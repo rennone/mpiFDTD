@@ -18,8 +18,8 @@ typedef struct ntffInfo{
 } NTFFInfo;
 
 //シミュレーション上の物理定数 
-static const double LIGHT_SPEED_S = 0.7;
-static const double C0_S = 0.7; //上の変数長いからこっちにする
+static const double LIGHT_SPEED_S = 0.7071;
+static const double C0_S = 0.7071; //上の変数長いからこっちにする
 
 static const double EPSILON_0_S = 1.0;
 static const double MU_0_S = 1.0/0.7/0.7;
