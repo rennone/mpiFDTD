@@ -1,6 +1,7 @@
 #include <math.h>
 #include "circleModel.h"
 #include "field.h"
+#include "function.h"
 static double radius;
 static double epsilon;
 static double posx;
@@ -47,4 +48,27 @@ static double eps(double x, double y, int col, int row)
   
   sum /= 32.0*32.0;
   return epsilon*sum + EPSILON_0_S*(1-sum);
+}
+
+
+static void output(FILE *fp, double complex* data)
+{
+  //半径の1.2倍の位置のデータを保存
+  double observation = 1.2*radius;
+  int ang;
+  for(ang=0; ang <360; ang++)
+  {
+    double rad = ang*M_PI/180.0;
+    double x = observation*cos(rad)+N_PX/2.0;
+    double y = observation*sin(rad)+N_PY/2.0;
+    double norm = cnorm(cbilinear(data,x,y,N_PX,N_PY));
+    fprintf(fp, "%d %lf \n", 180-ang, norm);   
+  }  
+  fclose(fp);  
+  printf("output end \n");
+}
+
+void (*circleModel_output(void))(FILE *, double complex*)
+{
+  return output;
 }

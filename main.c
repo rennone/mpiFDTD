@@ -61,14 +61,13 @@ int main( int argc, char *argv[] )
     double   h_u  = 10;   //1セルの大きさ(nm)
     int       pml = 10;  //pmlレイヤの数
     double lambda = 500;  //波長(nm)
-    int      step = 4000; //計算ステップ
+    int      step = 2000; //計算ステップ
     enum MODEL   modelType = MIE_CYLINDER; // モデルの種類
-    enum SOLVER solverType = TM_UPML_2D;        // 計算方法
+    enum SOLVER solverType = TE_UPML_2D;        // 計算方法
     simulator_init(width, height, h_u, pml, lambda, step, modelType, solverType);    //simulator
 
-
 #ifdef _USE_OPENGL    
-    enum COLOR_MODE colorMode = CREAL;
+    enum COLOR_MODE colorMode = CABS;
     
     glutInit(&argc, argv);
     glutInitWindowPosition(windowX,windowY);

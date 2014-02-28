@@ -7,6 +7,7 @@
 
 
 static double (*epsMethod)(double, double, int, int);
+static void (*outputMethod)(FILE*, double complex*);
 
 static void noModel(void)
 {
@@ -32,6 +33,7 @@ void setModel(enum MODEL model)
   case SHELF :
   case NONSHELF:
   case LAYER:
+    noModel();
     break;
   }
 }

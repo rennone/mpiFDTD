@@ -26,9 +26,6 @@ static double complex *Wz = NULL;
 static double complex *debug_U[4];
 static double complex *debug_W[4];
 
-//周波数領域に置けるntffのEz
-static double complex ntffEz[360];
-
 //Ez(i    , j    ) -> Ez[i,j];
 //Hx(i    , j+0.5) -> Hx[i,j];
 //Hy(i+0.5, j    ) -> Hy[i,j];
@@ -78,7 +75,6 @@ static inline void ntffOutput();
 
 //周波数領域でのntff
 static inline void ntffFrequency();
-
 
 //:public
 inline int fdtdTM_upml_getSubNx(void)
@@ -147,17 +143,40 @@ static inline int subIndv(const int i, const int j)
   return (i)*SUB_N_PY + (j);
 }
 
-static inline int subIndLeft(const int i){
+static inline int subIndLeft(const int i)
+{
   return i - SUB_N_PY;
 }
-static inline int subIndRight(const int i){
+
+static inline int subIndRight(const int i)
+{
   return i + SUB_N_PY;
 }
-static inline int subIndTop(const int i){
+
+static inline int subIndTop(const int i)
+{
   return i+1;
 }
-static inline int subIndBottom(const int i){
+
+static inline int subIndBottom(const int i)
+{
   return i-1;
+}
+
+//fileOpen用
+static FILE* fileOpen(const char* fileName)
+{
+  char name[256];
+  //フォルダー以下にする.
+  sprintf(name, "TM/%s", fileName);
+  
+  FILE *fp;
+  if( (fp=fopen(name, "w") ) == NULL )
+  {
+    printf("cannot open file %s \n", name);
+    exit(2);
+  }
+  return fp;
 }
 
 //Initialize
@@ -191,8 +210,8 @@ static void update(void)
 static void finish(void)
 {
   ntffOutput();
-  ntffFrequency();
-  output();
+//  ntffFrequency();
+//  output();
   freeMemories();
 }
 
@@ -291,13 +310,11 @@ static inline void scatteredWave(double complex *p, double *eps)
 
 //毎回計算すると時間かかりそうだから代入しておく  
   double _cos = cos(rad), _sin = sin(rad);
-//  double ks_cos = cos(rad)*k_s, ks_sin = sin(rad)*k_s;
-  const double t0 = 2000;      //t0 stepでmaxになるように時間移動
+  double ks_cos = cos(rad)*k_s, ks_sin = sin(rad)*k_s;
+  const double t0 = 0;      //t0 stepでmaxになるように時間移動
   
-  //ガウシアンパルス  
-  const double a = 1.0e-6;
+  //ガウシアンパルス
   const double beam_width = 50;
-//  double gaussian_coef = exp( -M_PI*a*pow(t0-time, 2 ) );
   
   for(int i=1; i<SUB_N_PX-1; i++)
   {
@@ -306,9 +323,17 @@ static inline void scatteredWave(double complex *p, double *eps)
       int k = subInd(&i,&j);
       int x = i-1+offsetX;
       int y = j-1+offsetY;
-      double r = (x*_cos+y*_sin)/C0_S-time;
-      double gaussian_coef = exp( -pow(r/beam_width, 2 ) );
+      
+      //ガウシアンパルス
+      const double r = (x*_cos+y*_sin)/C_0_S-(time-t0);
+      const double gaussian_coef = exp( -pow(r/beam_width, 2 ) );
       p[k] += gaussian_coef*(EPSILON_0_S/eps[k] - 1)*cexp(I*r*w_s);
+
+      /*
+      //単一波長の散乱波
+      double kr = x*ks_cos+y*ks_sin;
+      p[k] += ray_coef*(EPSILON_0_S/eps[k] - 1.0)*cexp( I*(kr-w_s*time) );
+      */
     }
   }
 }
@@ -345,8 +370,10 @@ static inline void planeWave(double complex *p, double *eps)
 //calculate J and D
 static inline void calcJD()
 {
-  for(int i=1; i<SUB_N_PX-1; i++){
-    for(int j=1; j<SUB_N_PY-1; j++){
+  for(int i=1; i<SUB_N_PX-1; i++)
+  {
+    for(int j=1; j<SUB_N_PY-1; j++)
+    {
       const int k = subInd(&i,&j);
       const int k_lft = subIndLeft(k); //一つ左
       const int k_btm = subIndBottom(k);       //一つ下
@@ -360,9 +387,10 @@ static inline void calcJD()
 //calculate E 
 static inline void calcE()
 {
-  double epsilon = EPSILON_0_S;
-  for(int i=1; i<SUB_N_PX-1; i++){
-    for(int j=1; j<SUB_N_PY-1; j++){      
+  for(int i=1; i<SUB_N_PX-1; i++)
+  {
+    for(int j=1; j<SUB_N_PY-1; j++)
+    {
       const int k = subInd(&i,&j);
       Ez[k] = Dz[k]/EPS_EZ[k];
     }
@@ -372,8 +400,10 @@ static inline void calcE()
 //calculate M and B
 static inline void calcMB()
 {  
-  for(int i=1; i<SUB_N_PX-1; i++){
-    for(int j=1; j<SUB_N_PY-1; j++){
+  for(int i=1; i<SUB_N_PX-1; i++)
+  {
+    for(int j=1; j<SUB_N_PY-1; j++)
+    {
       const int k = subInd(&i,&j);
       const int k_top = subIndTop(k); //一つ上
       double complex nowMx = Mx[k];
@@ -382,8 +412,10 @@ static inline void calcMB()
     }
   }
   
-  for(int i=1; i<SUB_N_PX-1; i++){
-    for(int j=1; j<SUB_N_PY-1; j++){
+  for(int i=1; i<SUB_N_PX-1; i++)
+  {
+    for(int j=1; j<SUB_N_PY-1; j++)
+    {
       const int k = subInd(&i,&j);
       const int k_rht = subIndRight(k); //一つ右     
       double complex nowMy = My[k];
@@ -396,14 +428,18 @@ static inline void calcMB()
 //calculate H
 static inline void calcH()
 {
-  for(int i=1; i<SUB_N_PX-1; i++){
-    for(int j=1; j<SUB_N_PY-1; j++){
+  for(int i=1; i<SUB_N_PX-1; i++)
+  {
+    for(int j=1; j<SUB_N_PY-1; j++)
+    {
       const int k = subInd(&i,&j);
       Hx[k] = Bx[k]/MU_0_S;
     }
   }  
-  for(int i=1; i<SUB_N_PX-1; i++){
-    for(int j=1; j<SUB_N_PY-1; j++){
+  for(int i=1; i<SUB_N_PX-1; i++)
+  {
+    for(int j=1; j<SUB_N_PY-1; j++)
+    {
       const int k = subInd(&i,&j);
       Hy[k] = By[k]/MU_0_S;
     }
@@ -433,7 +469,7 @@ static void output()
       for(int i=1, x=offsets[0]; i<SUB_N_PX-1; i++, x++)
         for(int j=1, y=offsets[1]; j<SUB_N_PY-1; j++, y++)
           entire[ind(x,y)] = Ez[subInd(&i, &j)];      
-    }    
+    }
     field_outputElliptic("mpi_mie.txt", entire);
     free(entire);
   }
@@ -641,34 +677,26 @@ static void init_mpi(void)
 //----------------------------------------
 //ff NTFF method
 //----------------------------------------
-static FILE* fileOpen(const char* fileName)
-{
-  FILE *fp;
-  if( (fp=fopen(fileName, "w") ) == NULL )
-  {
-    printf("cannot open file %s \n", fileName);
-    exit(2);
-  }
-  return fp;
-}
-
-static inline void debug_ntffOutputData(const char *fileName, double complex *data)
+//ntff用のフォーマットでdataをfileNameに保存
+static inline void ntffSaveData(const char *fileName, double complex *data)
 {
   char realFile[256], imagFile[256];
-  sprintf(realFile, "r_%s", fileName);
-  sprintf(imagFile, "i_%s", fileName);
-  FILE *fpR = fileOpen(realFile);
-  FILE *fpI = fileOpen(imagFile);
-  
+  FILE *fpR, *fpI;
   NTFFInfo nInfo = field_getNTFFInfo();
+  const int maxTime = field_getMaxTime();
   int ang;
+    
+  sprintf(realFile, "%s_r.txt", fileName);
+  sprintf(imagFile, "%s_i.txt", fileName);
+  
+  fpR = fileOpen(realFile);
+  fpI = fileOpen(imagFile);
+  
   for(ang=0; ang<360; ang++)
   {
-    double theta = 0;
-    double phi = ang*M_PI/180.0;
-    int k= ang*nInfo.arraySize;    
+    int k= ang*nInfo.arraySize;
     int i;
-    for(i=0; i < nInfo.arraySize; i++)
+    for(i=0; i < maxTime; i++)
     {
         fprintf(fpR,"%.20lf " , creal(data[k+i]));
         fprintf(fpI,"%.20lf " , cimag(data[k+i]));  
@@ -685,98 +713,53 @@ static inline void debug_ntffOutput()
   int i;
   for(i=0; i<4;i++)
   {
-    sprintf(fileName, "TM_debug%d_U.txt",i);
-    debug_ntffOutputData(fileName, debug_U[i]);
+    sprintf(fileName, "debug%d_U",i);
+    ntffSaveData(fileName, debug_U[i]);
     
-    sprintf(fileName, "TM_debug%d_W.txt",i);
-    debug_ntffOutputData(fileName, debug_W[i]);
+    sprintf(fileName, "debug%d_W",i);
+    ntffSaveData(fileName, debug_W[i]);
   }
-
-  /*
-  FILE *debug_fp_U_r[4], *debug_fp_U_i[4];
-  FILE *debug_fp_W_r[4], *debug_fp_W_i[4];
-  int i;
-  for(i=0; i<4; i++)
-  {
-    sprintf(fileName, "TM_debug%d_U_r.txt",i);
-    debug_fp_U_r[i] = fileOpen(fileName);
-    sprintf(fileName, "TM_debug%d_U_i.txt",i);
-    debug_fp_U_i[i] = fileOpen(fileName);
-
-    sprintf(fileName, "TM_debug%d_W_r.txt",i);
-    debug_fp_W_r[i] = fileOpen(fileName);
-    sprintf(fileName, "TM_debug%d_W_i.txt",i);
-    debug_fp_W_i[i] = fileOpen(fileName);
-  }
-
-  NTFFInfo nInfo = field_getNTFFInfo();
-  int ang;
-  for(ang=0; ang<360; ang++)
-  {
-    double phi = ang*M_PI/180.0;
-    int k= ang*nInfo.arraySize;    
-    int i;
-    for(i=0; i < nInfo.arraySize; i++)
-    {
-      int j;
-      for(j=0; j<4; j++)
-      {
-        fprintf(debug_fp_U_r[j],"%.20lf \n" , creal(debug_U[j][k+i]));
-        fprintf(debug_fp_U_i[j],"%.20lf \n" , cimag(debug_U[j][k+i]));
-        fprintf(debug_fp_W_r[j],"%.20lf \n" , creal(debug_W[j][k+i]));
-        fprintf(debug_fp_W_i[j],"%.20lf \n" , cimag(debug_W[j][k+i]));
-      }
-    }
-  }
-  */
 }
 
 static inline void ntffOutput()
-{  
-  FILE *fp_r, *fp_i,*fp_r2, *fp_i2;
-  fp_r  = fileOpen("TM/Eph_r.txt");
-  fp_i  = fileOpen("TM/Eph_i.txt");
-  fp_r2 = fileOpen("TM/Eth_r.txt");
-  fp_i2 = fileOpen("TM/Eth_i.txt");
-
-  const double C   = LIGHT_SPEED_S;
+{
   const double w_s = field_getOmega();
-  const double complex coef = csqrt(2*M_PI*C/(I*w_s));
+  const double complex coef = csqrt( 2*M_PI*C_0_S/(I*w_s) );
+  const int maxTime = field_getMaxTime();
   NTFFInfo nInfo = field_getNTFFInfo();
+  double complex *Eth = (double complex*)malloc(sizeof(double complex)*360*nInfo.arraySize);
+  double complex *Eph = (double complex*)malloc(sizeof(double complex)*360*nInfo.arraySize);
   int ang;
+  double theta = 0;
   for(ang=0; ang<360; ang++)
   {
-    double theta = 0;
     double phi = ang*M_PI/180.0;
-    int k= ang*nInfo.arraySize;
     
+    int k= ang*nInfo.arraySize;    
     double sx = cos(theta)*cos(phi);
     double sy = cos(theta)*sin(phi);
-    double sz = -sin(theta);
+    double sz = -cos(theta); //宇野先生の本では -sin(theta)になってる
     double px = -sin(phi);
     double py = cos(phi);
     int i;
-    for(i=0; i < nInfo.arraySize; i++)
+    for(i=0; i < maxTime; i++)
     {
       double complex WTH = 0 + 0 + Wz[k+i]*sz;
       double complex WPH = 0 + 0;
       double complex UTH = Ux[k+i]*sx + Uy[k+i]*sy + 0;
-      double complex UPH = Ux[k+i]*px + Uy[k+i]*py;
-      
+      double complex UPH = Ux[k+i]*px + Uy[k+i]*py;      
       double complex ETH  = coef*(-Z_0_S*WTH-UPH);
-      double complex EPH  = coef*(-Z_0_S*WPH-UTH);      
-      fprintf(fp_r,"%.20lf \n" , creal(EPH));
-      fprintf(fp_i,"%.20lf \n" , cimag(EPH));      
-      fprintf(fp_r2,"%.20lf \n", creal(ETH));
-      fprintf(fp_i2,"%.20lf \n", cimag(ETH));
+      double complex EPH  = coef*(-Z_0_S*WPH+UTH);
+      
+      Eth[k+i] = ETH;
+      Eph[k+i] = EPH;
     }
-  }  
-  fclose(fp_r);
-  fclose(fp_i);
-  fclose(fp_r2);
-  fclose(fp_i2);
-
-  debug_ntffOutput();
+  }
+  ntffSaveData("Eph", Eph);
+  ntffSaveData("Eth", Eth);
+  free(Eph);
+  free(Eth);
+  //debug_ntffOutput();
 }
 
 static inline void ntffCoef(double time, double timeShift, int *m, double *a, double *b, double *ab)
@@ -801,8 +784,8 @@ static void ntff()
   
   int m_e, m_h;
   double a_e, b_e, ab_e, a_h, b_h, ab_h;  
-  double timeE = field_getTime() - 1;  //t - Δt
-  double timeH = field_getTime() - 0.5;  //t - Δt/2
+  double timeE = field_getTime() - 1;   //t - Δt
+  double timeH = field_getTime() - 0.5; //t - Δt/2
 
   //分割領域における積分路, 有効範囲は(1~SUB_N_PX-2)まで
   int tp =    nInfo.top - offsetY; //上面
@@ -817,9 +800,8 @@ static void ntff()
     double r1x = cos(rad), r1y = sin(rad);
 
     const int stp = ang*nInfo.arraySize;  //角度ごとのインデックス
-
     //bottom side
-    //normal vector n is (0,-1)
+    //normal vector n is (0,-1,0)
     //W = Js = n × H = ( 0, 0, Hx)  U = Ms = E × n = (Ez, 0,  0)
     if (  0 < bm && bm < SUB_N_PY-1)
     {
@@ -842,23 +824,23 @@ static void ntff()
         const double complex hx = 0.5 * ( Hx[k] + Hx[subIndBottom(k)] );
               
         Ux[stp+m_e-1] += ez*b_e*coef;
-        Ux[stp+m_e]   += ez*ab_e*coef;
-        Ux[stp+m_e+1] -= ez*a_e*coef;
         Wz[stp+m_h-1] += hx*b_h*coef;
+        Ux[stp+m_e]   += ez*ab_e*coef;
         Wz[stp+m_h]   += hx*ab_h*coef;
+        Ux[stp+m_e+1] -= ez*a_e*coef;        
         Wz[stp+m_h+1] -= hx*a_h*coef;
 
         debug_U[0][stp+m_e-1] += ez*b_e*coef;
-        debug_U[0][stp+m_e]   += ez*ab_e*coef;
-        debug_U[0][stp+m_e+1] -= ez*a_e*coef;
         debug_W[0][stp+m_h-1] += hx*b_h*coef;
+        debug_U[0][stp+m_e]   += ez*ab_e*coef;
         debug_W[0][stp+m_h]   += hx*ab_h*coef;
+        debug_U[0][stp+m_e+1] -= ez*a_e*coef;        
         debug_W[0][stp+m_h+1] -= hx*a_h*coef;
       }
     }
     
     //right side
-    //normal vector n is (1,0)
+    //normal vector n is (1,0,0)
     //Js = n × H = (0, 0,Hy)  Ms = E × n = ( 0,Ez,0)
     //Js -> W                 Ms -> U
     if ( 0 < rt && rt < SUB_N_PX-1)
@@ -879,24 +861,23 @@ static void ntff()
         const double complex hy = 0.5 * ( Hy[k] + Hy[subIndLeft(k)] );      
         
         Uy[stp+m_e-1] += ez*b_e*coef;
-        Uy[stp+m_e]   += ez*ab_e*coef;
-        Uy[stp+m_e+1] -= ez*a_e*coef;      
         Wz[stp+m_h-1] += hy*b_h*coef;      
+        Uy[stp+m_e]   += ez*ab_e*coef;
         Wz[stp+m_h]   += hy*ab_h*coef;      
+        Uy[stp+m_e+1] -= ez*a_e*coef;              
         Wz[stp+m_h+1] -= hy*a_h*coef;
-
         
         debug_U[1][stp+m_e-1] += ez*b_e*coef;
-        debug_U[1][stp+m_e]   += ez*ab_e*coef;
-        debug_U[1][stp+m_e+1] -= ez*a_e*coef;
         debug_W[1][stp+m_h-1] += hy*b_h*coef;
+        debug_U[1][stp+m_e]   += ez*ab_e*coef;
         debug_W[1][stp+m_h]   += hy*ab_h*coef;
+        debug_U[1][stp+m_e+1] -= ez*a_e*coef;        
         debug_W[1][stp+m_h+1] -= hy*a_h*coef;        
       }
     }
 
         //top side
-    //normal vector n is (0,1)
+    //normal vector n is (0,1,0)
     //Js = n × H = (0, 0,-Hx)  Ms = E × n = (-Ez, 0,  0)
     //Js -> W                  Ms -> U
     if ( 0 < tp && tp < SUB_N_PY-1)
@@ -916,30 +897,30 @@ static void ntff()
         const double complex hx = -0.5 * ( Hx[k] + Hx[subIndBottom(k)] );
 
         Ux[stp+m_e-1] += ez*b_e*coef;
-        Ux[stp+m_e]   += ez*ab_e*coef;
-        Ux[stp+m_e+1] -= ez*a_e*coef;
         Wz[stp+m_h-1] += hx*b_h*coef;
+        Ux[stp+m_e]   += ez*ab_e*coef;
         Wz[stp+m_h]   += hx*ab_h*coef;
+        Ux[stp+m_e+1] -= ez*a_e*coef;        
         Wz[stp+m_h+1] -= hx*a_h*coef;
         
         debug_U[2][stp+m_e-1] += ez*b_e*coef;
-        debug_U[2][stp+m_e]   += ez*ab_e*coef;
-        debug_U[2][stp+m_e+1] -= ez*a_e*coef;
         debug_W[2][stp+m_h-1] += hx*b_h*coef;
+        debug_U[2][stp+m_e]   += ez*ab_e*coef;
         debug_W[2][stp+m_h]   += hx*ab_h*coef;
-        debug_W[2][stp+m_h+1] -= hx*a_h*coef;        
+        debug_U[2][stp+m_e+1] -= ez*a_e*coef;        
+        debug_W[2][stp+m_h+1] -= hx*a_h*coef;
       }
     }
 
     //left side
-    //normal vector n is (-1,0)
+    //normal vector n is (-1,0,0)
     //Js = n × H = (0,0,-Hy)    Ms = E × n = (0,-Ez,0)
     //Js -> W                   Ms -> U
-        // (left,top) -> (left,bottom)
+    // (left,top) -> (left,bottom)
     if ( 0 < lt && lt < SUB_N_PX )
     {
       int subTop    = min(SUB_N_PY, tp);
-      int subBottom = max(1, bm); 
+      int subBottom = max(1, bm);
       for ( int j=subBottom; j<subTop; j++ )
       {
         const double r2x = lt-cx;
@@ -953,10 +934,10 @@ static void ntff()
         const double complex hy = -0.5 * ( Hy[k] + Hy[subIndLeft(k)] );
       
         Uy[stp+m_e-1] += ez*b_e*coef;
-        Uy[stp+m_e]   += ez*ab_e*coef;
-        Uy[stp+m_e+1] -= ez*a_e*coef;      
         Wz[stp+m_h-1] += hy*b_h*coef;      
+        Uy[stp+m_e]   += ez*ab_e*coef;
         Wz[stp+m_h]   += hy*ab_h*coef;      
+        Uy[stp+m_e+1] -= ez*a_e*coef;      
         Wz[stp+m_h+1] -= hy*a_h*coef;
 
         debug_U[3][stp+m_e-1] += ez*b_e*coef;
@@ -967,7 +948,7 @@ static void ntff()
         debug_W[3][stp+m_h+1] -= hy*a_h*coef;
       }
     }
-  } 
+  }
 }
 
 
@@ -993,11 +974,13 @@ static inline void ntffFrequency()
 
   int ang;
 
+
+  static double complex ntffEz[360];
+
   printf("ntffFrequency start\n");
   for(ang=0; ang<max_angle; ang++)
   {
     double rad = ang*M_PI/180.0;
-
     double rx  = cos(rad), ry = sin(rad);
     double r2x, r2y;
 
@@ -1048,7 +1031,6 @@ static inline void ntffFrequency()
       }
     }
 
-    //here
     // (right,top) -> (left,top)  n=(0,1)
     if ( 0 < tp && tp < SUB_N_PY-1)
     {      
@@ -1093,10 +1075,10 @@ static inline void ntffFrequency()
     ntffEz[ang] = coef * ( Z_0_S*Nz + Lphi );
   }
 
-  const char nameRe[256]="TM/ntffRe.txt";
-  const char nameIm[256]="TM/ntffIm.txt";
-  FILE *fpR = fopen(nameRe, "w");
-  FILE *fpI = fopen(nameIm, "w");
+  const char nameRe[256]="ntffRe.txt";
+  const char nameIm[256]="ntffIm.txt";
+  FILE *fpR = fileOpen(nameRe);
+  FILE *fpI = fileOpen(nameIm);
   
   for(ang = 0; ang<max_angle; ang++)
   {
@@ -1106,6 +1088,6 @@ static inline void ntffFrequency()
 
   fclose(fpR);
   fclose(fpI);
-  printf("saved at %s and %s \n", nameRe, nameIm);
+  printf("saved at %s & %s \n", nameRe, nameIm);
   printf("ntffFrequency end\n");
 }

@@ -161,7 +161,7 @@ void drawer_finish()
 //--------------------Color Trancform---------------------//
 static void colorTransform(double phi, colorf *col)
 {
-  double range = 0.5; //波の振幅  
+  double range = 1.0; //波の振幅  
   double ab_phi = phi < 0 ? -phi : phi;
   double a = ab_phi < range ? (ab_phi <  range/3.0 ? 3.0/range*ab_phi : (-3.0/4.0/range*ab_phi+1.25) ) : 0.5;
   

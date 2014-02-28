@@ -18,7 +18,6 @@ static void (* initMethod)() = NULL;
 static void (* getSubFieldPositionMethod)(int*,int*,int*,int*) = NULL;
 static double* (* getEpsMethod )() = NULL;
 
-static char folderName[256];
 static struct timeval timer1, timer2;
 
 static void setTMupml(){
@@ -30,7 +29,6 @@ static void setTMupml(){
   getDataX = fdtdTM_upml_getHx;
   getDataY = fdtdTM_upml_getHy;
   getDataZ = fdtdTM_upml_getEz;
-  strcpy(folderName, "data/TMupml/");
 }
 
 static void setTEupml(){
@@ -43,7 +41,6 @@ static void setTEupml(){
   getDataX = fdtdTE_upml_getEx;
   getDataY = fdtdTE_upml_getEy;
   getDataZ = fdtdTE_upml_getHz;
-  strcpy(folderName, "data/TEupml/");
 }
 
 static void setSolver(enum SOLVER solver)
@@ -79,21 +76,16 @@ void simulator_init(int width, int height , double h_u, int pml, double lambda, 
   setSolver(solverType);//Solverの設定と初期化
 
   gettimeofday(&timer1, NULL); //開始時間の取得
+
 }
 
-void simulator_finish(){
-  printf("finish\n");
+void simulator_finish()
+{  
+  printf("finish at %d step \n", (int)field_getTime());  
   gettimeofday(&timer2,NULL);
   printf("time = %lf \n", timer2.tv_sec-timer1.tv_sec+(timer2.tv_usec-timer1.tv_usec)*1e-6);
-  
-  /*
-  char fileName[256];
-  strcpy(fileName, folderName);
-  strcat(fileName, "mie.txt");
-  */
-  
-  //field_outputElliptic(fileName, (*getDataZ)());
-  (*finishMethod)(); //メモリの解放等  
+  //メモリの解放等, solverの終了処理
+  (*finishMethod)(); 
 }
 
 double complex* simulator_getDrawingData(void){

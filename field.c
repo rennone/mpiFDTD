@@ -97,7 +97,7 @@ void setField(const int wid, const int hei, const double _h, const int pml, cons
   
   lambda_s = field_toCellUnit(lambda);
   k_s = 2*M_PI/lambda_s;
-  w_s = C0_S*k_s;
+  w_s = C_0_S*k_s;
   T_s = 2*M_PI/w_s;
 
   ray_coef = 0;  
@@ -108,11 +108,12 @@ void setField(const int wid, const int hei, const double _h, const int pml, cons
   ntff_info.bottom = N_PML + 5;
   ntff_info.left = N_PML + 5;
   ntff_info.right = N_PX - N_PML - 5;
-  
+
+
   double len = (ntff_info.top - ntff_info.bottom)/2;
   ntff_info.RFperC = len*2;
-  ntff_info.arraySize = maxTime + 2*ntff_info.RFperC; //必要配列数
-}  
+  ntff_info.arraySize = maxTime + 2*ntff_info.RFperC;
+}
 
 //-------------------getter-------------------//
 double inline field_getT()
