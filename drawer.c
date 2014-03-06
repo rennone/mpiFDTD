@@ -1,7 +1,6 @@
+#ifdef DEBUG
+
 #include "drawer.h"
-
-#ifdef _USE_OPENGL
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
