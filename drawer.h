@@ -8,7 +8,7 @@ enum COLOR_MODE
   CABS
 };
 
-#ifdef DEBUG
+#ifdef USE_OPENGL
 extern void (*drawer_getDraw(void))(void);
 extern void drawer_paintImage(int l, int b, int r, int t,int wid, int hei, double complex*);
 extern void drawer_paintModel(int l, int b, int r, int t,int wid, int hei, double *);

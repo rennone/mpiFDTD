@@ -5,7 +5,7 @@
 #include <complex.h>
 #include "simulator.h"
 
-#ifdef DEBUG
+#ifdef USE_OPENGL
 #include "drawer.h"
 #include <GL/glew.h>
 #include <GLUT/glut.h>
@@ -58,7 +58,7 @@ int main( int argc, char *argv[] )
   enum SOLVER solverType = TE_UPML_2D;        // 計算方法
   simulator_init(width, height, h_u, pml, lambda, step, modelType, solverType);    //simulator
 
-#ifdef DEBUG
+#ifdef USE_OPENGL
   static int windowX = 100;
   static int windowY = 100;
   static int windowWidth = 300;
@@ -77,7 +77,7 @@ int main( int argc, char *argv[] )
   MPI_Finalize();
 #endif
 
-#ifndef DEBUG
+#ifndef USE_OPENGL
   //only calculate mode
   while(!simulator_isFinish())
   {
