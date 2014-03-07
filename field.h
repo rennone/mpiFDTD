@@ -2,7 +2,12 @@
 #define _FIELD_H
 #include <stdio.h>
 #include <complex.h>
+#include <math.h>
 #include "bool.h"
+
+#ifndef M_PI
+#define M_PI 3.1415926535897932384626433832795
+#endif
 
 //入射波のモード
 enum WAVE_MODE{
@@ -18,9 +23,10 @@ typedef struct ntffInfo
   int arraySize; //必要な配列サイズ
 } NTFFInfo;
 
-//シミュレーション上の物理定数 
+//シミュレーション上の物理定数
+#define C_0_S 0.7071
 static const double LIGHT_SPEED_S = 0.7071;
-static const double C_0_S = 0.7071; //上の変数長いからこっちにする
+//static const double C_0_S = 0.7071; //上の変数長いからこっちにする
 static const double EPSILON_0_S = 1.0;
 static const double MU_0_S = 1.0/C_0_S/C_0_S;
 static const double Z_0_S  = 1.41422712488; // = √(μ/ε);
