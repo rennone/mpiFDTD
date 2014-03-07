@@ -5,8 +5,8 @@ cmake_minimum_required(VERSION 2.8)
 PROJECT(mpi_fdtd2D)
 
 set(CMAKE_C_FLAGS "-Wall -std=c99")
-set(CMAKE_C_FLAGS_DEBUG "-g -DUSE_OPENGL")
-set(CMAKE_C_FLAGS_RELEASE "-g -DUSE_OPENGL")
+set(CMAKE_C_FLAGS_DEBUG "-g -DUSE_OPENGL -DMAC_OS")
+set(CMAKE_C_FLAGS_RELEASE "-g -DUSE_OPENGL -DMAC_OS")
 set(CMAKE_BUILD_TYPE release)
 
 find_package(MPI)

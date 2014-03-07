@@ -1,13 +1,19 @@
 #ifdef USE_OPENGL
 
 #include "drawer.h"
+#include "function.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <GL/glew.h>
+#ifdef MAC_OS
 #include <GLUT/glut.h>
-#include "function.h"
+#endif
+#ifndef MAC_OS
+#include <GL/glut.h>
+#endif
+
 
 typedef struct {
  GLfloat r,g,b;

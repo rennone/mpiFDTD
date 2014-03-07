@@ -8,7 +8,14 @@
 #ifdef USE_OPENGL
 #include "drawer.h"
 #include <GL/glew.h>
+
+#ifdef MAC_OS
 #include <GLUT/glut.h>
+#endif
+
+#ifndef MAC_OS
+#include <GL/glut.h>
+#endif
 
 void display(void)
 {
