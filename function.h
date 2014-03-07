@@ -4,25 +4,6 @@
 
 #define max(a,b) (a > b ? a : b)
 #define min(a,b) (a < b ? a : b)
-/*
-static inline double max(double a, double b)
-{
-  return a > b ? a : b;
-}
-static inline int imax(int a, int b)
-{
-  return a > b ? a : b;
-}
-
-static inline double min(double a, double b)
-{
-  return a > b ? b : a;
-}
-static inline int imin(int a, int b)
-{
-  return a > b ? b : a;
-}
-*/
 
 //norm of complex
 static inline double cnorm(double complex c){
