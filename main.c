@@ -7,6 +7,8 @@
 
 #ifdef USE_OPENGL
 #include "drawer.h"
+#define WINDOW_WIDTH 300
+#define WINDOW_HEIGHT 300
 #include <GL/glew.h>
 
 #ifdef MAC_OS
@@ -53,8 +55,7 @@ void idle(void)
 
 int main( int argc, char *argv[] )
 {
-  MPI_Init( 0, 0 );
-    
+  MPI_Init( 0, 0 );    
   int    width  = 2560; //横幅(nm)
   int    height = 2560; //縦幅(nm)
   double   h_u  = 10;   //1セルの大きさ(nm)
@@ -66,14 +67,12 @@ int main( int argc, char *argv[] )
   simulator_init(width, height, h_u, pml, lambda, step, modelType, solverType);    //simulator
 
 #ifdef USE_OPENGL
-  static int windowX = 100;
-  static int windowY = 100;
-  static int windowWidth = 300;
-  static int windowHeight=300;
-  enum COLOR_MODE colorMode = CABS;    
+  int windowX = 100;
+  int windowY = 100;
+  enum COLOR_MODE colorMode = CABS;
   glutInit(&argc, argv);
   glutInitWindowPosition(windowX,windowY);
-  glutInitWindowSize(windowWidth, windowHeight);
+  glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
   glutInitDisplayMode(GLUT_RGBA | GLUT_DEPTH | GLUT_DOUBLE);
   glutCreateWindow("FDTD Simulator");
   glutDisplayFunc(display);

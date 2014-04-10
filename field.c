@@ -46,39 +46,39 @@ static void initMpi(void);
 
 //:public------------------------------------//
 //inline 意味ない->ヘッダに書かないと行けない
-inline double field_toCellUnit(const double phisycalUnit)
+double field_toCellUnit(const double phisycalUnit)
 {
   return phisycalUnit/H_u;   //セル単位に変換 
 }
-inline double field_toPhisycalUnit(const double cellUnit)
+double field_toPhisycalUnit(const double cellUnit)
 {
   return cellUnit*H_u;    //物理単位(nm)に変換
 }
-inline int field_getOffsetX()
+int field_getOffsetX()
 {
   return OFFSET_X;
 }
-inline int field_getOffsetY()
+int field_getOffsetY()
 {
   return OFFSET_Y;
 }
-inline int field_getSubNx()
+int field_getSubNx()
 {
   return SUB_N_X;
 }
-inline int field_getSubNy()
+int field_getSubNy()
 {
   return SUB_N_Y;
 }
-inline int field_getSubNpx()
+int field_getSubNpx()
 {
   return SUB_N_PX;
 }
-inline int field_getSubNpy()
+int field_getSubNpy()
 {
   return SUB_N_PY;
 }
-inline int field_getSubNcell()
+int field_getSubNcell()
 {
   return SUB_N_CELL;
 }
@@ -116,47 +116,47 @@ void setField(const int wid, const int hei, const double _h, const int pml, cons
 }
 
 //-------------------getter-------------------//
-double inline field_getT()
+double field_getT()
 {
   return T_s;
 }
 
-double inline field_getK()
+double  field_getK()
 {
   return k_s;
 }
 
-double inline field_getRayCoef()
+double  field_getRayCoef()
 {
   return ray_coef;
 }
 
-double inline field_getOmega()
+double  field_getOmega()
 {
   return w_s;
 }
 
-double inline field_getLambda()
+double  field_getLambda()
 {
   return lambda_s;
 }
 
-double inline field_getWaveAngle()
+double  field_getWaveAngle()
 {
   return waveAngle;
 }
 
-double inline field_getTime()
+double  field_getTime()
 {
   return time;
 }
 
-double inline field_getMaxTime()
+double  field_getMaxTime()
 {
   return maxTime;
 }
 
-NTFFInfo inline field_getNTFFInfo()
+NTFFInfo  field_getNTFFInfo()
 {
   return ntff_info;
 }
@@ -203,7 +203,7 @@ double field_pmlCoef_LXY(double ep_mu, double sig)
 }
 
 //1次元配列に変換
-inline int ind(const int i, const int j)
+ int ind(const int i, const int j)
 {
   return i*N_PY + j;
 }
@@ -217,12 +217,12 @@ double complex field_pointLight(void)
 }
 
 //------------------light method----------------------//
-inline void field_nextStep(void){
+ void field_nextStep(void){
   time+=1.0;
   ray_coef = 1.0 - exp(-pow(0.01*time, 2));
 }
 
-inline bool field_isFinish(void){
+ bool field_isFinish(void){
   return time >= maxTime;
 }
 

@@ -24,9 +24,9 @@ typedef struct ntffInfo
 } NTFFInfo;
 
 //シミュレーション上の物理定数
-#define C_0_S 0.7071
+#define C_0_S 0.7071 //下の変数名長いからこっちにする
 static const double LIGHT_SPEED_S = 0.7071;
-//static const double C_0_S = 0.7071; //上の変数長いからこっちにする
+
 static const double EPSILON_0_S = 1.0;
 static const double MU_0_S = 1.0/C_0_S/C_0_S;
 static const double Z_0_S  = 1.41422712488; // = √(μ/ε);
@@ -38,16 +38,16 @@ extern int N_PML;
 extern int N_PX;
 extern int N_PY;
 
-extern inline int field_getOffsetX();
-extern inline int field_getOffsetY();
-extern inline int field_getSubNx();
-extern inline int field_getSubNy();
-extern inline int field_getSubNpx();
-extern inline int field_getSubNpy();
-extern inline int field_getSubNcell();
+extern int field_getOffsetX();
+extern int field_getOffsetY();
+extern int field_getSubNx();
+extern int field_getSubNy();
+extern int field_getSubNpx();
+extern int field_getSubNpy();
+extern int field_getSubNcell();
 
 //インデックスを取ってくる 
-extern inline int ind(const int, const int);
+extern int ind(const int, const int);
 
 //フィールドの横,縦の大きさ, 1セルのサイズ, pmlレイヤの数, 波長(nm), 計算ステップ
 extern void setField(const int wid, const int hei, const double h, const int pml, const double lambda, const double step);
@@ -57,27 +57,27 @@ extern double field_sigmaX(double x, double y);
 extern double field_sigmaY(double x, double y);
 extern double field_pmlCoef(double x, double y);
 extern double field_pmlCoef_LXY(double x, double y);
-extern inline double field_toCellUnit(const double);
-extern inline double field_toPhisycalUnit(const double);
+extern double field_toCellUnit(const double);
+extern double field_toPhisycalUnit(const double);
 
 //---------------入射波---------------
 extern double complex field_pointLight(void);
 
 //:NTFF
-extern inline void field_nextStep(void);
-extern inline bool field_isFinish(void);
+extern void field_nextStep(void);
+extern bool field_isFinish(void);
 
 
 //:getter
-extern inline double field_getT(void);
-extern inline double field_getK(void);
-extern inline double field_getRayCoef(void);
-extern inline double field_getOmega(void);
-extern inline double field_getLambda(void);
-extern inline double field_getWaveAngle(void);
-extern inline double field_getTime(void);
-extern inline double field_getMaxTime(void);
-extern inline NTFFInfo field_getNTFFInfo(void);
+extern double field_getT(void);
+extern double field_getK(void);
+extern double field_getRayCoef(void);
+extern double field_getOmega(void);
+extern double field_getLambda(void);
+extern double field_getWaveAngle(void);
+extern double field_getTime(void);
+extern double field_getMaxTime(void);
+extern NTFFInfo field_getNTFFInfo(void);
 
 //output method
 extern void field_outputElliptic(const char *fileName,double complex* data); //

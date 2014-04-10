@@ -9,12 +9,12 @@ extern double complex* fdtdTE_upml_getEx(void);
 extern double complex* fdtdTE_upml_getEy(void);
 extern double complex* fdtdTE_upml_getHz(void);
 
-extern inline int fdtdTE_upml_getSubNx(void);
-extern inline int fdtdTE_upml_getSubNy(void);
-extern inline int fdtdTE_upml_getSubNpx(void);
-extern inline int fdtdTE_upml_getSubNpy(void);
-extern inline int fdtdTE_upml_getSubNcell(void);
-extern inline void fdtdTE_upml_getSubFieldPositions(int *subNx,int *subNy,int *subNpx, int *subNpy);
+extern int fdtdTE_upml_getSubNx(void);
+extern int fdtdTE_upml_getSubNy(void);
+extern int fdtdTE_upml_getSubNpx(void);
+extern int fdtdTE_upml_getSubNpy(void);
+extern int fdtdTE_upml_getSubNcell(void);
+extern void fdtdTE_upml_getSubFieldPositions(int *subNx,int *subNy,int *subNpx, int *subNpy);
 
-extern inline double * fdtdTE_upml_getEps(void);
+extern double * fdtdTE_upml_getEps(void);
 #endif

@@ -41,8 +41,7 @@ static double *C_BZMZ0=NULL, *C_BZMZ1=NULL;
 
 static double *EPS_EX=NULL, *EPS_EY=NULL, *EPS_HZ=NULL;
 
-#define timeStep 500
-static double complex Uz[360][timeStep],Wx[360][timeStep], Wy[360][timeStep];
+static double complex *Uz, *Wx, *Wy;
 static double complex *debug_U[4];
 static double complex *debug_W[4];
 
@@ -97,27 +96,27 @@ double* fdtdTE_upml_getEps(void){
   return EPS_EY;
 }
 
-inline int fdtdTE_upml_getSubNx(void){
+int fdtdTE_upml_getSubNx(void){
   return SUB_N_X;
 }
 
-inline int fdtdTE_upml_getSubNy(void){
+int fdtdTE_upml_getSubNy(void){
   return SUB_N_Y;
 }
 
-inline int fdtdTE_upml_getSubNpx(void){
+int fdtdTE_upml_getSubNpx(void){
   return SUB_N_PX;
 }
 
-inline int fdtdTE_upml_getSubNpy(void){
+int fdtdTE_upml_getSubNpy(void){
   return SUB_N_PY;
 }
 
-inline int fdtdTE_upml_getSubNcell(void){
+int fdtdTE_upml_getSubNcell(void){
   return SUB_N_CELL;
 }
 
-inline void fdtdTE_upml_getSubFieldPositions(int *subNx,int *subNy,int *subNpx, int *subNpy)
+void fdtdTE_upml_getSubFieldPositions(int *subNx,int *subNy,int *subNpx, int *subNpy)
 {
   *subNx = fdtdTE_upml_getSubNx();
   *subNy = fdtdTE_upml_getSubNy();
@@ -272,22 +271,24 @@ static void init(){
   setCoefficient();
 }
 
-static inline void update(void)
+static void update(void)
 {
   calcJD();
   calcE();
-  scatteredWave(Ey, EPS_EY);
-  Connection_SendRecvE();
+  
+  scatteredWave(Ey, EPS_EY);  
+//  Connection_SendRecvE();
+  Connection_ISend_IRecvE();
   calcMB();
   calcH();
-  Connection_SendRecvH();
-
-//  ntff();
+//  Connection_SendRecvH();
+  Connection_ISend_IRecvH();
+  ntff();
 }
 
 static void finish()
 {
-  ntffFrequency();
+//  ntffFrequency();
   output();
   freeMemories();
 }
@@ -433,6 +434,22 @@ static void allocateMemories()
   memset(Dx, 0, sizeof(double complex)*SUB_N_CELL);
   memset(Dy, 0, sizeof(double complex)*SUB_N_CELL);
   memset(Bz,0, sizeof(double complex)*SUB_N_CELL);
+
+  
+  NTFFInfo info = field_getNTFFInfo();
+  Wx = (double complex*)malloc(sizeof(double complex)*360*info.arraySize);
+  Wy = (double complex*)malloc(sizeof(double complex)*360*info.arraySize);
+  Uz = (double complex*)malloc(sizeof(double complex)*360*info.arraySize);
+  memset(Wx, 0, sizeof(double complex)*360*info.arraySize);
+  memset(Wy, 0, sizeof(double complex)*360*info.arraySize);
+  memset(Uz, 0, sizeof(double complex)*360*info.arraySize);
+
+  int i;
+  for(i=0; i<4; i++)
+  {    
+    debug_U[i] = (double complex*)malloc(sizeof(double complex)*360*info.arraySize);
+    debug_W[i] = (double complex*)malloc(sizeof(double complex)*360*info.arraySize);
+  }
 }
 
 static void setCoefficient()
@@ -548,7 +565,7 @@ static void output()
 }
 
 
-static void ntffFrequency(void)
+static void ntffFrequency()
 {
   int cx = N_PX/2 - offsetX;
   int cy = N_PY/2 - offsetY;
@@ -739,7 +756,7 @@ static inline void ntffCoef(double time, double timeShift, int *m, double *a, do
   *ab = *a-*b;
 }
 
-static void ntff(void)
+static void ntff()
 {
   NTFFInfo nInfo = field_getNTFFInfo();
   const double R = 1.0e6;
@@ -775,8 +792,10 @@ static void ntff(void)
       const int subRight = min(SUB_N_PX, rt);
       for(int i=subLeft; i<subRight; i++)
       {
+        //distance between origin to cell
         const double r2x = i-cx+0.5;
-        const double r2y = bm-cy;            //distance between origin to cell
+        const double r2y = bm-cy;
+        
         double timeShift = -(r1x*r2x + r1y*r2y)/C_0_S + nInfo.RFperC;
         ntffCoef(timeE, timeShift, &m_e, &a_e, &b_e, &ab_e);
         ntffCoef(timeH, timeShift, &m_e, &a_e, &b_e, &ab_e);
@@ -785,12 +804,12 @@ static void ntff(void)
         double complex ex = -Ex[k];
         double complex hz = -0.5*( Hz[k] + Hz[subIndBottom(k)] );
           
-        Uz[ang][m_e-1] += ex*b_e*coef;
-        Wx[ang][m_h-1] += hz*b_h*coef;
-        Uz[ang][m_e]   += ex*ab_e*coef;
-        Wx[ang][m_h]   += hz*ab_h*coef;
-        Uz[ang][m_e+1] -= ex*a_e*coef;
-        Wx[ang][m_h+1] -= hz*a_h*coef;
+        Uz[stp+m_e-1] += ex*b_e*coef;
+        Wx[stp+m_h-1] += hz*b_h*coef;
+        Uz[stp+m_e]   += ex*ab_e*coef;
+        Wx[stp+m_h]   += hz*ab_h*coef;
+        Uz[stp+m_e+1] -= ex*a_e*coef;
+        Wx[stp+m_h+1] -= hz*a_h*coef;
 
         debug_U[0][stp+m_e-1] += ex*b_e*coef;
         debug_W[0][stp+m_h-1] += hz*b_h*coef;
@@ -820,12 +839,12 @@ static void ntff(void)
         int k = subInd(rt, j);
         double complex ey = -Ey[k];
         double complex hz = -0.5*( Hz[k] + Hz[subIndLeft(k)] );
-        Uz[ang][m_e-1] += ey*b_e*coef;
-        Wy[ang][m_h-1] += hz*b_h*coef;
-        Uz[ang][m_e]   += ey*ab_e*coef;
-        Wy[ang][m_h]   += hz*ab_h*coef;
-        Uz[ang][m_e+1] -= ey*a_e*coef;
-        Wy[ang][m_h+1] -= hz*a_h*coef;
+        Uz[stp+m_e-1] += ey*b_e*coef;
+        Wy[stp+m_h-1] += hz*b_h*coef;
+        Uz[stp+m_e]   += ey*ab_e*coef;
+        Wy[stp+m_h]   += hz*ab_h*coef;
+        Uz[stp+m_e+1] -= ey*a_e*coef;
+        Wy[stp+m_h+1] -= hz*a_h*coef;
 
         debug_U[1][stp+m_e-1] += ey*b_e*coef;
         debug_W[1][stp+m_h-1] += hz*b_h*coef;
@@ -856,12 +875,12 @@ static void ntff(void)
         double complex ex = Ex[k];
         double complex hz = 0.5*( Hz[k] + Hz[subIndBottom(k)] );
 
-        Uz[ang][m_e-1] += ex*b_e*coef;
-        Wx[ang][m_h-1] += hz*b_h*coef;
-        Uz[ang][m_e]   += ex*ab_e*coef;
-        Wx[ang][m_h]   += hz*ab_h*coef;
-        Uz[ang][m_e+1] -= ex*a_e*coef;
-        Wx[ang][m_h+1] -= hz*a_h*coef;
+        Uz[stp+m_e-1] += ex*b_e*coef;
+        Wx[stp+m_h-1] += hz*b_h*coef;
+        Uz[stp+m_e]   += ex*ab_e*coef;
+        Wx[stp+m_h]   += hz*ab_h*coef;
+        Uz[stp+m_e+1] -= ex*a_e*coef;
+        Wx[stp+m_h+1] -= hz*a_h*coef;
 
         debug_U[1][stp+m_e-1] += ex*b_e*coef;
         debug_W[1][stp+m_h-1] += hz*b_h*coef;
@@ -892,12 +911,12 @@ static void ntff(void)
         double complex ey = Ey[k];
         double complex hz = 0.5*( Hz[k] + Hz[subIndLeft(k)] );
       
-        Uz[ang][m_e-1] += ey*b_e*coef;
-        Wy[ang][m_h-1] += hz*b_h*coef;
-        Uz[ang][m_e]   += ey*ab_e*coef;
-        Wy[ang][m_h]   += hz*ab_h*coef;
-        Uz[ang][m_e+1] -= ey*a_e*coef;
-        Wy[ang][m_h+1] -= hz*a_h*coef;
+        Uz[stp+m_e-1] += ey*b_e*coef;
+        Wy[stp+m_h-1] += hz*b_h*coef;
+        Uz[stp+m_e]   += ey*ab_e*coef;
+        Wy[stp+m_h]   += hz*ab_h*coef;
+        Uz[stp+m_e+1] -= ey*a_e*coef;
+        Wy[stp+m_h+1] -= hz*a_h*coef;
 
         debug_U[3][stp+m_e-1] += ey*b_e*coef;
         debug_U[3][stp+m_e]   += ey*ab_e*coef;
@@ -911,3 +930,87 @@ static void ntff(void)
   }
 }
 
+//ntff用のフォーマットでdataをfileNameに保存
+static inline void ntffSaveData(const char *fileName, double complex *data)
+{
+  char realFile[256], imagFile[256];
+  FILE *fpR, *fpI;
+  NTFFInfo nInfo = field_getNTFFInfo();
+  const int maxTime = field_getMaxTime();
+  int ang;
+    
+  sprintf(realFile, "%s_r.txt", fileName);
+  sprintf(imagFile, "%s_i.txt", fileName);
+  
+  fpR = fileOpen(realFile);
+  fpI = fileOpen(imagFile);
+  
+  for(ang=0; ang<360; ang++)
+  {
+    int k= ang*nInfo.arraySize;
+    int i;
+    for(i=0; i < maxTime; i++)
+    {
+        fprintf(fpR,"%.20lf " , creal(data[k+i]));
+        fprintf(fpI,"%.20lf " , cimag(data[k+i]));  
+    }
+    fprintf(fpR,"\n");
+    fprintf(fpI,"\n");
+  }
+  printf("saved at %s & %s\n",realFile, imagFile);
+}
+
+static void debug_ntffOutput()
+{
+  char fileName[256];
+  int i;
+  for(i=0; i<4;i++)
+  {
+    sprintf(fileName, "debug%d_U",i);
+    ntffSaveData(fileName, debug_U[i]);
+    
+    sprintf(fileName, "debug%d_W",i);
+    ntffSaveData(fileName, debug_W[i]);
+  }
+}
+
+static void ntffOutput()
+{
+  const double w_s = field_getOmega();
+  const double complex coef = csqrt( 2*M_PI*C_0_S/(I*w_s) );
+  const int maxTime = field_getMaxTime();
+  NTFFInfo nInfo = field_getNTFFInfo();
+  double complex *Eth = (double complex*)malloc(sizeof(double complex)*360*nInfo.arraySize);
+  double complex *Eph = (double complex*)malloc(sizeof(double complex)*360*nInfo.arraySize);
+  int ang;
+  double theta = 0;
+  for(ang=0; ang<360; ang++)
+  {
+    double phi = ang*M_PI/180.0;
+    
+    int k= ang*nInfo.arraySize;    
+    double sx = cos(theta)*cos(phi);
+    double sy = cos(theta)*sin(phi);
+    double sz = -cos(theta); //宇野先生の本では -sin(theta)になってる
+    double px = -sin(phi);
+    double py = cos(phi);
+    int i;
+    for(i=0; i < maxTime; i++)
+    {
+      double complex WTH = Wx[k+i]*sx + Wy[k+i]*sy + 0;
+      double complex WPH = Wx[k+i]*px + Wy[k+i]*py; //TODO 式を確認
+      double complex UTH = 0 + 0 + Uz[k+i]*sz;
+      double complex UPH = 0 + 0; //TODO 式を確認
+      double complex ETH  = coef*(-Z_0_S*WTH-UPH);
+      double complex EPH  = coef*(-Z_0_S*WPH+UTH);
+      
+      Eth[k+i] = ETH;
+      Eph[k+i] = EPH;
+    }
+  }
+  ntffSaveData("Eph", Eph);
+  ntffSaveData("Eth", Eth);
+  free(Eph);
+  free(Eth);
+  debug_ntffOutput();
+}

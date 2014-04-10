@@ -10,11 +10,11 @@ extern double complex* fdtdTM_upml_getHy(void);
 extern double complex* fdtdTM_upml_getEz(void);
 extern double * fdtdTM_upml_getEps(void);
 
-extern inline int fdtdTM_upml_getSubNx(void);
-extern inline int fdtdTM_upml_getSubNy(void);
-extern inline int fdtdTM_upml_getSubNpx(void);
-extern inline int fdtdTM_upml_getSubNpy(void);
-extern inline int fdtdTM_upml_getSubNcell(void);
-extern inline void fdtdTM_upml_getSubFieldPositions(int *subNx,int *subNy,int *subNpx, int *subNpy);
+extern int fdtdTM_upml_getSubNx(void);
+extern int fdtdTM_upml_getSubNy(void);
+extern int fdtdTM_upml_getSubNpx(void);
+extern int fdtdTM_upml_getSubNpy(void);
+extern int fdtdTM_upml_getSubNcell(void);
+extern void fdtdTM_upml_getSubFieldPositions(int *subNx,int *subNy,int *subNpx, int *subNpy);
 
 #endif

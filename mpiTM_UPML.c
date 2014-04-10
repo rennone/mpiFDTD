@@ -194,7 +194,7 @@ static void update(void)
   calcE();
   scatteredWave(Ez, EPS_EZ);
   //planeWave(Ez, EPS_EZ);
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_COMM_WORLD); //いらない?
   
   //Connection_SendRecvE();
   Connection_ISend_IRecvE();
@@ -793,8 +793,9 @@ static void ntff()
   int rt = nInfo.right  - offsetX; //右
   int lt = nInfo.left   - offsetX; //左
 
+  int ang;
   //360°方向の, 遠方界を求める
-  for(int ang=0; ang<360; ang++)
+  for(ang=0; ang<360; ang++)
   {
     double rad = ang*M_PI/180.0;
     double r1x = cos(rad), r1y = sin(rad);
