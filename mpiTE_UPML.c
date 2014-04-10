@@ -49,7 +49,8 @@ static double complex *debug_W[4];
 static void update(void);
 static void finish(void);
 static void init(void);
-static void initMpi();
+static void initMpi(void);
+static void initDebug(void);
 static void allocateMemories();
 static void freeMemories();
 static void setCoefficient();
@@ -269,6 +270,7 @@ static void init(){
   initMpi();
   allocateMemories();
   setCoefficient();
+  initDebug();
 }
 
 static void update(void)
@@ -449,13 +451,6 @@ static void allocateMemories()
   memset(Wx, 0, sizeof(double complex)*360*info.arraySize);
   memset(Wy, 0, sizeof(double complex)*360*info.arraySize);
   memset(Uz, 0, sizeof(double complex)*360*info.arraySize);
-
-  int i;
-  for(i=0; i<4; i++)
-  {    
-    debug_U[i] = (double complex*)malloc(sizeof(double complex)*360*info.arraySize);
-    debug_W[i] = (double complex*)malloc(sizeof(double complex)*360*info.arraySize);
-  }
 }
 
 static void setCoefficient()
@@ -781,12 +776,14 @@ static void ntff()
   int rt = nInfo.right  - offsetX; //右
   int lt = nInfo.left   - offsetX; //左
   int ang;
-  for(ang=0; ang<360; ang++)
+  
+  for(ang=0, stp=0; ang<360; ang++, stp+=nInfo.arraySize)
   {
     double rad = ang*M_PI/180.0;
     double r1x = cos(rad), r1y = sin(rad);
 
-    const int stp = ang*nInfo.arraySize;
+//    const int stp = ang*nInfo.arraySize;
+    
     //bottom side
     //normal vector n is (0,-1, 0)
     //Js = n × H = (-Hz, 0, 0)  Ms = E × n = (0, 0, -Ex)
@@ -804,7 +801,7 @@ static void ntff()
         
         double timeShift = -(r1x*r2x + r1y*r2y)/C_0_S + nInfo.RFperC;
         ntffCoef(timeE, timeShift, &m_e, &a_e, &b_e, &ab_e);
-        ntffCoef(timeH, timeShift, &m_e, &a_e, &b_e, &ab_e);
+        ntffCoef(timeH, timeShift, &m_h, &a_h, &b_h, &ab_h);
 
         int k = subInd(i, bm);
         double complex ex = -Ex[k];
@@ -817,12 +814,15 @@ static void ntff()
         Uz[stp+m_e+1] -= ex*a_e*coef;
         Wx[stp+m_h+1] -= hz*a_h*coef;
 
+#ifdef DEBUG
         debug_U[0][stp+m_e-1] += ex*b_e*coef;
         debug_W[0][stp+m_h-1] += hz*b_h*coef;
         debug_U[0][stp+m_e]   += ex*ab_e*coef;
         debug_W[0][stp+m_h]   += hz*ab_h*coef;
         debug_U[0][stp+m_e+1] -= ex*a_e*coef;        
         debug_W[0][stp+m_h+1] -= hz*a_h*coef;
+        #endif
+
       }
     }
 
@@ -852,12 +852,14 @@ static void ntff()
         Uz[stp+m_e+1] -= ey*a_e*coef;
         Wy[stp+m_h+1] -= hz*a_h*coef;
 
+#ifdef DEBUG
         debug_U[1][stp+m_e-1] += ey*b_e*coef;
         debug_W[1][stp+m_h-1] += hz*b_h*coef;
         debug_U[1][stp+m_e]   += ey*ab_e*coef;
         debug_W[1][stp+m_h]   += hz*ab_h*coef;
         debug_U[1][stp+m_e+1] -= ey*a_e*coef;        
-        debug_W[1][stp+m_h+1] -= hz*a_h*coef;        
+        debug_W[1][stp+m_h+1] -= hz*a_h*coef;
+#endif
       }
     }
 
@@ -887,13 +889,15 @@ static void ntff()
         Wx[stp+m_h]   += hz*ab_h*coef;
         Uz[stp+m_e+1] -= ex*a_e*coef;
         Wx[stp+m_h+1] -= hz*a_h*coef;
-
+        
+#ifdef DEBUG
         debug_U[1][stp+m_e-1] += ex*b_e*coef;
         debug_W[1][stp+m_h-1] += hz*b_h*coef;
         debug_U[1][stp+m_e]   += ex*ab_e*coef;
         debug_W[1][stp+m_h]   += hz*ab_h*coef;
         debug_U[1][stp+m_e+1] -= ex*a_e*coef;        
         debug_W[1][stp+m_h+1] -= hz*a_h*coef;
+#endif
       }
     }
     
@@ -924,15 +928,16 @@ static void ntff()
         Uz[stp+m_e+1] -= ey*a_e*coef;
         Wy[stp+m_h+1] -= hz*a_h*coef;
 
+#ifdef DEBUG
         debug_U[3][stp+m_e-1] += ey*b_e*coef;
         debug_U[3][stp+m_e]   += ey*ab_e*coef;
         debug_U[3][stp+m_e+1] -= ey*a_e*coef;
         debug_W[3][stp+m_h-1] += hz*b_h*coef;
         debug_W[3][stp+m_h]   += hz*ab_h*coef;
         debug_W[3][stp+m_h+1] -= hz*a_h*coef;
+#endif
       }
-    }
-
+    }    
   }
 }
 
@@ -1019,4 +1024,21 @@ static void ntffOutput()
   free(Eph);
   free(Eth);
   debug_ntffOutput();
+}
+
+//============================================================
+// for Debug
+//============================================================
+static void initDebug()
+{  
+#ifdef DEBUG
+  printf("debug mode\n");
+  NTFFInfo info = field_getNTFFInfo();
+  int i;
+  for(i=0; i<4; i++)
+  {    
+  debug_U[i] = (double complex*)malloc(sizeof(double complex)*360*info.arraySize);
+  debug_W[i] = (double complex*)malloc(sizeof(double complex)*360*info.arraySize);
+}
+#endif
 }

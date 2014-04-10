@@ -63,7 +63,7 @@ int main( int argc, char *argv[] )
   double lambda = 500;  //波長(nm)
   int      step = 2000; //計算ステップ
   enum MODEL   modelType = MIE_CYLINDER; // モデルの種類
-  enum SOLVER solverType = TM_UPML_2D;        // 計算方法
+  enum SOLVER solverType = TE_UPML_2D;        // 計算方法
   simulator_init(width, height, h_u, pml, lambda, step, modelType, solverType);    //simulator
 
 #ifdef USE_OPENGL

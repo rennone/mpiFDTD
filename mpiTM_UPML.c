@@ -3,11 +3,12 @@
 #include <string.h>
 #include <math.h>
 #include <mpi.h>
+#include <sys/stat.h>
 #include "mpiTM_UPML.h"
 #include "field.h"
 #include "models.h"
 #include "function.h"
-#include <sys/stat.h>
+
 /* about MPI  */
 static int rank;      //MPIのランク
 static int nproc;     //全プロセス数
@@ -23,8 +24,12 @@ static double complex *Ux = NULL;
 static double complex *Uy = NULL;
 static double complex *Wz = NULL;
 
+#ifdef DEBUG
 static double complex *debug_U[4];
 static double complex *debug_W[4];
+#endif
+
+static void initDebug(void);
 
 //Ez(i    , j    ) -> Ez[i,j];
 //Hx(i    , j+0.5) -> Hx[i,j];
@@ -181,10 +186,11 @@ static FILE* fileOpen(const char* fileName)
 
 //Initialize
 static void init(void)
-{  
+{
   init_mpi();
   allocateMemories();
-  setCoefficient();  
+  setCoefficient();
+  initDebug();
 }
 
 //Update
@@ -582,14 +588,6 @@ static void allocateMemories(void)
   memset(Ux, 0, sizeof(double complex)*360*info.arraySize);
   memset(Uy, 0, sizeof(double complex)*360*info.arraySize);
   memset(Wz, 0, sizeof(double complex)*360*info.arraySize);
-
-
-  int i;
-  for(i=0; i<4; i++)
-  {    
-    debug_U[i] = (double complex*)malloc(sizeof(double complex)*360*info.arraySize);
-    debug_W[i] = (double complex*)malloc(sizeof(double complex)*360*info.arraySize);
-  }
 }
 
 static void setCoefficient(void)
@@ -653,12 +651,12 @@ static void init_mpi(void)
   MPI_Comm_size(MPI_COMM_WORLD, &nproc); //プロセス数の取得
   int dim = 2;          //number of dimension
   int procs[2] = {0,0}; //[0]: x方向の分割数, [1]:y方向の分割数 がはいる
-  int period[2] = {0,0};//境界条件, 固定境界
+  int period[2] = {0,0};//境界条件, 0は固定境界
   MPI_Comm grid_comm;
   int reorder = 1;   //re-distribute rank flag
 
   MPI_Dims_create(nproc, dim, procs); //縦横を何分割にするか自動的に計算
-  MPI_Cart_create(MPI_COMM_WORLD, 2, procs, period, reorder, &grid_comm); //領域を分割
+  MPI_Cart_create(MPI_COMM_WORLD, 2, procs, period, reorder, &grid_comm); //領域を自動分割 => procs, grid_commは変更される
   MPI_Cart_shift(grid_comm, 0, 1, &ltRank, &rtRank);
   MPI_Cart_shift(grid_comm, 1, 1, &bmRank, &tpRank);
 
@@ -669,8 +667,8 @@ static void init_mpi(void)
   
   SUB_N_X = N_PX / procs[0];
   SUB_N_Y = N_PY / procs[1];
-  SUB_N_PX = SUB_N_X + 2; //のりしろの分2大きい
-  SUB_N_PY = SUB_N_Y + 2; //のりしろの分2大きい
+  SUB_N_PX = SUB_N_X + 2; //のりしろ(となりの領域の値が入る部分)の分2大きい
+  SUB_N_PY = SUB_N_Y + 2;
   SUB_N_CELL = SUB_N_PX*SUB_N_PY;  
   offsetX = coordinates[0] * SUB_N_X; //ランクのインデックスではなく, セル単位のオフセットなのでSUB_N_Xずれる
   offsetY = coordinates[1] * SUB_N_Y;
@@ -715,6 +713,7 @@ static inline void ntffSaveData(const char *fileName, double complex *data)
 
 static inline void debug_ntffOutput()
 {
+  #ifdef DEBUG
   char fileName[256];
   int i;
   for(i=0; i<4;i++)
@@ -725,6 +724,7 @@ static inline void debug_ntffOutput()
     sprintf(fileName, "debug%d_W",i);
     ntffSaveData(fileName, debug_W[i]);
   }
+  #endif
 }
 
 static inline void ntffOutput()
@@ -836,13 +836,15 @@ static void ntff()
         Wz[stp+m_h]   += hx*ab_h*coef;
         Ux[stp+m_e+1] -= ez*a_e*coef;        
         Wz[stp+m_h+1] -= hx*a_h*coef;
-
+        
+#ifdef DEBUG
         debug_U[0][stp+m_e-1] += ez*b_e*coef;
         debug_W[0][stp+m_h-1] += hx*b_h*coef;
         debug_U[0][stp+m_e]   += ez*ab_e*coef;
         debug_W[0][stp+m_h]   += hx*ab_h*coef;
         debug_U[0][stp+m_e+1] -= ez*a_e*coef;        
         debug_W[0][stp+m_h+1] -= hx*a_h*coef;
+#endif
       }
     }
     
@@ -873,13 +875,16 @@ static void ntff()
         Wz[stp+m_h]   += hy*ab_h*coef;      
         Uy[stp+m_e+1] -= ez*a_e*coef;              
         Wz[stp+m_h+1] -= hy*a_h*coef;
-        
+
+#ifdef DEBUG
         debug_U[1][stp+m_e-1] += ez*b_e*coef;
         debug_W[1][stp+m_h-1] += hy*b_h*coef;
         debug_U[1][stp+m_e]   += ez*ab_e*coef;
         debug_W[1][stp+m_h]   += hy*ab_h*coef;
         debug_U[1][stp+m_e+1] -= ez*a_e*coef;        
-        debug_W[1][stp+m_h+1] -= hy*a_h*coef;        
+        debug_W[1][stp+m_h+1] -= hy*a_h*coef;
+#endif
+
       }
     }
 
@@ -909,13 +914,15 @@ static void ntff()
         Wz[stp+m_h]   += hx*ab_h*coef;
         Ux[stp+m_e+1] -= ez*a_e*coef;        
         Wz[stp+m_h+1] -= hx*a_h*coef;
-        
+
+#ifdef DEBUG
         debug_U[2][stp+m_e-1] += ez*b_e*coef;
         debug_W[2][stp+m_h-1] += hx*b_h*coef;
         debug_U[2][stp+m_e]   += ez*ab_e*coef;
         debug_W[2][stp+m_h]   += hx*ab_h*coef;
         debug_U[2][stp+m_e+1] -= ez*a_e*coef;        
         debug_W[2][stp+m_h+1] -= hx*a_h*coef;
+#endif
       }
     }
 
@@ -947,12 +954,14 @@ static void ntff()
         Uy[stp+m_e+1] -= ez*a_e*coef;      
         Wz[stp+m_h+1] -= hy*a_h*coef;
 
+#ifdef DEBUG
         debug_U[3][stp+m_e-1] += ez*b_e*coef;
         debug_U[3][stp+m_e]   += ez*ab_e*coef;
         debug_U[3][stp+m_e+1] -= ez*a_e*coef;
         debug_W[3][stp+m_h-1] += hy*b_h*coef;
         debug_W[3][stp+m_h]   += hy*ab_h*coef;
         debug_W[3][stp+m_h+1] -= hy*a_h*coef;
+#endif
       }
     }
   }
@@ -978,10 +987,7 @@ static inline void ntffFrequency()
   int lt = nInfo.left   - offsetX; //左
 
   const int max_angle = 360;
-
   int ang;
-
-
   static double complex ntffEz[360];
 
   printf("ntffFrequency start\n");
@@ -1006,7 +1012,7 @@ static inline void ntffFrequency()
       int subRight = min(SUB_N_PX, rt); //領域の端っこでなれば, 全部が積分路なのでSUB_N_PX-1 でなく SUB_N_PX まで
       for ( int i=subLeft; i<subRight; i++ )
       {
-        r2x  =  i-cx;
+        r2x  =  i-cx; //cx, cyを分割領域空間に変換してるので, そのまま引き算が出来る
         r2y  = bm-cy;
 
         int k = subInd(&i, &bm);
@@ -1025,7 +1031,7 @@ static inline void ntffFrequency()
       int subBottom = max(1, bm);
        for ( int j=subBottom; j<subTop; j++ )
       {
-        r2x  = rt-cx;
+        r2x  = rt-cx; //cx, cyを分割領域空間に変換してるので, そのまま引き算が出来る
         r2y  =  j-cy;
 
         int k = subInd(&rt, &j);
@@ -1097,4 +1103,21 @@ static inline void ntffFrequency()
   fclose(fpI);
   printf("saved at %s & %s \n", nameRe, nameIm);
   printf("ntffFrequency end\n");
+}
+
+//============================================================
+// for Debug 
+//============================================================
+static void initDebug()
+{
+#ifdef DEBUG
+  printf("debug mode\n");
+  NTFFInfo info = field_getNTFFInfo();
+  int i;
+  for(i=0; i<4; i++)
+  {    
+    debug_U[i] = (double complex*)malloc(sizeof(double complex)*360*info.arraySize);
+    debug_W[i] = (double complex*)malloc(sizeof(double complex)*360*info.arraySize);
+  }
+#endif  
 }
