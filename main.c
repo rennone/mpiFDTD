@@ -1,7 +1,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <mpi.h>
+//#include <mpi.h>
 #include <complex.h>
 #include "simulator.h"
 
@@ -43,19 +43,19 @@ void idle(void)
 
   if( simulator_isFinish() )
   {
-    MPI_Barrier(MPI_COMM_WORLD);
+//    MPI_Barrier(MPI_COMM_WORLD);
     simulator_finish();
-    MPI_Finalize();
+//    MPI_Finalize();
     exit(0);
-  }  
+  }
   glutPostRedisplay();  //再描画
-  MPI_Barrier(MPI_COMM_WORLD);
+//  MPI_Barrier(MPI_COMM_WORLD);
 }
 #endif
 
 int main( int argc, char *argv[] )
 {
-  MPI_Init( 0, 0 );    
+//  MPI_Init( 0, 0 );    
   int    width  = 2560; //横幅(nm)
   int    height = 2560; //縦幅(nm)
   double   h_u  = 10;   //1セルの大きさ(nm)
@@ -63,7 +63,7 @@ int main( int argc, char *argv[] )
   double lambda = 500;  //波長(nm)
   int      step = 2000; //計算ステップ
   enum MODEL   modelType = MIE_CYLINDER; // モデルの種類
-  enum SOLVER solverType = TE_UPML_2D;        // 計算方法
+  enum SOLVER solverType = TM_UPML_2D;        // 計算方法
   simulator_init(width, height, h_u, pml, lambda, step, modelType, solverType);    //simulator
 
 #ifdef USE_OPENGL
@@ -80,7 +80,7 @@ int main( int argc, char *argv[] )
   glewInit();
   drawer_init(colorMode);
   glutMainLoop();
-  MPI_Finalize();
+//  MPI_Finalize();
 #endif
 
 #ifndef USE_OPENGL
@@ -89,9 +89,9 @@ int main( int argc, char *argv[] )
   {
     simulator_calc();    
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+//  MPI_Barrier(MPI_COMM_WORLD);
   simulator_finish();
-  MPI_Finalize();
+//  MPI_Finalize();
 #endif
 
   return 1;

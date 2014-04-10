@@ -209,10 +209,15 @@ static void update(void)
 //Finish
 static void finish(void)
 {
+  //最後は同期をとっておく
+  MPI_Barrier(MPI_COMM_WORLD);
+  
   ntffOutput();
 //  ntffFrequency();
 //  output();
   freeMemories();
+  
+  MPI_Finalize();
 }
 
 static inline void Connection_ISend_IRecvH(void)
@@ -644,6 +649,7 @@ static void setCoefficient(void)
 
 static void init_mpi(void)
 {
+  MPI_Init( 0, 0 );
   MPI_Comm_size(MPI_COMM_WORLD, &nproc); //プロセス数の取得
   int dim = 2;          //number of dimension
   int procs[2] = {0,0}; //[0]: x方向の分割数, [1]:y方向の分割数 がはいる

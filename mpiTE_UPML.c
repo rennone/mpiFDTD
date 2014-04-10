@@ -273,6 +273,8 @@ static void init(){
 
 static void update(void)
 {
+//  MPI_Barrier(MPI_COMM_WORLD);
+  
   calcJD();
   calcE();
   
@@ -288,9 +290,12 @@ static void update(void)
 
 static void finish()
 {
+  MPI_Barrier(MPI_COMM_WORLD);
 //  ntffFrequency();
   output();
   freeMemories();
+  
+  MPI_Finalize();
 }
 
 static inline void calcJD(void)
@@ -360,6 +365,7 @@ static inline void calcH(void)
 //-----------------memory allocate-------------//
 static void initMpi()
 {
+  MPI_Init( 0, 0 );    
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
   int dim = 2;          //number of dimension is 2
   int procs[2] = {0,0};         //[0]: x方向の分割数, [1]:y方向の分割数
