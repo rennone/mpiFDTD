@@ -21,26 +21,26 @@ static double* (* getEpsMethod )() = NULL;
 static struct timeval timer1, timer2;
 
 static void setTMupml(){
-  update = fdtdTM_upml_getUpdate();
-  initMethod = fdtdTM_upml_getInit();
-  finishMethod = fdtdTM_upml_getFinish();
-  getSubFieldPositionMethod = fdtdTM_upml_getSubFieldPositions;
-  getEpsMethod = fdtdTM_upml_getEps;  
-  getDataX = fdtdTM_upml_getHx;
-  getDataY = fdtdTM_upml_getHy;
-  getDataZ = fdtdTM_upml_getEz;
+  update = mpi_fdtdTM_upml_getUpdate();
+  initMethod = mpi_fdtdTM_upml_getInit();
+  finishMethod = mpi_fdtdTM_upml_getFinish();
+  getSubFieldPositionMethod = mpi_fdtdTM_upml_getSubFieldPositions;
+  getEpsMethod = mpi_fdtdTM_upml_getEps;  
+  getDataX = mpi_fdtdTM_upml_getHx;
+  getDataY = mpi_fdtdTM_upml_getHy;
+  getDataZ = mpi_fdtdTM_upml_getEz;
 }
 
 static void setTEupml(){
-  update = fdtdTE_upml_getUpdate();
-  initMethod = fdtdTE_upml_getInit();
-  finishMethod = fdtdTE_upml_getFinish();
-  getSubFieldPositionMethod = fdtdTE_upml_getSubFieldPositions;
-  getEpsMethod = fdtdTE_upml_getEps;
+  update = mpi_fdtdTE_upml_getUpdate();
+  initMethod = mpi_fdtdTE_upml_getInit();
+  finishMethod = mpi_fdtdTE_upml_getFinish();
+  getSubFieldPositionMethod = mpi_fdtdTE_upml_getSubFieldPositions;
+  getEpsMethod = mpi_fdtdTE_upml_getEps;
 
-  getDataX = fdtdTE_upml_getEx;
-  getDataY = fdtdTE_upml_getEy;
-  getDataZ = fdtdTE_upml_getHz;
+  getDataX = mpi_fdtdTE_upml_getEx;
+  getDataY = mpi_fdtdTE_upml_getEy;
+  getDataZ = mpi_fdtdTE_upml_getHz;
 }
 
 static void setSolver(enum SOLVER solver)

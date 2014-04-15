@@ -1,7 +1,6 @@
-
 #include <stdio.h>
 #include <stdlib.h>
-//#include <mpi.h>
+
 #include <complex.h>
 #include "simulator.h"
 
@@ -11,10 +10,12 @@
 #define WINDOW_HEIGHT 300
 #include <GL/glew.h>
 
+//Macの場合
 #ifdef MAC_OS
 #include <GLUT/glut.h>
 #endif
 
+//Mac以外
 #ifndef MAC_OS
 #include <GL/glut.h>
 #endif

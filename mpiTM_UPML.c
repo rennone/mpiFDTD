@@ -82,57 +82,57 @@ static inline void ntffOutput();
 static inline void ntffFrequency();
 
 //:public
-inline int fdtdTM_upml_getSubNx(void)
+inline int mpi_fdtdTM_upml_getSubNx(void)
 {
   return SUB_N_X;
 }
-inline int fdtdTM_upml_getSubNy(void)
+inline int mpi_fdtdTM_upml_getSubNy(void)
 {
   return SUB_N_Y;
 }
-inline int fdtdTM_upml_getSubNpx(void)
+inline int mpi_fdtdTM_upml_getSubNpx(void)
 {
   return SUB_N_PX;
 }
-inline int fdtdTM_upml_getSubNpy(void)
+inline int mpi_fdtdTM_upml_getSubNpy(void)
 {
   return SUB_N_PY;
 }
-inline int fdtdTM_upml_getSubNcell(void)
+inline int mpi_fdtdTM_upml_getSubNcell(void)
 {
   return SUB_N_CELL;
 }
 
-inline void fdtdTM_upml_getSubFieldPositions(int *subNx,int *subNy,int *subNpx, int *subNpy)
+inline void mpi_fdtdTM_upml_getSubFieldPositions(int *subNx,int *subNy,int *subNpx, int *subNpy)
 {
-  *subNx = fdtdTM_upml_getSubNx();
-  *subNy = fdtdTM_upml_getSubNy();
-  *subNpx = fdtdTM_upml_getSubNpx();
-  *subNpy = fdtdTM_upml_getSubNpy();
+  *subNx = mpi_fdtdTM_upml_getSubNx();
+  *subNy = mpi_fdtdTM_upml_getSubNy();
+  *subNpx = mpi_fdtdTM_upml_getSubNpx();
+  *subNpy = mpi_fdtdTM_upml_getSubNpy();
 }
 
-void (* fdtdTM_upml_getUpdate(void))(void)
+void (* mpi_fdtdTM_upml_getUpdate(void))(void)
 {
   return update;
 }
-void (* fdtdTM_upml_getFinish(void))(void)
+void (* mpi_fdtdTM_upml_getFinish(void))(void)
 {
   return finish;
 }
-void (* fdtdTM_upml_getInit(void))(void)
+void (* mpi_fdtdTM_upml_getInit(void))(void)
 {
   return init;
 }
-double complex* fdtdTM_upml_getHx(void){
+double complex* mpi_fdtdTM_upml_getHx(void){
   return Hx;
 }
-double complex* fdtdTM_upml_getHy(void){
+double complex* mpi_fdtdTM_upml_getHy(void){
   return Hy;
 }
-double complex* fdtdTM_upml_getEz(void){
+double complex* mpi_fdtdTM_upml_getEz(void){
   return Ez;
 }
-double* fdtdTM_upml_getEps(void){
+double* mpi_fdtdTM_upml_getEps(void){
   return EPS_EZ;
 }
 

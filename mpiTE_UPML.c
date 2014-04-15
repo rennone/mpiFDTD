@@ -66,63 +66,63 @@ static void ntffFrequency(void);
 static void ntffOutput(void);
 
 //:public-------------------------------//
-void (* fdtdTE_upml_getUpdate(void))(void)
+void (* mpi_fdtdTE_upml_getUpdate(void))(void)
 {
   return update;
 }
 
-void (* fdtdTE_upml_getFinish(void))(void)
+void (* mpi_fdtdTE_upml_getFinish(void))(void)
 {
   return finish;
 }
 
-void (* fdtdTE_upml_getInit(void))(void)
+void (* mpi_fdtdTE_upml_getInit(void))(void)
 {
   return init;
 }
 
-double complex* fdtdTE_upml_getEx(void){
+double complex* mpi_fdtdTE_upml_getEx(void){
   return Ex;
 }
 
-double complex* fdtdTE_upml_getEy(void){
+double complex* mpi_fdtdTE_upml_getEy(void){
   return Ey;
 }
 
-double complex* fdtdTE_upml_getHz(void){
+double complex* mpi_fdtdTE_upml_getHz(void){
   return Hz;
 }
 
-double* fdtdTE_upml_getEps(void){
+double* mpi_fdtdTE_upml_getEps(void){
   return EPS_EY;
 }
 
-int fdtdTE_upml_getSubNx(void){
+int mpi_fdtdTE_upml_getSubNx(void){
   return SUB_N_X;
 }
 
-int fdtdTE_upml_getSubNy(void){
+int mpi_fdtdTE_upml_getSubNy(void){
   return SUB_N_Y;
 }
 
-int fdtdTE_upml_getSubNpx(void){
+int mpi_fdtdTE_upml_getSubNpx(void){
   return SUB_N_PX;
 }
 
-int fdtdTE_upml_getSubNpy(void){
+int mpi_fdtdTE_upml_getSubNpy(void){
   return SUB_N_PY;
 }
 
-int fdtdTE_upml_getSubNcell(void){
+int mpi_fdtdTE_upml_getSubNcell(void){
   return SUB_N_CELL;
 }
 
-void fdtdTE_upml_getSubFieldPositions(int *subNx,int *subNy,int *subNpx, int *subNpy)
+void mpi_fdtdTE_upml_getSubFieldPositions(int *subNx,int *subNy,int *subNpx, int *subNpy)
 {
-  *subNx = fdtdTE_upml_getSubNx();
-  *subNy = fdtdTE_upml_getSubNy();
-  *subNpx = fdtdTE_upml_getSubNpx();
-  *subNpy = fdtdTE_upml_getSubNpy();
+  *subNx = mpi_fdtdTE_upml_getSubNx();
+  *subNy = mpi_fdtdTE_upml_getSubNy();
+  *subNpx = mpi_fdtdTE_upml_getSubNpx();
+  *subNpy = mpi_fdtdTE_upml_getSubNpy();
 }
 
 //:private ----------------------------//
@@ -275,12 +275,11 @@ static void init(){
 
 static void update(void)
 {
-//  MPI_Barrier(MPI_COMM_WORLD);
-  
+//  MPI_Barrier(MPI_COMM_WORLD);  
   calcJD();
   calcE();
   
-  scatteredWave(Ey, EPS_EY);  
+  scatteredWave(Ey, EPS_EY);
 //  Connection_SendRecvE();
   Connection_ISend_IRecvE();
   calcMB();
@@ -776,7 +775,7 @@ static void ntff()
   int rt = nInfo.right  - offsetX; //右
   int lt = nInfo.left   - offsetX; //左
   int ang;
-  
+  int stp;
   for(ang=0, stp=0; ang<360; ang++, stp+=nInfo.arraySize)
   {
     double rad = ang*M_PI/180.0;
@@ -821,7 +820,7 @@ static void ntff()
         debug_W[0][stp+m_h]   += hz*ab_h*coef;
         debug_U[0][stp+m_e+1] -= ex*a_e*coef;        
         debug_W[0][stp+m_h+1] -= hz*a_h*coef;
-        #endif
+#endif
 
       }
     }

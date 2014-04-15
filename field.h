@@ -15,7 +15,7 @@ enum WAVE_MODE{
   SCATTER //散乱波
 };
 
-typedef struct ntffInfo
+typedef struct NFFInfo
 {
   int top, bottom, left, right;
   int cx,cy;
