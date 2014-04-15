@@ -252,7 +252,7 @@ static inline void scatteredWave(double complex *p, double *eps){
   double w_s  = field_getOmega();
   double ray_coef = field_getRayCoef();
   double k_s = field_getK();  
-  double rad = field_getWaveAngle()*M_PI/180;	//ラジアン変換
+  double rad = field_getWaveAngle()*M_PI/180.0;	//ラジアン変換
   double ks_cos = cos(rad)*k_s, ks_sin = sin(rad)*k_s;	//毎回計算すると時間かかりそうだから,代入しておく
   int i,j;
   for(i=1; i<SUB_N_PX-1; i++){
@@ -275,17 +275,17 @@ static void init(){
 
 static void update(void)
 {
-//  MPI_Barrier(MPI_COMM_WORLD);  
+  MPI_Barrier(MPI_COMM_WORLD);  
   calcJD();
   calcE();
   
   scatteredWave(Ey, EPS_EY);
-//  Connection_SendRecvE();
-  Connection_ISend_IRecvE();
+  Connection_SendRecvE();
+//  Connection_ISend_IRecvE(); //bug => うまく動かない
   calcMB();
   calcH();
-//  Connection_SendRecvH();
-  Connection_ISend_IRecvH();
+  Connection_SendRecvH();
+//  Connection_ISend_IRecvH();  //bug => うまく動かない
   ntff();
 }
 
@@ -366,7 +366,6 @@ static inline void calcH(void)
 //-----------------memory allocate-------------//
 static void initMpi()
 {
-  MPI_Init( 0, 0 );    
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
   int dim = 2;          //number of dimension is 2
   int procs[2] = {0,0};         //[0]: x方向の分割数, [1]:y方向の分割数

@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <mpi.h>
 #include <complex.h>
 #include "simulator.h"
 
@@ -44,7 +44,7 @@ void idle(void)
 
   if( simulator_isFinish() )
   {
-//    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
     simulator_finish();
 //    MPI_Finalize();
     exit(0);
@@ -56,16 +56,18 @@ void idle(void)
 
 int main( int argc, char *argv[] )
 {
-//  MPI_Init( 0, 0 );    
-  int    width  = 2560; //横幅(nm)
-  int    height = 2560; //縦幅(nm)
-  double   h_u  = 10;   //1セルの大きさ(nm)
-  int       pml = 10;  //pmlレイヤの数
-  double lambda = 500;  //波長(nm)
-  int      step = 2000; //計算ステップ
+  MPI_Init( 0, 0 );
+  FieldInfo field_info;
+  field_info.width_nm  = 2560;
+  field_info.height_nm = 2560;
+  field_info.h_u_nm    = 10;
+  field_info.pml       = 10;
+  field_info.lambda_nm = 500;
+  field_info.stepNum   = 2000;  
+
   enum MODEL   modelType = MIE_CYLINDER; // モデルの種類
   enum SOLVER solverType = TE_UPML_2D;        // 計算方法
-  simulator_init(width, height, h_u, pml, lambda, step, modelType, solverType);    //simulator
+  simulator_init(field_info, modelType, solverType);
 
 #ifdef USE_OPENGL
   int windowX = 100;

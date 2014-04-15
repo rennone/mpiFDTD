@@ -45,7 +45,16 @@ static void field_setNTFF(int);
 static void initMpi(void);
 
 //:public------------------------------------//
-//inline 意味ない->ヘッダに書かないと行けない
+void initField(FieldInfo field_info)
+{
+  setField(field_info.width_nm,
+           field_info.height_nm,
+           field_info.h_u_nm,
+           field_info.pml,
+           field_info.lambda_nm,
+           field_info.stepNum);
+}
+
 double field_toCellUnit(const double phisycalUnit)
 {
   return phisycalUnit/H_u;   //セル単位に変換 

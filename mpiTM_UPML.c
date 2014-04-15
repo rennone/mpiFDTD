@@ -316,7 +316,7 @@ static inline void scatteredWave(double complex *p, double *eps)
   double time = field_getTime();
   double w_s  = field_getOmega();
   double ray_coef = field_getRayCoef();
-  double k_s = field_getK();  
+  double k_s = field_getK();
   double rad = field_getWaveAngle()*M_PI/180;	//ラジアン変換
 
 //毎回計算すると時間かかりそうだから代入しておく  
@@ -334,17 +334,18 @@ static inline void scatteredWave(double complex *p, double *eps)
       int k = subInd(&i,&j);
       int x = i-1+offsetX;
       int y = j-1+offsetY;
-      
+
+      /*
       //ガウシアンパルス
       const double r = (x*_cos+y*_sin)/C_0_S-(time-t0);
       const double gaussian_coef = exp( -pow(r/beam_width, 2 ) );
       p[k] += gaussian_coef*(EPSILON_0_S/eps[k] - 1)*cexp(I*r*w_s);
-
-      /*
+      */
+      
       //単一波長の散乱波
       double kr = x*ks_cos+y*ks_sin;
       p[k] += ray_coef*(EPSILON_0_S/eps[k] - 1.0)*cexp( I*(kr-w_s*time) );
-      */
+      
     }
   }
 }
@@ -647,7 +648,6 @@ static void setCoefficient(void)
 
 static void init_mpi(void)
 {
-  MPI_Init( 0, 0 );
   MPI_Comm_size(MPI_COMM_WORLD, &nproc); //プロセス数の取得
   int dim = 2;          //number of dimension
   int procs[2] = {0,0}; //[0]: x方向の分割数, [1]:y方向の分割数 がはいる
