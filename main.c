@@ -63,10 +63,9 @@ int main( int argc, char *argv[] )
   field_info.h_u_nm    = 10;
   field_info.pml       = 10;
   field_info.lambda_nm = 500;
-  field_info.stepNum   = 2000;  
-
+  field_info.stepNum   = 2000;
   enum MODEL   modelType = MIE_CYLINDER; // モデルの種類
-  enum SOLVER solverType = TE_UPML_2D;        // 計算方法
+  enum SOLVER solverType = MPI_TM_UPML_2D;        // 計算方法
   simulator_init(field_info, modelType, solverType);
 
 #ifdef USE_OPENGL

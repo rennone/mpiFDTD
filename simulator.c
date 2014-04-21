@@ -20,7 +20,23 @@ static double* (* getEpsMethod )() = NULL;
 
 static struct timeval timer1, timer2;
 
-static void setTMupml(){
+static void setTM()
+{
+}
+
+static void setTE()
+{
+}
+
+static void setTMupml()
+{
+}
+
+static void setTEupml()
+{
+}
+
+static void setMPITMupml(){
   update       = mpi_fdtdTM_upml_getUpdate();
   initMethod   = mpi_fdtdTM_upml_getInit();
   finishMethod = mpi_fdtdTM_upml_getFinish();
@@ -30,10 +46,10 @@ static void setTMupml(){
   
   getDataX = mpi_fdtdTM_upml_getHx;
   getDataY = mpi_fdtdTM_upml_getHy;
-  getDataZ = mpi_fdtdTM_upml_getEz;
+  getDataZ = mpi_fdtdTM_upml_getEz;  
 }
 
-static void setTEupml(){
+static void setMPITEupml(){
   update       = mpi_fdtdTE_upml_getUpdate();
   initMethod   = mpi_fdtdTE_upml_getInit();
   finishMethod = mpi_fdtdTE_upml_getFinish();
@@ -49,13 +65,19 @@ static void setTEupml(){
 static void setSolver(enum SOLVER solver)
 {
   switch(solver){
-  case TM_UPML_2D:
-    setTMupml();
+  case TM_2D:
     break;
-  case TE_UPML_2D:
-    setTEupml();
+  case TE_2D:
     break;
-  default:    
+  case MPI_TM_UPML_2D:
+    setMPITMupml();
+    break;
+  case MPI_TE_UPML_2D:
+    setMPITEupml();
+    break;
+  default:
+    printf("error, not implement simulator (simulator.c)\n");
+    exit(2);
     break;
   }
   (*initMethod)(); //Solverの初期化, EPS, Coeffの設定  
@@ -69,7 +91,7 @@ void simulator_calc(){
 
 void simulator_init(FieldInfo field_info, enum MODEL model, enum SOLVER solver)
 {
-    //横幅(nm), 縦幅(nm), 1セルのサイズ(nm), pmlレイヤの数, 波長(nm), 計算ステップ
+  //横幅(nm), 縦幅(nm), 1セルのサイズ(nm), pmlレイヤの数, 波長(nm), 計算ステップ
   initField(field_info);
 
   //NO_MODEL. MIE_CYLINDER, SHELF, NONSHELF
@@ -81,28 +103,13 @@ void simulator_init(FieldInfo field_info, enum MODEL model, enum SOLVER solver)
   gettimeofday(&timer1, NULL); //開始時間の取得
 }
 
-/*
-void simulator_init(int width, int height , double h_u, int pml, double lambda, int step,  enum MODEL modelType, enum SOLVER solverType)
-{
-   //横幅(nm), 縦幅(nm), 1セルのサイズ(nm), pmlレイヤの数, 波長(nm), 計算ステップ
-  setField(width, height, h_u, pml, lambda, step); //必ず最初にこれ
-
-  //NO_MODEL. MIE_CYLINDER, SHELF, NONSHELF
-  // UNDONE : SHELF, NONSHELFモデル
-  setModel(modelType);  //次にこれ,  モデル(散乱体)を定義
-
-  setSolver(solverType);//Solverの設定と初期化
-
-  gettimeofday(&timer1, NULL); //開始時間の取得
-}
-*/
 void simulator_finish()
 {  
-  printf("finish at %d step \n", (int)field_getTime());  
+  printf("finish at %d step \n", (int)field_getTime());
   gettimeofday(&timer2,NULL);
   printf("time = %lf \n", timer2.tv_sec-timer1.tv_sec+(timer2.tv_usec-timer1.tv_usec)*1e-6);
-  //メモリの解放等, solverの終了処理
-  (*finishMethod)(); 
+
+  (*finishMethod)();   //メモリの解放等, solverの終了処理
 }
 
 double complex* simulator_getDrawingData(void){
@@ -113,7 +120,6 @@ bool simulator_isFinish(void)
 {
   return field_isFinish();
 }
-
 
 //小領域の幅と高さを取ってくる
 void simulator_getSubFieldPositions(int *subNx,int *subNy,int *subNpx, int *subNpy)

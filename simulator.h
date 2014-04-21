@@ -7,8 +7,12 @@
 
 enum SOLVER
 {
+  TM_2D,
+  TE_2D,
   TM_UPML_2D,
   TE_UPML_2D,
+  MPI_TM_UPML_2D,
+  MPI_TE_UPML_2D
 };
 
 extern void simulator_init(FieldInfo field_info, enum MODEL model, enum SOLVER solver);
