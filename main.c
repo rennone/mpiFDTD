@@ -3,6 +3,7 @@
 #include <mpi.h>
 #include <complex.h>
 #include "simulator.h"
+#include "field.h"
 
 #ifdef USE_OPENGL
 #include "drawer.h"
@@ -22,17 +23,19 @@
 
 void display(void)
 {
-
   glEnableClientState( GL_VERTEX_ARRAY );
   glEnableClientState( GL_TEXTURE_COORD_ARRAY );
-
-  int Nx, Ny, Npx, Npy;
-  simulator_getSubFieldPositions(&Nx, &Ny, &Npx,&Npy );
-  drawer_paintImage(1,1, Nx, Ny, Npx, Npy, simulator_getDrawingData());
-  drawer_paintModel(1,1, Nx, Ny, Npx, Npy, simulator_getEps());
+  SubFieldInfo_S subInfo = field_getSubFieldInfo();
+//  int Nx, Ny, Npx, Npy;
+//  simulator_getSubFieldPositions(&Nx, &Ny, &Npx,&Npy );
+//  drawer_paintImage(1,1, Nx, Ny, Npx, Npy, simulator_getDrawingData());
+//  drawer_paintModel(1,1, Nx, Ny, Npx, Npy, simulator_getEps());
   
-  drawer_draw();
-    
+  drawer_paintImage(1,1, subInfo.SUB_N_X, subInfo.SUB_N_Y, subInfo.SUB_N_PX, subInfo.SUB_N_PY,
+                    simulator_getDrawingData());
+  drawer_paintModel(1,1, subInfo.SUB_N_X, subInfo.SUB_N_Y, subInfo.SUB_N_PX, subInfo.SUB_N_PY,
+                    simulator_getEps());  
+  drawer_draw();    
   glDisableClientState( GL_VERTEX_ARRAY );
   glDisableClientState( GL_TEXTURE_COORD_ARRAY );
   glutSwapBuffers();
@@ -69,8 +72,10 @@ int main( int argc, char *argv[] )
   simulator_init(field_info, modelType, solverType);
 
 #ifdef USE_OPENGL
-  int windowX = 100;
-  int windowY = 100;
+  SubFieldInfo_S subInfo = field_getSubFieldInfo();
+  
+  int windowX = 1.0*subInfo.OFFSET_X / subInfo.SUB_N_PX * WINDOW_WIDTH;
+  int windowY = 800-1.0*subInfo.OFFSET_Y/subInfo.SUB_N_PY * WINDOW_HEIGHT - WINDOW_HEIGHT;
   enum COLOR_MODE colorMode = CABS;
   glutInit(&argc, argv);
   glutInitWindowPosition(windowX,windowY);

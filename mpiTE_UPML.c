@@ -247,13 +247,20 @@ static inline void Connection_SendRecvH(void)
 }
 
 //Standard Scattered Wave
-static inline void scatteredWave(double complex *p, double *eps){
+static inline void scatteredWave(double complex *p, double *eps)
+{
   double time = field_getTime();
   double w_s  = field_getOmega();
   double ray_coef = field_getRayCoef();
   double k_s = field_getK();  
   double rad = field_getWaveAngle()*M_PI/180.0;	//ラジアン変換
-  double ks_cos = cos(rad)*k_s, ks_sin = sin(rad)*k_s;	//毎回計算すると時間かかりそうだから,代入しておく
+
+  double _cos = cos(rad), _sin = sin(rad);
+  double ks_cos = cos(rad)*k_s, ks_sin = sin(rad)*k_s;//先に計算しておく
+  
+  //ガウシアンパルス    
+  const double beam_width = 50;
+  const double t0 = 100;      //t0 stepでmaxになるように時間移動
   int i,j;
   for(i=1; i<SUB_N_PX-1; i++){
     for(j=1; j<SUB_N_PY-1; j++){
@@ -261,7 +268,14 @@ static inline void scatteredWave(double complex *p, double *eps){
       int x = i-1+offsetX;
       int y = j-1+offsetY;
       double ikx = x*ks_cos + y*ks_sin; //k_s*(i*cos + j*sin)
-      p[k] += ray_coef*(EPSILON_0_S/eps[k] - 1)*(cos(ikx-w_s*time) + I*sin(ikx-w_s*time));
+            
+      //ガウシアンパルス
+      const double r = (x*_cos+y*_sin)/C_0_S-(time-t0);
+      const double gaussian_coef = exp( -pow(r/beam_width, 2 ) );
+      p[k] += gaussian_coef*(EPSILON_0_S/eps[k] - 1)*cexp(I*r*w_s);
+      
+      
+      //    p[k] += ray_coef*(EPSILON_0_S/eps[k] - 1)*(cos(ikx-w_s*time) + I*sin(ikx-w_s*time));
     }
   }
 }
@@ -293,6 +307,7 @@ static void finish()
 {
   MPI_Barrier(MPI_COMM_WORLD);
 //  ntffFrequency();
+  ntffOutput();
   output();
   freeMemories();
   
@@ -1007,9 +1022,9 @@ static void ntffOutput()
     for(i=0; i < maxTime; i++)
     {
       double complex WTH = Wx[k+i]*sx + Wy[k+i]*sy + 0;
-      double complex WPH = Wx[k+i]*px + Wy[k+i]*py; //TODO 式を確認
+      double complex WPH = Wx[k+i]*px + Wy[k+i]*py;
       double complex UTH = 0 + 0 + Uz[k+i]*sz;
-      double complex UPH = 0 + 0; //TODO 式を確認
+      double complex UPH = 0 + 0;
       double complex ETH  = coef*(-Z_0_S*WTH-UPH);
       double complex EPH  = coef*(-Z_0_S*WPH+UTH);
       

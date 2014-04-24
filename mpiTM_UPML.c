@@ -69,11 +69,15 @@ static inline void planeWave(double complex *p, double *eps);
 static inline void scatteredWave(double complex *p, double *eps);
 static inline void Connection_ISend_IRecvE(void);
 static inline void Connection_ISend_IRecvH(void);
+static inline void Connection_SendRecvE(void);
+static inline void Connection_SendRecvH(void);
 static inline void calcJD(void);
 static inline void calcE(void);
 static inline void calcMB(void);
 static inline void calcH(void);
 
+static inline void _CalcJDE();
+static inline void _CalcMBH();
 static inline void ntffCoef(double time, double timeShift, int *m, double *a, double *b, double *ab);
 static inline void ntff(void);
 static inline void ntffOutput();
@@ -184,7 +188,7 @@ static FILE* fileOpen(const char* fileName)
   return fp;
 }
 
-//Initialize
+//Initalize
 static void init(void)
 {
   init_mpi();
@@ -196,20 +200,25 @@ static void init(void)
 //Update
 static void update(void)
 {
-  calcJD();
+  _CalcJDE();
+//  calcJD();
   calcE();
+
+//  MPI_Barrier(MPI_COMM_WORLD); //いらない?
   scatteredWave(Ez, EPS_EZ);
   //planeWave(Ez, EPS_EZ);
-  MPI_Barrier(MPI_COMM_WORLD); //いらない?
+
   
   //Connection_SendRecvE();
   Connection_ISend_IRecvE();
-  calcMB();
+  
+  _CalcMBH();
+//  calcMB();
   calcH();
   Connection_ISend_IRecvH();
   //Connection_SendRecvH();
 
-  ntff();
+  //ntff();
 }
 
 //Finish
@@ -218,7 +227,7 @@ static void finish(void)
   //最後は同期をとっておく
   MPI_Barrier(MPI_COMM_WORLD);
   
-  ntffOutput();
+//  ntffOutput();
 //  ntffFrequency();
 //  output();
   freeMemories();
@@ -379,6 +388,31 @@ static inline void planeWave(double complex *p, double *eps)
   }
 }
 
+//Eは別に計算した方が速い
+//=>配列のアクセスの問題がfor文のインクリメントとかにかかるコストを上回っているから?
+static inline void _CalcJDE()
+{
+  int sub_py = field_getSubNpy();
+  int k    = sub_py + 1;                      //i行目の0列目
+  int last = field_getSubNcell() - sub_py;//最後のセル(右上)の左下のセルまで
+
+  // for(i=1..SUB_N_PX-1)
+  //   for(j=1..SUB_N_PY-1) と同じ
+  for(; k<last; k+=2) {
+    // 列の最後では, 次の列の1番目まで移動([i][SUB_N_PY-1] => [i+1][1])
+      int endRow = k+sub_py-2;
+    for( ; k<endRow; k++)
+    {
+      const int k_lft = subIndLeft(k);    //一つ左
+      const int k_btm = subIndBottom(k);  //一つ下
+      const double complex nowJz = Jz[k];
+      Jz[k] = C_JZ[k]*Jz[k] + C_JZHXHY[k]*(+Hy[k] - Hy[k_lft] - Hx[k] + Hx[k_btm]);
+      Dz[k] = C_DZ[k]*Dz[k] + C_DZJZ1[k]*Jz[k] - C_DZJZ0[k]*nowJz;
+//      Ez[k] = Dz[k]/EPS_EZ[k];
+    }
+  }
+}
+
 //calculate J and D
 static inline void calcJD()
 {
@@ -407,6 +441,36 @@ static inline void calcE()
       Ez[k] = Dz[k]/EPS_EZ[k];
     }
   }
+}
+
+
+//calculate M and B
+//ここでHを計算すると, MPI分割時におかしくなる
+static inline void _CalcMBH()
+{
+  int sub_py = field_getSubNpy();
+  int k    = sub_py + 1;                      //i行目の0列目
+  int last = field_getSubNcell() - sub_py;//最後のセル(右上)の左下のセルまで
+
+  for(; k<last; k+=2)
+  {
+    int end = k+sub_py-2;
+    for(; k<end; k++)
+    {
+      const int k_top = subIndTop(k); //一つ上
+      double complex nowMx = Mx[k];
+      Mx[k] = C_MX[k]*Mx[k] - C_MXEZ[k]*(Ez[k_top] - Ez[k]);
+      Bx[k] = C_BX[k]*Bx[k] + C_BXMX1[k]*Mx[k] - C_BXMX0[k]*nowMx;
+
+      const int k_rht = subIndRight(k); //一つ右     
+      double complex nowMy = My[k];
+      My[k] = C_MY[k]*My[k] - C_MYEZ[k]*(-Ez[k_rht] + Ez[k]);
+      By[k] = C_BY[k]*By[k] + C_BYMY1[k]*My[k] - C_BYMY0[k]*nowMy;
+
+//      Hx[k] = Bx[k]/MU_0_S;
+//      Hy[k] = By[k]/MU_0_S;
+    }
+  }  
 }
 
 //calculate M and B
@@ -446,16 +510,9 @@ static inline void calcH()
     {
       const int k = subInd(&i,&j);
       Hx[k] = Bx[k]/MU_0_S;
-    }
-  }  
-  for(int i=1; i<SUB_N_PX-1; i++)
-  {
-    for(int j=1; j<SUB_N_PY-1; j++)
-    {
-      const int k = subInd(&i,&j);
       Hy[k] = By[k]/MU_0_S;
     }
-  }
+  }  
 }
 
 //----------------------------------------

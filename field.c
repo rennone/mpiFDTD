@@ -1,9 +1,9 @@
 #define _USE_MATH_DEFINES
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 #include <math.h>
 #include <mpi.h>
-
 #include "field.h"
 #include "models.h"
 #include "function.h"
@@ -14,17 +14,6 @@ int N_CELL;
 int N_PML;
 int N_PX;
 int N_PY;
-
-//MPI分割したときのフィールドパラメータ
-static int SUB_N_X;
-static int SUB_N_Y;
-static int SUB_N_PX;
-static int SUB_N_PY;
-static int SUB_N_CELL;
-static int RANK, NPROC;
-static int LTRANK, RTRANK, TPRANK,BMRANK;
-static int OFFSET_X, OFFSET_Y;
-static MPI_Datatype MPI_DOUBLE_COMPLEX_COLUM;
 
 //_u : 物理量変換単位, _s:シミュレーション単位
 static const int H_s = 1;
@@ -40,76 +29,87 @@ static void (*defaultWave)(double complex* p, double* eps);
 static double maxTime;
 
 static NTFFInfo ntff_info;
+static FieldInfo fieldInfo;
+static FieldInfo_S    fieldInfo_s;
+static WaveInfo_S     waveInfo_s;
+static SubFieldInfo_S subFieldInfo_s;
 
 static void field_setNTFF(int);
 static void initMpi(void);
+static void mpiSplit(void);
 
 //:public------------------------------------//
+double field_getT() {  return T_s;}
+double  field_getK(){  return k_s;}
+double  field_getRayCoef(){  return ray_coef;}
+double  field_getOmega(){  return w_s;}
+double  field_getLambda(){  return lambda_s;}
+double  field_getWaveAngle(){  return waveAngle;}
+double  field_getTime(){  return time;}
+double  field_getMaxTime(){  return maxTime;}
+NTFFInfo  field_getNTFFInfo()          { return ntff_info;}
+WaveInfo_S field_getWaveInfo()         { return waveInfo_s;}
+SubFieldInfo_S field_getSubFieldInfo() { return subFieldInfo_s;}
+FieldInfo_S field_getFieldInfo()       { return fieldInfo_s;}
+FieldInfo field_getPhisicFieldInfo()   { return fieldInfo;}
+
+int field_getOffsetX(){  return subFieldInfo_s.OFFSET_X; }
+int field_getOffsetY(){  return subFieldInfo_s.OFFSET_Y; }
+int field_getSubNx()  {  return subFieldInfo_s.SUB_N_X;  }
+int field_getSubNy()  {  return subFieldInfo_s.SUB_N_Y;  }
+int field_getSubNpx() {  return subFieldInfo_s.SUB_N_PX; }
+int field_getSubNpy() {  return subFieldInfo_s.SUB_N_PY; }
+int field_getSubNcell(){ return subFieldInfo_s.SUB_N_CELL;}
+
+
+int ind(const int i, const int j){  return i*N_PY + j;}//1次元配列に変換
+double field_toCellUnit(const double phisycalUnit){
+  return phisycalUnit/fieldInfo.h_u_nm; //セル単位に変換 
+}
+double field_toPhisycalUnit(const double cellUnit){
+  return cellUnit*fieldInfo.h_u_nm;//物理単位(nm)に変換
+}
+
 void initField(FieldInfo field_info)
 {
-  setField(field_info.width_nm,
-           field_info.height_nm,
-           field_info.h_u_nm,
-           field_info.pml,
-           field_info.lambda_nm,
-           field_info.stepNum);
-}
+  //フィールド情報の保存(最初にしないとtoCellUnit, PhisicalUnitが使えない.
+  fieldInfo = field_info;
+  
+  //領域のシミュレータパラメータを計算
+  fieldInfo_s.N_PX  = field_toCellUnit(fieldInfo.width_nm);
+  fieldInfo_s.N_PY  = field_toCellUnit(fieldInfo.height_nm);
+  fieldInfo_s.N_PML = fieldInfo.pml;
+  fieldInfo_s.N_X   = fieldInfo_s.N_PX - 2*fieldInfo_s.N_PML;
+  fieldInfo_s.N_Y   = fieldInfo_s.N_PY - 2*fieldInfo_s.N_PML;
+  fieldInfo_s.N_CELL= fieldInfo_s.N_PY*fieldInfo_s.N_PX;
 
-double field_toCellUnit(const double phisycalUnit)
-{
-  return phisycalUnit/H_u;   //セル単位に変換 
-}
-double field_toPhisycalUnit(const double cellUnit)
-{
-  return cellUnit*H_u;    //物理単位(nm)に変換
-}
-int field_getOffsetX()
-{
-  return OFFSET_X;
-}
-int field_getOffsetY()
-{
-  return OFFSET_Y;
-}
-int field_getSubNx()
-{
-  return SUB_N_X;
-}
-int field_getSubNy()
-{
-  return SUB_N_Y;
-}
-int field_getSubNpx()
-{
-  return SUB_N_PX;
-}
-int field_getSubNpy()
-{
-  return SUB_N_PY;
-}
-int field_getSubNcell()
-{
-  return SUB_N_CELL;
-}
+  //入射波パラメータの計算
+  waveInfo_s.Lambda_s = field_toCellUnit(fieldInfo.lambda_nm);
+  waveInfo_s.T_s      = waveInfo_s.Lambda_s/C_0_S;
+  waveInfo_s.K_s      = 2*M_PI/waveInfo_s.Lambda_s;
+  waveInfo_s.Omega_s  = C_0_S*waveInfo_s.K_s;
+  waveInfo_s.Degree   = 0; //0°
 
-void setField(const int wid, const int hei, const double _h, const int pml, const double lambda, double maxstep)
-{
-  H_u = _h;
-  N_PX = field_toCellUnit(wid);
-  N_PY = field_toCellUnit(hei);
-  N_PML = pml;  
+  //小領域のパラメータを保存
+  mpiSplit();
+
+  // 下位バージョンとの互換性の為
+  H_u = fieldInfo.h_u_nm;  
+  N_PX = field_toCellUnit(fieldInfo.width_nm);
+  N_PY = field_toCellUnit(fieldInfo.height_nm);
+  N_PML= fieldInfo.pml;  
   N_X = N_PX - 2*N_PML;
   N_Y = N_PY - 2*N_PML;
   N_CELL = N_PX * N_PY; //全セル数 
   time = 0;
-  maxTime = maxstep;
+  maxTime = fieldInfo.stepNum;
   
-  lambda_s = field_toCellUnit(lambda);
+  lambda_s = field_toCellUnit(fieldInfo.lambda_nm);
   k_s = 2*M_PI/lambda_s;
   w_s = C_0_S*k_s;
   T_s = 2*M_PI/w_s;
 
-  ray_coef = 0;  
+  ray_coef  = 0;  
   waveAngle = 0;
   
   /* NTFF設定 */  
@@ -124,53 +124,7 @@ void setField(const int wid, const int hei, const double _h, const int pml, cons
   ntff_info.arraySize = maxTime + 2*ntff_info.RFperC;
 }
 
-//-------------------getter-------------------//
-double field_getT()
-{
-  return T_s;
-}
-
-double  field_getK()
-{
-  return k_s;
-}
-
-double  field_getRayCoef()
-{
-  return ray_coef;
-}
-
-double  field_getOmega()
-{
-  return w_s;
-}
-
-double  field_getLambda()
-{
-  return lambda_s;
-}
-
-double  field_getWaveAngle()
-{
-  return waveAngle;
-}
-
-double  field_getTime()
-{
-  return time;
-}
-
-double  field_getMaxTime()
-{
-  return maxTime;
-}
-
-NTFFInfo  field_getNTFFInfo()
-{
-  return ntff_info;
-}
-
-//----------------------------------------//
+//----------------PMLに用いるσx,σyの計算--------------------//
 double field_sigmaX(const double x, const double y)
 {
   const int M = 2;
@@ -183,7 +137,6 @@ double field_sigmaX(const double x, const double y)
   else
     return pow(1.0*(x - (N_PX-N_PML-1))/N_PML, M);
 }
-
 double field_sigmaY(const double x, double y)
 {
   const int M = 2;
@@ -196,7 +149,6 @@ double field_sigmaY(const double x, double y)
   else
     return pow(1.0*(y - (N_PY-N_PML-1))/N_PML,M);
 }
-
 //pml用の係数のひな形 Δt = 1
 //ep_mu εかμ(Eの係数->ε, Hの係数-> μ
 //sig  σ
@@ -204,28 +156,12 @@ double field_pmlCoef(double ep_mu, double sig)
 {
   return (1.0 - sig/ep_mu)/(1.0+sig/ep_mu);
 }
-
 double field_pmlCoef_LXY(double ep_mu, double sig)
 {
-  return 1.0/(ep_mu + sig);
-  //  return 1.0/ep_mu/(1.0 + sig/ep_mu);
+  return 1.0/(ep_mu + sig); // 1.0/{ep_mu(1.0 + sig/ep_mu)}と同じ
 }
 
-//1次元配列に変換
- int ind(const int i, const int j)
-{
-  return i*N_PY + j;
-}
 //------------------getter-------------------------//
-
-//------------------light method----------------------//
-//点光源を返す
-double complex field_pointLight(void)
-{
-  return ray_coef * (cos(w_s*time) + sin(w_s*time)*I);
-}
-
-//------------------light method----------------------//
  void field_nextStep(void){
   time+=1.0;
   ray_coef = 1.0 - exp(-pow(0.01*time, 2));
@@ -235,9 +171,7 @@ double complex field_pointLight(void)
   return time >= maxTime;
 }
 
-
 //---------------output method---------------//
-
 void field_outputElliptic(const char *fileName, double complex* data)
 {
   printf("output start\n");
@@ -261,6 +195,7 @@ void field_outputElliptic(const char *fileName, double complex* data)
   printf("output to %s end\n", fileName);
 }
 
+//呼び出し時の計算領域のすべての値を出力
 void field_outputAllDataComplex(const char *fileName, double complex *data)
 {
    printf("output all data start\n");
@@ -304,36 +239,76 @@ void field_outputAllDataDouble(const char *fileName, double *data)
   fclose(fp);
   printf("output all data to %s end\n", fileName);
 }
- 
-static void init_mpi(void)
-{
-  MPI_Comm_size(MPI_COMM_WORLD, &NPROC);
-  int dim = 2;          //number of dimension is 2
-  int procs[2] = {0,0};         //[0]: x方向の分割数, [1]:y方向の分割数
-  int period[2] = {0,0};//境界条件, 固定境界
-  MPI_Comm grid_comm;
-  int reorder = 1;   //re-distribute rank flag
 
-  MPI_Dims_create(NPROC, dim, procs);
+//:private
+//MPIにより, 領域を分割する.
+static void mpiSplit(void)
+{
+  int num_proc;
+  int dim       = 2;        //number of dimension is 2
+  int procs[2]  = {0,0};    //[0]: x方向の分割数, [1]:y方向の分割数
+  int period[2] = {0,0};    //境界条件, 固定境界(1=>周期境界)
+  int reorder   = 1;   //re-distribute rank flag
+  MPI_Comm grid_comm;
+
+  MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
+  MPI_Dims_create(num_proc, dim, procs);
   MPI_Cart_create(MPI_COMM_WORLD, 2, procs, period, reorder, &grid_comm);
-  MPI_Cart_shift(grid_comm, 0, 1, &LTRANK, &RTRANK);
-  MPI_Cart_shift(grid_comm, 1, 1, &BMRANK, &TPRANK);
+  //周りの領域のプロセスランクを取得
+  MPI_Cart_shift(grid_comm, 0, 1, &subFieldInfo_s.LtRank, &subFieldInfo_s.RtRank);
+  MPI_Cart_shift(grid_comm, 1, 1, &subFieldInfo_s.BmRank, &subFieldInfo_s.TpRank);
 
   //プロセス座標において自分がどの位置に居るのか求める(何行何列に居るか)
   int coordinates[2];
-  MPI_Comm_rank(grid_comm, &RANK);
-  MPI_Cart_coords(grid_comm, RANK, 2, coordinates);
-  
-  SUB_N_X = N_PX / procs[0];
-  SUB_N_Y = N_PY / procs[1];
-  SUB_N_PX = SUB_N_X + 2; //のりしろの分2大きい
-  SUB_N_PY = SUB_N_Y + 2; //のりしろの分2大きい
-  SUB_N_CELL = SUB_N_PX*SUB_N_PY;
-  
-  OFFSET_X = coordinates[0] * SUB_N_X; //ランクのインデックスではなく, セル単位のオフセットなのでSUB_N_Xずれる
-  OFFSET_Y = coordinates[1] * SUB_N_Y;
+  MPI_Comm_rank(grid_comm, &subFieldInfo_s.Rank);
+  MPI_Cart_coords(grid_comm, subFieldInfo_s.Rank, 2, coordinates);
 
-/*これだと, 1個のデータをSUB_N_PY跳び(次のデータまでSUB_N_PY-1個隙間がある),SUB_N_X行ぶん取ってくる事になる */
-  MPI_Type_vector(SUB_N_X, 1, SUB_N_PY, MPI_C_DOUBLE_COMPLEX, &MPI_DOUBLE_COMPLEX_COLUM); 
-  MPI_Type_commit(&MPI_DOUBLE_COMPLEX_COLUM);
+  //小領域がすべて同じ大きさになるかチェック
+  if( fieldInfo_s.N_PX%procs[0] !=0 || fieldInfo_s.N_PY%procs[1] != 0){      
+    printf("cannot devide size(%d, %d) by proc(%d,%d) \n",
+           fieldInfo_s.N_PX, fieldInfo_s.N_PY, procs[0],procs[1]);
+    exit(2);
+  }
+
+  //小領域のパラメータ
+  subFieldInfo_s.SUB_N_X    = fieldInfo_s.N_PX / procs[0];
+  subFieldInfo_s.SUB_N_Y    = fieldInfo_s.N_PY / procs[1];
+  subFieldInfo_s.SUB_N_PX   = subFieldInfo_s.SUB_N_X + 2; //のりしろの分2大きい
+  subFieldInfo_s.SUB_N_PY   = subFieldInfo_s.SUB_N_Y + 2; //のりしろの分2大きい
+  subFieldInfo_s.SUB_N_CELL = subFieldInfo_s.SUB_N_PX*subFieldInfo_s.SUB_N_PY;  
+  subFieldInfo_s.OFFSET_X  = coordinates[0] * subFieldInfo_s.SUB_N_X; //ランクのインデックスではなく, セル単位のオフセットなのでSUB_N_Xずれる
+  subFieldInfo_s.OFFSET_Y  = coordinates[1] * subFieldInfo_s.SUB_N_Y;
+  printf("subN_PX %d, subN_PY %d\n", subFieldInfo_s.SUB_N_X, subFieldInfo_s.SUB_N_Y);
 }
+
+/*
+void setField(const int wid, const int hei, const double _h, const int pml, const double lambda, double maxstep)
+{
+  H_u = _h;
+  N_PX = field_toCellUnit(wid);
+  N_PY = field_toCellUnit(hei);
+  N_PML = pml;  
+  N_X = N_PX - 2*N_PML;
+  N_Y = N_PY - 2*N_PML;
+  N_CELL = N_PX * N_PY; //全セル数 
+  time = 0;
+  maxTime = maxstep;
+  
+  lambda_s = field_toCellUnit(lambda);
+  k_s = 2*M_PI/lambda_s;
+  w_s = C_0_S*k_s;
+  T_s = 2*M_PI/w_s;
+
+  ray_coef = 0;  
+  waveAngle = 0;  
+
+  ntff_info.top = N_PY - N_PML - 5;
+  ntff_info.bottom = N_PML + 5;
+  ntff_info.left = N_PML + 5;
+  ntff_info.right = N_PX - N_PML - 5;
+
+  double len = (ntff_info.top - ntff_info.bottom)/2;
+  ntff_info.RFperC = len*2;
+  ntff_info.arraySize = maxTime + 2*ntff_info.RFperC;
+}
+*/

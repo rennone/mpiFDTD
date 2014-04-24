@@ -16,6 +16,7 @@ static double complex* (*getDataZ)() = NULL;
 static void (* finishMethod)() = NULL;
 static void (* initMethod)() = NULL;
 static void (* getSubFieldPositionMethod)(int*,int*,int*,int*) = NULL;
+static double complex* (*getDrawData)() = NULL;
 static double* (* getEpsMethod )() = NULL;
 
 static struct timeval timer1, timer2;
@@ -46,7 +47,9 @@ static void setMPITMupml(){
   
   getDataX = mpi_fdtdTM_upml_getHx;
   getDataY = mpi_fdtdTM_upml_getHy;
-  getDataZ = mpi_fdtdTM_upml_getEz;  
+  getDataZ = mpi_fdtdTM_upml_getEz;
+  
+  getDrawData = getDataZ;
 }
 
 static void setMPITEupml(){
@@ -60,6 +63,8 @@ static void setMPITEupml(){
   getDataX = mpi_fdtdTE_upml_getEx;
   getDataY = mpi_fdtdTE_upml_getEy;
   getDataZ = mpi_fdtdTE_upml_getHz;
+
+  getDrawData = getDataY;
 }
 
 static void setSolver(enum SOLVER solver)
@@ -113,7 +118,7 @@ void simulator_finish()
 }
 
 double complex* simulator_getDrawingData(void){
-  return (* getDataZ)();
+  return (* getDrawData)();
 }
 
 bool simulator_isFinish(void)
