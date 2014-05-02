@@ -2,12 +2,11 @@
 #include "models.h"
 #include "noModel.h"
 #include "circleModel.h"
+#include "multiLayerModel.h"
 //#include "shelf.h"
 //#include "nonshelf.h"
 
-
 static double (*epsMethod)(double, double, int, int);
-static void (*outputMethod)(FILE*, double complex*);
 
 static void noModel(void)
 {
@@ -19,6 +18,11 @@ static void circleModel(void)
 {
   //cylinder material whitch radius = lambda, origin = center of field
   epsMethod = circleModel_EPS(N_PX*0.5, N_PY*0.5, field_getLambda());
+}
+
+static void multiLayerModel()
+{
+  epsMethod = multiLayerModel_EPS();
 }
 
 void setModel(enum MODEL model)
@@ -33,7 +37,7 @@ void setModel(enum MODEL model)
   case SHELF :
   case NONSHELF:
   case LAYER:
-    noModel();
+    multiLayerModel();
     break;
   }
 }

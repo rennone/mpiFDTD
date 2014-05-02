@@ -1,7 +1,7 @@
 #ifndef _FIELD_H
 #define _FIELD_H
 #include <stdio.h>
-#include <complex.h>
+#include "myComplex.h"
 #include <math.h>
 #include "bool.h"
 
@@ -64,10 +64,6 @@ typedef struct NFFInfo
   int arraySize; //必要な配列サイズ
 } NTFFInfo;
 
-
-#define FIELD_SUB_INDEX(i, j) ( ((i)*SUB_N_PY) + (j))
-
-//シミュレーション上の物理定数
 #define C_0_S 0.7071 //下の変数名長いからこっちにする
 static const double LIGHT_SPEED_S = 0.7071;
 
@@ -113,7 +109,6 @@ extern double field_pmlCoef_LXY(double x, double y);
 
 extern double field_toCellUnit(const double);
 extern double field_toPhisycalUnit(const double);
-
 extern void field_nextStep(void);
 extern bool field_isFinish(void);
 
@@ -127,10 +122,20 @@ extern double field_getWaveAngle(void);
 extern double field_getTime(void);
 extern double field_getMaxTime(void);
 extern NTFFInfo field_getNTFFInfo(void);
-extern WaveInfo_S field_getWaveInfo(void);
-extern SubFieldInfo_S field_getSubFieldInfo(void);
-extern FieldInfo_S field_getFieldInfo(void);
-extern FieldInfo field_getPhisicFieldInfo(void);
+extern WaveInfo_S field_getWaveInfo_S(void);
+extern SubFieldInfo_S field_getSubFieldInfo_S(void);
+extern FieldInfo_S field_getFieldInfo_S(void);
+extern FieldInfo field_getFieldInfo(void);
+
+//散乱波
+// gapX, gapY : Ex-z, Hx-zは格子点からずれた位置に配置され散る為,格子点からのずれを送る必要がある.
+extern void field_scatteredWave(dcomplex *p, double *eps, double gapX, double gapY);
+extern void field_scatteredPulse(dcomplex *p, double *eps, double gapX, double gapY);
+
+//座標->インデックス変換
+//(乗算命令があるので何度も呼び出すような処理では使わない方がいい)
+extern int field_index(int i, int j);
+extern int field_subIndex(int i, int j);
 
 //output method
 extern void field_outputElliptic(const char *fileName,double complex* data); //

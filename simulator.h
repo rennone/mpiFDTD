@@ -21,8 +21,6 @@ extern void simulator_calc(void);
 extern bool simulator_isFinish(void);
 extern void simulator_finish(void);
 extern double complex* simulator_getDrawingData();
-
-extern void simulator_getSubFieldPositions(int *subNx,int *subNy,int *subNpx, int *subNpy);
 extern double *simulator_getEps();
 
 #endif

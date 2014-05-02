@@ -25,7 +25,7 @@ static double lambda_s; //波長
 static double k_s;      //波数 
 static double w_s;      //角周波数
 static double T_s;      //周期 
-static void (*defaultWave)(double complex* p, double* eps);
+
 static double maxTime;
 
 static NTFFInfo ntff_info;
@@ -34,24 +34,22 @@ static FieldInfo_S    fieldInfo_s;
 static WaveInfo_S     waveInfo_s;
 static SubFieldInfo_S subFieldInfo_s;
 
-static void field_setNTFF(int);
-static void initMpi(void);
 static void mpiSplit(void);
 
 //:public------------------------------------//
-double field_getT() {  return T_s;}
-double  field_getK(){  return k_s;}
+double field_getT() {  return waveInfo_s.T_s; }
+double  field_getK(){  return waveInfo_s.K_s;}
 double  field_getRayCoef(){  return ray_coef;}
-double  field_getOmega(){  return w_s;}
+double  field_getOmega(){  return waveInfo_s.Omega_s;}
 double  field_getLambda(){  return lambda_s;}
 double  field_getWaveAngle(){  return waveAngle;}
 double  field_getTime(){  return time;}
 double  field_getMaxTime(){  return maxTime;}
 NTFFInfo  field_getNTFFInfo()          { return ntff_info;}
-WaveInfo_S field_getWaveInfo()         { return waveInfo_s;}
-SubFieldInfo_S field_getSubFieldInfo() { return subFieldInfo_s;}
-FieldInfo_S field_getFieldInfo()       { return fieldInfo_s;}
-FieldInfo field_getPhisicFieldInfo()   { return fieldInfo;}
+WaveInfo_S field_getWaveInfo_S()         { return waveInfo_s;}
+SubFieldInfo_S field_getSubFieldInfo_S() { return subFieldInfo_s;}
+FieldInfo_S field_getFieldInfo_S()       { return fieldInfo_s;}
+FieldInfo field_getFieldInfo()   { return fieldInfo;}
 
 int field_getOffsetX(){  return subFieldInfo_s.OFFSET_X; }
 int field_getOffsetY(){  return subFieldInfo_s.OFFSET_Y; }
@@ -61,8 +59,17 @@ int field_getSubNpx() {  return subFieldInfo_s.SUB_N_PX; }
 int field_getSubNpy() {  return subFieldInfo_s.SUB_N_PY; }
 int field_getSubNcell(){ return subFieldInfo_s.SUB_N_CELL;}
 
+int field_subIndex(int i, int j){
+    return i*subFieldInfo_s.SUB_N_PY + j;
+}
+
+int field_index(int i, int j){
+    return i*fieldInfo_s.N_PY + j;
+}
 
 int ind(const int i, const int j){  return i*N_PY + j;}//1次元配列に変換
+
+
 double field_toCellUnit(const double phisycalUnit){
   return phisycalUnit/fieldInfo.h_u_nm; //セル単位に変換 
 }
@@ -112,16 +119,59 @@ void initField(FieldInfo field_info)
   ray_coef  = 0;  
   waveAngle = 0;
   
-  /* NTFF設定 */  
-  ntff_info.top = N_PY - N_PML - 5;
+  /* NTFF設定 */
+  ntff_info.cx     = N_PX/2;
+  ntff_info.cx     = N_PY/2;
+  ntff_info.top    = N_PY - N_PML - 5;
   ntff_info.bottom = N_PML + 5;
-  ntff_info.left = N_PML + 5;
-  ntff_info.right = N_PX - N_PML - 5;
-
+  ntff_info.left   = N_PML + 5;
+  ntff_info.right  = N_PX - N_PML - 5;
 
   double len = (ntff_info.top - ntff_info.bottom)/2;
   ntff_info.RFperC = len*2;
   ntff_info.arraySize = maxTime + 2*ntff_info.RFperC;
+}
+
+//単一波長の散乱波
+// gapX, gapY : Ex-z, Hx-zは格子点からずれた位置に配置され散る為,格子点からのずれを送る必要がある.
+void field_scatteredWave(dcomplex *p, double *eps, double gapX, double gapY)
+{
+  FieldInfo_S fInfo_s = field_getFieldInfo_S();
+  double time = field_getTime();
+  double w_s  = field_getOmega();
+  double ray_coef = field_getRayCoef();
+  double k_s = field_getK();
+  double rad = field_getWaveAngle()*M_PI/180;
+  double ks_cos = cos(rad)*k_s, ks_sin = sin(rad)*k_s;//毎回計算すると時間かかりそうだから代入しておく  
+  for(int i=1; i<fInfo_s.N_PX-1; i++) {
+    for(int j=1; j<fInfo_s.N_PY-1; j++) {
+      int k = field_index(i,j);
+      double kr = (i+gapX)*ks_cos+(j+gapY)*ks_sin;
+      p[k] += ray_coef*(EPSILON_0_S/eps[k] - 1.0)*cexp( I*(kr-w_s*time) );      
+    }
+  }
+}
+
+//ガウシアンパルス
+// gapX, gapY : Ex-z, Hx-zは格子点からずれた位置に配置され散る為,格子点からのずれを送る必要がある.
+void field_scatteredPulse(dcomplex *p, double *eps, double gapX, double gapY)
+{
+  double time = field_getTime();
+  double w_s  = field_getOmega();
+  double rad = field_getWaveAngle()*M_PI/180;	//ラジアン変換  
+
+  double cos_per_c = cos(rad)/C_0_S, sin_per_c = sin(rad)/C_0_S;
+  const double beam_width = 50; //パルスの幅  
+  
+  FieldInfo_S fInfo_s = field_getFieldInfo_S();
+  for(int i=1; i<fInfo_s.N_PX-1; i++) {
+    for(int j=1; j<fInfo_s.N_PY-1; j++) {
+      int k = field_index(i,j);
+      const double r = (i+gapX)*cos_per_c+(j+gapY)*sin_per_c-time; // (x*cos+y*sin)/C - time
+      const double gaussian_coef = exp( -pow(r/beam_width, 2 ) );
+      p[k] += gaussian_coef*(EPSILON_0_S/eps[k] - 1)*cexp(I*r*w_s);      
+    }
+  } 
 }
 
 //----------------PMLに用いるσx,σyの計算--------------------//
@@ -278,7 +328,6 @@ static void mpiSplit(void)
   subFieldInfo_s.SUB_N_CELL = subFieldInfo_s.SUB_N_PX*subFieldInfo_s.SUB_N_PY;  
   subFieldInfo_s.OFFSET_X  = coordinates[0] * subFieldInfo_s.SUB_N_X; //ランクのインデックスではなく, セル単位のオフセットなのでSUB_N_Xずれる
   subFieldInfo_s.OFFSET_Y  = coordinates[1] * subFieldInfo_s.SUB_N_Y;
-  printf("subN_PX %d, subN_PY %d\n", subFieldInfo_s.SUB_N_X, subFieldInfo_s.SUB_N_Y);
 }
 
 /*

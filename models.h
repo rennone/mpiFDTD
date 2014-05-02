@@ -23,5 +23,5 @@ extern void setModel(enum MODEL model);
 extern double models_eps(double x, double y, enum MODE mode);
 
 //データの吐き出し
-extern void models_output(FILE *fp, double complex *data);
+//extern void models_output(FILE *fp, double complex *data);
 #endif

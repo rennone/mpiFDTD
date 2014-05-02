@@ -8,6 +8,7 @@
 #include "field.h"
 #include "models.h"
 #include "function.h"
+#include "ntffTM.h"
 
 /* about MPI  */
 static int rank;      //MPIのランク
@@ -76,14 +77,11 @@ static inline void calcE(void);
 static inline void calcMB(void);
 static inline void calcH(void);
 
-static inline void _CalcJDE();
-static inline void _CalcMBH();
+static inline void _CalcJD();
+static inline void _CalcMB();
 static inline void ntffCoef(double time, double timeShift, int *m, double *a, double *b, double *ab);
 static inline void ntff(void);
 static inline void ntffOutput();
-
-//周波数領域でのntff
-static inline void ntffFrequency();
 
 //:public
 inline int mpi_fdtdTM_upml_getSubNx(void)
@@ -105,14 +103,6 @@ inline int mpi_fdtdTM_upml_getSubNpy(void)
 inline int mpi_fdtdTM_upml_getSubNcell(void)
 {
   return SUB_N_CELL;
-}
-
-inline void mpi_fdtdTM_upml_getSubFieldPositions(int *subNx,int *subNy,int *subNpx, int *subNpy)
-{
-  *subNx = mpi_fdtdTM_upml_getSubNx();
-  *subNy = mpi_fdtdTM_upml_getSubNy();
-  *subNpx = mpi_fdtdTM_upml_getSubNpx();
-  *subNpy = mpi_fdtdTM_upml_getSubNpy();
 }
 
 void (* mpi_fdtdTM_upml_getUpdate(void))(void)
@@ -177,7 +167,7 @@ static FILE* fileOpen(const char* fileName)
 {
   char name[256];
   //フォルダー以下にする.
-  sprintf(name, "TM/%s", fileName);
+  sprintf(name, "MPI_TM_UPML/%s", fileName);
   
   FILE *fp;
   if( (fp=fopen(name, "w") ) == NULL )
@@ -200,8 +190,8 @@ static void init(void)
 //Update
 static void update(void)
 {
-  _CalcJDE();
-//  calcJD();
+//  _CalcJD();
+  calcJD();
   calcE();
 
 //  MPI_Barrier(MPI_COMM_WORLD); //いらない?
@@ -212,13 +202,13 @@ static void update(void)
   //Connection_SendRecvE();
   Connection_ISend_IRecvE();
   
-  _CalcMBH();
-//  calcMB();
+//  _CalcMB();
+  calcMB();
   calcH();
   Connection_ISend_IRecvH();
   //Connection_SendRecvH();
 
-  //ntff();
+  ntff();
 }
 
 //Finish
@@ -228,8 +218,12 @@ static void finish(void)
   MPI_Barrier(MPI_COMM_WORLD);
   
 //  ntffOutput();
-//  ntffFrequency();
 //  output();
+
+  dcomplex *res = (dcomplex*)malloc(sizeof(dcomplex)*360);
+  ntffTM_FrequencySplit(Hx, Hy, Ez, res);
+  free(res);
+  
   freeMemories();
   
   MPI_Finalize();
@@ -331,7 +325,7 @@ static inline void scatteredWave(double complex *p, double *eps)
 //毎回計算すると時間かかりそうだから代入しておく  
   double _cos = cos(rad), _sin = sin(rad);
   double ks_cos = cos(rad)*k_s, ks_sin = sin(rad)*k_s;
-  const double t0 = 0;      //t0 stepでmaxになるように時間移動
+  const double t0 = 100;      //t0 stepでmaxになるように時間移動
   
   //ガウシアンパルス
   const double beam_width = 50;
@@ -390,7 +384,7 @@ static inline void planeWave(double complex *p, double *eps)
 
 //Eは別に計算した方が速い
 //=>配列のアクセスの問題がfor文のインクリメントとかにかかるコストを上回っているから?
-static inline void _CalcJDE()
+static inline void _CalcJD()
 {
   int sub_py = field_getSubNpy();
   int k    = sub_py + 1;                      //i行目の0列目
@@ -445,8 +439,8 @@ static inline void calcE()
 
 
 //calculate M and B
-//ここでHを計算すると, MPI分割時におかしくなる
-static inline void _CalcMBH()
+//Hは別に計算した方が速い
+static inline void _CalcMB()
 {
   int sub_py = field_getSubNpy();
   int k    = sub_py + 1;                      //i行目の0列目
@@ -666,8 +660,8 @@ static void setCoefficient(void)
       int y = j-1 + offsetY;
       
       EPS_EZ[k] = models_eps(x,y, D_XY);     
-      EPS_HX[k] = models_eps(x,y+0.5, D_Y); //todo D_Y ?     
-      EPS_HY[k] = models_eps(x+0.5,y, D_X); //todo D_X ?
+      EPS_HX[k] = models_eps(x,y+0.5, D_Y);
+      EPS_HY[k] = models_eps(x+0.5,y, D_X);
 
       sig_ez_x = sig_max*field_sigmaX(x,y);
       sig_ez_y = sig_max*field_sigmaY(x,y);
@@ -1025,6 +1019,12 @@ static void ntff()
 }
 
 
+
+
+//--------------------------------------------------//
+// ntff.h ntff.c に移行済み
+//--------------------------------------------------//
+/*
 static inline void ntffFrequency()
 {
     //分割領域系に置ける, 中心の位置
@@ -1161,7 +1161,7 @@ static inline void ntffFrequency()
   printf("saved at %s & %s \n", nameRe, nameIm);
   printf("ntffFrequency end\n");
 }
-
+*/
 //============================================================
 // for Debug 
 //============================================================

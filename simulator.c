@@ -3,9 +3,14 @@
 #include <string.h>
 #include "simulator.h"
 #include "field.h"
+
 #include "mpiTM_UPML.h"
 #include "mpiTE_UPML.h"
-#include "drawer.h"
+#include "fdtdTM.h"
+#include "fdtdTE.h"
+#include "fdtdTM_upml.h"
+#include "fdtdTE_upml.h"
+
 #include "models.h"
 #include <sys/time.h>
 
@@ -15,7 +20,6 @@ static double complex* (*getDataY)() = NULL;
 static double complex* (*getDataZ)() = NULL;
 static void (* finishMethod)() = NULL;
 static void (* initMethod)() = NULL;
-static void (* getSubFieldPositionMethod)(int*,int*,int*,int*) = NULL;
 static double complex* (*getDrawData)() = NULL;
 static double* (* getEpsMethod )() = NULL;
 
@@ -23,33 +27,77 @@ static struct timeval timer1, timer2;
 
 static void setTM()
 {
+  update       = fdtdTM_getUpdate();
+  initMethod   = fdtdTM_getInit();
+  finishMethod = fdtdTM_getFinish();
+
+  getEpsMethod = fdtdTM_getEps;
+  getDataX = fdtdTM_getHx;
+  getDataY = fdtdTM_getHy;
+  getDataZ = fdtdTM_getEz;
+
+  getDrawData = getDataZ;
+  printf("TM mode \n");
 }
 
 static void setTE()
 {
+  update       = fdtdTE_getUpdate();
+  initMethod   = fdtdTE_getInit();
+  finishMethod = fdtdTE_getFinish();
+
+  getEpsMethod = fdtdTE_getEps;
+  getDataX = fdtdTE_getEx;
+  getDataY = fdtdTE_getEy;
+  getDataZ = fdtdTE_getHz;
+
+  getDrawData = getDataY;
+  printf("TE mode \n");
 }
 
 static void setTMupml()
 {
+  update       = fdtdTM_upml_getUpdate();
+  initMethod   = fdtdTM_upml_getInit();
+  finishMethod = fdtdTM_upml_getFinish();
+
+  getEpsMethod = fdtdTM_upml_getEps;
+  getDataX = fdtdTM_upml_getHx;
+  getDataY = fdtdTM_upml_getHy;
+  getDataZ = fdtdTM_upml_getEz;
+
+  getDrawData = getDataZ;
+  printf("TM UPML mode \n");
 }
 
 static void setTEupml()
 {
+  update       = fdtdTE_upml_getUpdate();
+  initMethod   = fdtdTE_upml_getInit();
+  finishMethod = fdtdTE_upml_getFinish();
+
+  getEpsMethod = fdtdTE_upml_getEps;
+  getDataX = fdtdTE_upml_getEx;
+  getDataY = fdtdTE_upml_getEy;
+  getDataZ = fdtdTE_upml_getHz;
+
+  getDrawData = getDataY;
+  printf("TE UPML mode \n");
 }
 
 static void setMPITMupml(){
   update       = mpi_fdtdTM_upml_getUpdate();
   initMethod   = mpi_fdtdTM_upml_getInit();
   finishMethod = mpi_fdtdTM_upml_getFinish();
-  
-  getSubFieldPositionMethod = mpi_fdtdTM_upml_getSubFieldPositions;
-  getEpsMethod              = mpi_fdtdTM_upml_getEps;
+
+  getEpsMethod = mpi_fdtdTM_upml_getEps;
   
   getDataX = mpi_fdtdTM_upml_getHx;
   getDataY = mpi_fdtdTM_upml_getHy;
   getDataZ = mpi_fdtdTM_upml_getEz;
   
   getDrawData = getDataZ;
+  printf("MPI TM UPML mode \n");
 }
 
 static void setMPITEupml(){
@@ -57,29 +105,38 @@ static void setMPITEupml(){
   initMethod   = mpi_fdtdTE_upml_getInit();
   finishMethod = mpi_fdtdTE_upml_getFinish();
   
-  getSubFieldPositionMethod = mpi_fdtdTE_upml_getSubFieldPositions;
-  getEpsMethod              = mpi_fdtdTE_upml_getEps;
+  getEpsMethod = mpi_fdtdTE_upml_getEps;
 
   getDataX = mpi_fdtdTE_upml_getEx;
   getDataY = mpi_fdtdTE_upml_getEy;
   getDataZ = mpi_fdtdTE_upml_getHz;
 
   getDrawData = getDataY;
+  
+  printf("MPI TE UPML mode \n");
 }
 
 static void setSolver(enum SOLVER solver)
 {
   switch(solver){
   case TM_2D:
+    setTM();
     break;
   case TE_2D:
+    setTE();
+    break;
+  case TE_UPML_2D:
+    setTEupml();
+    break;
+  case TM_UPML_2D:
+    setTMupml();
     break;
   case MPI_TM_UPML_2D:
     setMPITMupml();
     break;
   case MPI_TE_UPML_2D:
     setMPITEupml();
-    break;
+    break;    
   default:
     printf("error, not implement simulator (simulator.c)\n");
     exit(2);
@@ -124,12 +181,6 @@ double complex* simulator_getDrawingData(void){
 bool simulator_isFinish(void)
 {
   return field_isFinish();
-}
-
-//小領域の幅と高さを取ってくる
-void simulator_getSubFieldPositions(int *subNx,int *subNy,int *subNpx, int *subNpy)
-{
-  (*getSubFieldPositionMethod)(subNx, subNy, subNpx, subNpy);  
 }
 
 //屈折率のマップを取ってくる

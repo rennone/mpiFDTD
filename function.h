@@ -1,41 +1,20 @@
 #ifndef _FUNCTION_H
 #define _FUNCTION_H
-#include <complex.h>
+#include "myComplex.h"
+#include <stdio.h>
 
 #define max(a,b) (a > b ? a : b)
 #define min(a,b) (a < b ? a : b)
 
-//norm of complex
-static inline double cnorm(double complex c){
-  double re = creal(c);
-  double im = cimag(c);
-  return re*re + im*im;
-}
+extern double dbilinear(double *p, double x, double y, int width, int height);
 
-static inline double complex cbilinear(double complex *p, double x, double y, int width, int height)
-{
-  int i = floor(x);
-  int j = floor(y);
-  double dx = x - i;
-  double dy = y - j;
-  int index = i*height + j;
-  return p[index]*(1.0-dx)*(1.0-dy)
-       + p[index+height]*dx*(1.0-dy)
-       + p[index+1]*(1.0-dx)*dy
-       + p[index+height+1]*dx*dy;
-}
+extern FILE* openFile(const char* file_name);
 
-static inline double dbilinear(double *p, double x, double y, int width, int height)
-{
-  int i = floor(x);
-  int j = floor(y);
-  double dx = x - i;
-  double dy = y - j;
-  int index = i*height + j;
-  return p[index]*(1.0-dx)*(1.0-dy)
-       + p[index+height]*dx*(1.0-dy)
-       + p[index+1]*(1.0-dx)*dy
-       + p[index+height+1]*dx*dy;
-}
+// for(i=1..N_PX-1)
+//   for(j=1..N_PY-1) と同じ
+#define FAST_FOR_FOR(k, fInfo_s) \
+  for(int k=fInfo_s.N_PY+1, last = fInfo_s.N_CELL-fInfo_s.N_PY; k<last; k+=2) \
+    for(int endRow = k+fInfo_s.N_PY-2; k<endRow; k++)
+
 
 #endif

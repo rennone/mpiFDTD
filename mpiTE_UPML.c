@@ -7,6 +7,8 @@
 #include "field.h"
 #include "models.h"
 #include "function.h"
+#include "ntffTE.h"
+
 /* about MPI  */
 static int rank;      //MPIのランク
 static int nproc;     //全プロセス数
@@ -117,14 +119,6 @@ int mpi_fdtdTE_upml_getSubNcell(void){
   return SUB_N_CELL;
 }
 
-void mpi_fdtdTE_upml_getSubFieldPositions(int *subNx,int *subNy,int *subNpx, int *subNpy)
-{
-  *subNx = mpi_fdtdTE_upml_getSubNx();
-  *subNy = mpi_fdtdTE_upml_getSubNy();
-  *subNpx = mpi_fdtdTE_upml_getSubNpx();
-  *subNpy = mpi_fdtdTE_upml_getSubNpy();
-}
-
 //:private ----------------------------//
 static inline int subInd(const int i, const int j)
 {
@@ -152,7 +146,7 @@ static FILE* fileOpen(const char* fileName)
 {
   char name[256];
   //フォルダー以下にする.
-  sprintf(name, "TE/%s", fileName);
+  sprintf(name, "MPI_TE_UPML/%s", fileName);
   
   FILE *fp;
   if( (fp=fopen(name, "w") ) == NULL )
@@ -268,14 +262,14 @@ static inline void scatteredWave(double complex *p, double *eps)
       int x = i-1+offsetX;
       int y = j-1+offsetY;
       double ikx = x*ks_cos + y*ks_sin; //k_s*(i*cos + j*sin)
-            
+      /*
       //ガウシアンパルス
       const double r = (x*_cos+y*_sin)/C_0_S-(time-t0);
       const double gaussian_coef = exp( -pow(r/beam_width, 2 ) );
       p[k] += gaussian_coef*(EPSILON_0_S/eps[k] - 1)*cexp(I*r*w_s);
+      */
       
-      
-      //    p[k] += ray_coef*(EPSILON_0_S/eps[k] - 1)*(cos(ikx-w_s*time) + I*sin(ikx-w_s*time));
+      p[k] += ray_coef*(EPSILON_0_S/eps[k] - 1)*(cos(ikx-w_s*time) + I*sin(ikx-w_s*time));
     }
   }
 }
@@ -308,7 +302,10 @@ static void finish()
   MPI_Barrier(MPI_COMM_WORLD);
 //  ntffFrequency();
   ntffOutput();
-  output();
+//  output();
+
+  dcomplex *res = (dcomplex*)malloc(sizeof(dcomplex)*360);
+  ntffTE_FrequencySplit(Ex,Ey,Hz,res);
   freeMemories();
   
   MPI_Finalize();
@@ -578,189 +575,7 @@ static void output()
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-
-static void ntffFrequency()
-{
-  int cx = N_PX/2 - offsetX;
-  int cy = N_PY/2 - offsetY;
-
-  double k_s = field_getK();
-  double r0 = 1.0e6;
-  double complex coef = csqrt( I*k_s/(8*M_PI*r0) ) * cexp( I*k_s*r0 );	// common coefficient
-
-  NTFFInfo nInfo = field_getNTFFInfo();
-  int tp = nInfo.top - offsetY;
-  int bm = nInfo.bottom - offsetY;
-  int rt = nInfo.right - offsetX;
-  int lt = nInfo.left - offsetX;
-
-  double complex ntffEphi[360];  
-  double complex debugLz[4][360];
-  double complex debugNx[2][360];
-  double complex debugNy[2][360];
-  
-  int ang;
-  for ( ang=0; ang<360; ang++ )
-  {
-    double rad = ang * M_PI/180.0;
-    double rx = cos(rad), ry = sin(rad);
-    
-    double complex Nx = 0;
-    double complex Ny = 0;
-    double complex Lz = 0;
-    
-    //bottom side
-    //normal vector n is (0,-1, 0)
-    //Js = n × H = (-Hz, 0, 0)  Ms = E × n = (0, 0, -Ex)
-    if ( 0 < bm && bm < SUB_N_PY-1 )
-    {
-      //積分路の端で無ければ, 分割領域の端から端までが積分路である
-      // left <= x < right という繰り返し条件のため, 1 ~ SUB_N_PXとなっている
-      const int subLeft  = max(1, lt);
-      const int subRight = min(SUB_N_PX, rt);
-      int i;
-      for( i=subLeft; i<subRight; i++)
-      {
-        const double r2x = i-cx+0.5;
-        const double r2y = bm-cy;            //distance between origin to cell
-
-        int k = subInd(i, bm);
-        double complex C_HZ  = 0.5*( Hz[k] + Hz[subIndBottom(k)] );
-        double complex C_EX  = Ex[k];
-
-        double innerProd = rx*r2x + ry*r2y;
-        Nx   -= C_HZ * cexp( I * k_s * innerProd );
-        Lz   -= C_EX * cexp( I * k_s * innerProd );
-      }
-    }
-    debugNx[0][ang] = Nx;
-    debugLz[0][ang] = Lz;
-
-      //right side
-    //normal vector n is (1,0)
-    //Js = n × H = (0,-Hz,0)    Ms = E × n = (0,0,-Ey)
-    //Js -> W                 Ms -> U
-    if ( 0 < rt && rt < SUB_N_PX-1)
-    {
-      int subTop    = min(SUB_N_PY, tp);
-      int subBottom = max(1, bm);
-      int j;
-      for(j=subBottom; j<subTop; j++)
-      {
-        double r2x = rt-cx;
-        double r2y = j-cy+0.5;  
-
-        int k = subInd(rt, j);
-        double complex C_HZ  = 0.5*( Hz[k] + Hz[subIndLeft(k)] );
-        double complex C_EY  = Ey[k];
-
-        double innerProd = rx*r2x + ry*r2y;  //内積
-        Ny -= C_HZ * cexp( I * k_s * innerProd );
-        Lz -= C_EY * cexp( I * k_s * innerProd );
-      }
-    }    
-    debugLz[1][ang] = Lz - debugLz[0][ang];
-    debugNy[0][ang] = Ny;
-
-
-    //top side
-    //normal vector n is (0,1)
-    //Js = n × H = (Hz, 0, 0)  Ms = E × n = (0, 0, Ex)
-    //Js -> W                  Ms -> U
-    if ( 0 < tp && tp < SUB_N_PY-1)
-    {      
-      int subLeft  = max(1, lt);
-      int subRight = min(SUB_N_PX, rt);
-      int i;
-      for ( i=subLeft; i<subRight; i++ ) 
-      {
-        const double r2x = i-cx+0.5;
-        const double r2y = tp-cy;
-
-        int k = subInd(i, tp);
-        double complex C_HZ  = 0.5*( Hz[k]+ Hz[subIndBottom(k)] );
-        double complex C_EX  = Ex[k];
-        double innerProd = rx*r2x  + ry*r2y;  //内積
-        Nx += C_HZ * cexp( I * k_s * innerProd );
-        Lz += C_EX * cexp( I * k_s * innerProd );
-      }
-    }
-    debugLz[2][ang] = Lz - debugLz[0][ang] - debugLz[1][ang];
-    debugNx[1][ang] = Nx - debugNx[0][ang];
-
-    //left side
-    //normal vector n is (-1,0)
-    //Js = n × H = (0,Hz,0)    Ms = E × n = (0,0,Ey)    
-    if ( 0 < lt && lt < SUB_N_PX )
-    {
-      int subTop    = min(SUB_N_PY, tp);
-      int subBottom = max(1, bm);
-      int j;
-      for ( j=subBottom; j<subTop; j++ )
-      {
-        const double r2x = lt-cx;
-        const double r2y = j-cy+0.5;
-        
-        int k = subInd(lt, j);
-        double complex C_HZ  = 0.5 * ( Hz[k] + Hz[subIndLeft(k)] );
-        double complex C_EY  = Ey[k];
-        double innerProd = rx*r2x  + ry*r2y;  //内積
-        Ny += C_HZ * cexp( I * k_s * innerProd );
-        Lz += C_EY * cexp( I * k_s * innerProd );
-      }
-    }
-    debugLz[3][ang] = Lz - debugLz[0][ang] - debugLz[1][ang] - debugLz[2][ang];
-    debugNy[1][ang] = Ny - debugNy[0][ang];
-    
-    // Get Ephi
-    double complex Nphi  = -Nx*sin(rad) + Ny*cos(rad);
-    ntffEphi[ang] = coef * ( Z_0_S*Nphi - Lz );
-  }
-  
-  FILE *fpR = fileOpen("ntffRe.txt");//fopen("ntffRe.txt", "w");
-  FILE *fpI = fileOpen("ntffIm.txt");//fopen("TEntffIm.txt", "w");
-  for(ang = 0; ang<360; ang++)
-  {
-    fprintf(fpR, "%.18lf\n", creal(ntffEphi[ang]));
-    fprintf(fpI, "%.18lf\n", cimag(ntffEphi[ang]));
-  }
-  
-  FILE *debugLzFp[4];
-  {
-    int i;
-    char name[256];
-    for(i=0; i<4; i++)
-    {
-      sprintf(name, "debugLz%d.txt", i);
-      debugLzFp[i] = fileOpen(name);
-    }
-  }
-
-  FILE *debugNxFp[2];
-  debugNxFp[0] = fileOpen("debugNx0.txt");
-  debugNxFp[1] = fileOpen("debugNx1.txt");
-  
-  FILE *debugNyFp[2];
-  debugNyFp[0] = fileOpen("debugNy0.txt");
-  debugNyFp[1] = fileOpen("debugNy1.txt");
-  
-  for(ang=0; ang<360; ang++)
-  {
-    int j;
-    for(j=0; j<4; j++)
-      fprintf(debugLzFp[j], "%lf %lf\n", creal(debugLz[j][ang]), cimag(debugLz[j][ang]) );
-
-    for(j=0; j<2; j++)
-    {
-      fprintf(debugNxFp[j], "%lf %lf\n", creal(debugNx[j][ang]), cimag(debugNx[j][ang]) );
-      fprintf(debugNyFp[j], "%lf %lf\n", creal(debugNy[j][ang]), cimag(debugNx[j][ang]) );
-    }
-  }
-
-}
-
 //---------------------- ntff--------------------//
-
 static inline void ntffCoef(double time, double timeShift, int *m, double *a, double *b, double *ab)
 {  
   double t = time + timeShift;
@@ -788,6 +603,7 @@ static void ntff()
   int bm = nInfo.bottom - offsetY; //下面
   int rt = nInfo.right  - offsetX; //右
   int lt = nInfo.left   - offsetX; //左
+
   int ang;
   int stp;
   for(ang=0, stp=0; ang<360; ang++, stp+=nInfo.arraySize)
@@ -1055,3 +871,189 @@ static void initDebug()
 }
 #endif
 }
+
+
+//==================================================//
+// ntff.c ntff.hに移行済み
+//==================================================//
+/*
+static void ntffFrequency()
+{
+  int cx = N_PX/2 - offsetX;
+  int cy = N_PY/2 - offsetY;
+
+  double k_s = field_getK();
+  double r0 = 1.0e6;
+  double complex coef = csqrt( I*k_s/(8*M_PI*r0) ) * cexp( I*k_s*r0 );	// common coefficient
+
+  NTFFInfo nInfo = field_getNTFFInfo();
+  int tp = nInfo.top - offsetY;
+  int bm = nInfo.bottom - offsetY;
+  int rt = nInfo.right - offsetX;
+  int lt = nInfo.left - offsetX;
+
+  double complex ntffEphi[360];  
+  double complex debugLz[4][360];
+  double complex debugNx[2][360];
+  double complex debugNy[2][360];
+  
+  int ang;
+  for ( ang=0; ang<360; ang++ )
+  {
+    double rad = ang * M_PI/180.0;
+    double rx = cos(rad), ry = sin(rad);
+    
+    double complex Nx = 0;
+    double complex Ny = 0;
+    double complex Lz = 0;
+    
+    //bottom side
+    //normal vector n is (0,-1, 0)
+    //Js = n × H = (-Hz, 0, 0)  Ms = E × n = (0, 0, -Ex)
+    if ( 0 < bm && bm < SUB_N_PY-1 )
+    {
+      //積分路の端で無ければ, 分割領域の端から端までが積分路である
+      // left <= x < right という繰り返し条件のため, 1 ~ SUB_N_PXとなっている
+      const int subLeft  = max(1, lt);
+      const int subRight = min(SUB_N_PX, rt);
+      int i;
+      for( i=subLeft; i<subRight; i++)
+      {
+        const double r2x = i-cx+0.5;
+        const double r2y = bm-cy;            //distance between origin to cell
+
+        int k = subInd(i, bm);
+        double complex C_HZ  = 0.5*( Hz[k] + Hz[subIndBottom(k)] );
+        double complex C_EX  = Ex[k];
+
+        double innerProd = rx*r2x + ry*r2y;
+        Nx   -= C_HZ * cexp( I * k_s * innerProd );
+        Lz   -= C_EX * cexp( I * k_s * innerProd );
+      }
+    }
+    debugNx[0][ang] = Nx;
+    debugLz[0][ang] = Lz;
+
+      //right side
+    //normal vector n is (1,0)
+    //Js = n × H = (0,-Hz,0)    Ms = E × n = (0,0,-Ey)
+    //Js -> W                 Ms -> U
+    if ( 0 < rt && rt < SUB_N_PX-1)
+    {
+      int subTop    = min(SUB_N_PY, tp);
+      int subBottom = max(1, bm);
+      int j;
+      for(j=subBottom; j<subTop; j++)
+      {
+        double r2x = rt-cx;
+        double r2y = j-cy+0.5;  
+
+        int k = subInd(rt, j);
+        double complex C_HZ  = 0.5*( Hz[k] + Hz[subIndLeft(k)] );
+        double complex C_EY  = Ey[k];
+
+        double innerProd = rx*r2x + ry*r2y;  //内積
+        Ny -= C_HZ * cexp( I * k_s * innerProd );
+        Lz -= C_EY * cexp( I * k_s * innerProd );
+      }
+    }    
+    debugLz[1][ang] = Lz - debugLz[0][ang];
+    debugNy[0][ang] = Ny;
+
+
+    //top side
+    //normal vector n is (0,1)
+    //Js = n × H = (Hz, 0, 0)  Ms = E × n = (0, 0, Ex)
+    //Js -> W                  Ms -> U
+    if ( 0 < tp && tp < SUB_N_PY-1)
+    {      
+      int subLeft  = max(1, lt);
+      int subRight = min(SUB_N_PX, rt);
+      int i;
+      for ( i=subLeft; i<subRight; i++ ) 
+      {
+        const double r2x = i-cx+0.5;
+        const double r2y = tp-cy;
+
+        int k = subInd(i, tp);
+        double complex C_HZ  = 0.5*( Hz[k]+ Hz[subIndBottom(k)] );
+        double complex C_EX  = Ex[k];
+        double innerProd = rx*r2x  + ry*r2y;  //内積
+        Nx += C_HZ * cexp( I * k_s * innerProd );
+        Lz += C_EX * cexp( I * k_s * innerProd );
+      }
+    }
+    debugLz[2][ang] = Lz - debugLz[0][ang] - debugLz[1][ang];
+    debugNx[1][ang] = Nx - debugNx[0][ang];
+
+    //left side
+    //normal vector n is (-1,0)
+    //Js = n × H = (0,Hz,0)    Ms = E × n = (0,0,Ey)    
+    if ( 0 < lt && lt < SUB_N_PX )
+    {
+      int subTop    = min(SUB_N_PY, tp);
+      int subBottom = max(1, bm);
+      int j;
+      for ( j=subBottom; j<subTop; j++ )
+      {
+        const double r2x = lt-cx;
+        const double r2y = j-cy+0.5;
+        
+        int k = subInd(lt, j);
+        double complex C_HZ  = 0.5 * ( Hz[k] + Hz[subIndLeft(k)] );
+        double complex C_EY  = Ey[k];
+        double innerProd = rx*r2x  + ry*r2y;  //内積
+        Ny += C_HZ * cexp( I * k_s * innerProd );
+        Lz += C_EY * cexp( I * k_s * innerProd );
+      }
+    }
+    debugLz[3][ang] = Lz - debugLz[0][ang] - debugLz[1][ang] - debugLz[2][ang];
+    debugNy[1][ang] = Ny - debugNy[0][ang];
+    
+    // Get Ephi
+    double complex Nphi  = -Nx*sin(rad) + Ny*cos(rad);
+    ntffEphi[ang] = coef * ( Z_0_S*Nphi - Lz );
+  }
+  
+  FILE *fpR = fileOpen("ntffRe.txt");//fopen("ntffRe.txt", "w");
+  FILE *fpI = fileOpen("ntffIm.txt");//fopen("TEntffIm.txt", "w");
+  for(ang = 0; ang<360; ang++)
+  {
+    fprintf(fpR, "%.18lf\n", creal(ntffEphi[ang]));
+    fprintf(fpI, "%.18lf\n", cimag(ntffEphi[ang]));
+  }
+  
+  FILE *debugLzFp[4];
+  {
+    int i;
+    char name[256];
+    for(i=0; i<4; i++)
+    {
+      sprintf(name, "debugLz%d.txt", i);
+      debugLzFp[i] = fileOpen(name);
+    }
+  }
+
+  FILE *debugNxFp[2];
+  debugNxFp[0] = fileOpen("debugNx0.txt");
+  debugNxFp[1] = fileOpen("debugNx1.txt");
+  
+  FILE *debugNyFp[2];
+  debugNyFp[0] = fileOpen("debugNy0.txt");
+  debugNyFp[1] = fileOpen("debugNy1.txt");
+  
+  for(ang=0; ang<360; ang++)
+  {
+    int j;
+    for(j=0; j<4; j++)
+      fprintf(debugLzFp[j], "%lf %lf\n", creal(debugLz[j][ang]), cimag(debugLz[j][ang]) );
+
+    for(j=0; j<2; j++)
+    {
+      fprintf(debugNxFp[j], "%lf %lf\n", creal(debugNx[j][ang]), cimag(debugNx[j][ang]) );
+      fprintf(debugNyFp[j], "%lf %lf\n", creal(debugNy[j][ang]), cimag(debugNx[j][ang]) );
+    }
+  }
+
+}
+*/

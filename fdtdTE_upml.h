@@ -1,6 +1,6 @@
 #ifndef FDTD_TE_UPML_H
 #define FDTD_TE_UPML_H
-#include <complex.h>
+#include "myComplex.h"
 
 extern void (* fdtdTE_upml_getUpdate(void))(void);
 extern void (* fdtdTE_upml_getFinish(void))(void);

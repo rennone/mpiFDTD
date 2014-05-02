@@ -1,5 +1,5 @@
-#ifndef FDTD_TE_UPML_H
-#define FDTD_TE_UPML_H
+#ifndef MPI_FDTD_TE_UPML_H
+#define MPI_FDTD_TE_UPML_H
 #include <complex.h>
 
 extern void (* mpi_fdtdTE_upml_getUpdate(void))(void);
@@ -14,7 +14,6 @@ extern int mpi_fdtdTE_upml_getSubNy(void);
 extern int mpi_fdtdTE_upml_getSubNpx(void);
 extern int mpi_fdtdTE_upml_getSubNpy(void);
 extern int mpi_fdtdTE_upml_getSubNcell(void);
-extern void mpi_fdtdTE_upml_getSubFieldPositions(int *subNx,int *subNy,int *subNpx, int *subNpy);
 
 extern double * mpi_fdtdTE_upml_getEps(void);
 #endif
