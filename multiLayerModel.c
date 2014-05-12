@@ -69,8 +69,8 @@ double ( *multiLayerModel_EPS(void))(double, double, int, int)
   thickness_s[0] = field_toCellUnit(100);
   thickness_s[1] = field_toCellUnit(50);
   layerNum = 10;
-  ep[0] = 1.6*1.6*EPSILON_0_S;
-  ep[1] = 3.6*3.6*EPSILON_0_S;
+  ep[0] = 1.56*1.56*EPSILON_0_S;
+  ep[1] = 1*1*EPSILON_0_S;
 
   return eps;
 }

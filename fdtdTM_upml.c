@@ -54,8 +54,8 @@ static void update(void)
 {
   calcJD();
   calcE();
-  field_scatteredWave(Ez, EPS_EZ, 0, 0); //Ezは格子点上に配置されているので,ずれは(0,0)
-//  field_scatterdPulse(Ez, EPS_EZ, 0, 0); //Ezは格子点上に配置されているので,ずれは(0,0)
+//  field_scatteredWave(Ez, EPS_EZ, 0, 0); //Ezは格子点上に配置されているので,ずれは(0,0)
+  field_scatteredPulse(Ez, EPS_EZ, 0, 0); //Ezは格子点上に配置されているので,ずれは(0,0)
   calcMB();  
   calcH();
   ntffTM_TimeCalc(Hx,Hy,Ez,Ux,Uy,Wz);
@@ -71,9 +71,14 @@ static void init(void)
 //Finish
 static void finish(void)
 {
-  const int maxTime = field_getMaxTime();
-  NTFFInfo nInfo = field_getNTFFInfo();
-  dcomplex *Eth, *Eph;
+  FILE *fpRe = openFile("TM_UPML/Eth_r.txt");
+  FILE *fpIm = openFile("TM_UPML/Eth_i.txt");
+  ntffTM_TimeOutput(Ux,Uy,Wz,fpRe, fpIm);
+  
+  /*
+    const int maxTime = field_getMaxTime();
+    NTFFInfo nInfo = field_getNTFFInfo();
+  dcomplex *Eth, *Eph;  
   Eth = newDComplex(360*nInfo.arraySize);
   Eph = newDComplex(360*nInfo.arraySize);  
   ntffTM_TimeTranslate(Ux,Uy,Wz,Eth,Eph);  
@@ -89,8 +94,10 @@ static void finish(void)
     }
     fprintf(fpR,"\n");
     fprintf(fpI,"\n");
-  }  
-  
+  }
+  free(Eth);
+  free(Eph);
+  */
   freeMemories();
 }
 

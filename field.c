@@ -42,7 +42,7 @@ double  field_getK(){  return waveInfo_s.K_s;}
 double  field_getRayCoef(){  return ray_coef;}
 double  field_getOmega(){  return waveInfo_s.Omega_s;}
 double  field_getLambda(){  return lambda_s;}
-double  field_getWaveAngle(){  return waveAngle;}
+double  field_getWaveAngle(){  return waveInfo_s.Angle_deg;}
 double  field_getTime(){  return time;}
 double  field_getMaxTime(){  return maxTime;}
 NTFFInfo  field_getNTFFInfo()          { return ntff_info;}
@@ -95,7 +95,7 @@ void initField(FieldInfo field_info)
   waveInfo_s.T_s      = waveInfo_s.Lambda_s/C_0_S;
   waveInfo_s.K_s      = 2*M_PI/waveInfo_s.Lambda_s;
   waveInfo_s.Omega_s  = C_0_S*waveInfo_s.K_s;
-  waveInfo_s.Degree   = 0; //0°
+  waveInfo_s.Angle_deg   = 0; //0°
 
   //小領域のパラメータを保存
   mpiSplit();

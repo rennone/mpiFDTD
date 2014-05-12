@@ -82,6 +82,7 @@ int main( int argc, char *argv[] )
   field_info.lambda_nm   = 500;
   field_info.stepNum     = 2000;
   enum MODEL   modelType = MIE_CYLINDER; // モデルの種類
+  
   enum SOLVER solverType;
   if(rank == 0)
     solverType  = TM_UPML_2D;        // 計算方法

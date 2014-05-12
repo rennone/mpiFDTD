@@ -53,7 +53,7 @@ typedef struct WaveInfo_S
   double T_s;      //周期
   double Omega_s;  //角周波数
   double K_s;      //波数
-  double Degree;   //入射角
+  double Angle_deg;   //入射角
 } WaveInfo_S;
 
 typedef struct NFFInfo

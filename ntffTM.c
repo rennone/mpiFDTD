@@ -136,8 +136,32 @@ void ntffTM_TimeTranslate(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, dcomplex *Et
   }
 }
 
+//時間領域のEthの書き出し.
+void ntffTM_TimeOutput(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, FILE *fpRe, FILE *fpIm)
+{
+  const int maxTime = field_getMaxTime();
+  NTFFInfo nInfo = field_getNTFFInfo();
+  dcomplex *Eth, *Eph;  
+  Eth = newDComplex(360*nInfo.arraySize);
+  Eph = newDComplex(360*nInfo.arraySize);
+  ntffTM_TimeTranslate(Ux,Uy,Wz,Eth,Eph);  
+  for(int ang=0; ang<360; ang++)
+  {
+    int k= ang*nInfo.arraySize;
+    for(int i=0; i < maxTime; i++)
+    {
+      fprintf(fpRe,"%.20lf " , creal(Eth[k+i]));
+      fprintf(fpIm,"%.20lf " , cimag(Eth[k+i]));  
+    }
+    fprintf(fpRe,"\n");
+    fprintf(fpIm,"\n");
+  }
+  free(Eth);
+  free(Eph);
+}
+
 // eとU[stp] もしくは hとW[stp]を渡す
-//UW_ang = Ux,Uy,Wz[stp] の事. array[360][num]を一次元配列で表しており, その角度における配列を引数にとる
+//UW_ang = Ux[stp],Uy[stp],Wz[stp] の事. array[360][num]を一次元配列で表しており, その角度における配列を引数にとる
 static inline void calc(double time_plus_timeShift, dcomplex eh,  dcomplex *UW_ang){  
   int m = floor(time_plus_timeShift+0.5);
   double a = (0.5 + time_plus_timeShift - m);
