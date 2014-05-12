@@ -112,6 +112,8 @@ extern double field_toPhisycalUnit(const double);
 extern void field_nextStep(void);
 extern bool field_isFinish(void);
 
+extern void field_setWaveAngle(int deg);
+
 //:getter
 extern double field_getT(void);
 extern double field_getK(void);

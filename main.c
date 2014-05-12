@@ -91,6 +91,8 @@ int main( int argc, char *argv[] )
   
   simulator_init(field_info, modelType, solverType);
 
+  
+  field_setWaveAngle(-90);
 #ifdef USE_OPENGL
   SubFieldInfo_S subInfo = field_getSubFieldInfo_S();
   

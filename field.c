@@ -20,7 +20,7 @@ static const int H_s = 1;
 static double H_u;         //1セルの大きさ(nm)
 static double time;     //ステップ数
 static double ray_coef; //波をゆっくり入れる為の係数;
-static double waveAngle;//入射角
+//static double waveAngle;//入射角
 static double lambda_s; //波長 
 static double k_s;      //波数 
 static double w_s;      //角周波数
@@ -37,6 +37,8 @@ static SubFieldInfo_S subFieldInfo_s;
 static void mpiSplit(void);
 
 //:public------------------------------------//
+void field_setWaveAngle(int deg) { waveInfo_s.Angle_deg = deg;}
+
 double field_getT() {  return waveInfo_s.T_s; }
 double  field_getK(){  return waveInfo_s.K_s;}
 double  field_getRayCoef(){  return ray_coef;}
@@ -117,7 +119,7 @@ void initField(FieldInfo field_info)
   T_s = 2*M_PI/w_s;
 
   ray_coef  = 0;  
-  waveAngle = 0;
+//  waveAngle = 0;
   
   /* NTFF設定 */
   ntff_info.cx     = N_PX/2;
@@ -134,6 +136,8 @@ void initField(FieldInfo field_info)
 
 //単一波長の散乱波
 // gapX, gapY : Ex-z, Hx-zは格子点からずれた位置に配置され散る為,格子点からのずれを送る必要がある.
+// 分割領域では使えない->gapをさらに領域のオフセットだけずらせば使えそう
+// UPML専用
 void field_scatteredWave(dcomplex *p, double *eps, double gapX, double gapY)
 {
   FieldInfo_S fInfo_s = field_getFieldInfo_S();
@@ -141,35 +145,42 @@ void field_scatteredWave(dcomplex *p, double *eps, double gapX, double gapY)
   double w_s  = field_getOmega();
   double ray_coef = field_getRayCoef();
   double k_s = field_getK();
-  double rad = field_getWaveAngle()*M_PI/180;
+  double rad = field_getWaveAngle()*M_PI/180.0;
   double ks_cos = cos(rad)*k_s, ks_sin = sin(rad)*k_s;//毎回計算すると時間かかりそうだから代入しておく  
   for(int i=1; i<fInfo_s.N_PX-1; i++) {
     for(int j=1; j<fInfo_s.N_PY-1; j++) {
       int k = field_index(i,j);
       double kr = (i+gapX)*ks_cos+(j+gapY)*ks_sin;
-      p[k] += ray_coef*(EPSILON_0_S/eps[k] - 1.0)*cexp( I*(kr-w_s*time) );      
+      p[k] += ray_coef*(EPSILON_0_S/eps[k] - 1.0)*cexp( I*(kr-w_s*time) );  //p[k] -= かも(岡田さんのメール参照)
     }
   }
 }
 
 //ガウシアンパルス
 // gapX, gapY : Ex-z, Hx-zは格子点からずれた位置に配置され散る為,格子点からのずれを送る必要がある.
+// 分割領域では使えない->gapをさらに領域のオフセットだけずらせば使えそう
+// UPML専用
 void field_scatteredPulse(dcomplex *p, double *eps, double gapX, double gapY)
 {
   double time = field_getTime();
   double w_s  = field_getOmega();
-  double rad = field_getWaveAngle()*M_PI/180;	//ラジアン変換  
+  double rad = field_getWaveAngle()*M_PI/180.0;	//ラジアン変換  
 
   double cos_per_c = cos(rad)/C_0_S, sin_per_c = sin(rad)/C_0_S;
-  const double beam_width = 50; //パルスの幅  
-  
+  const double beam_width = 50; //パルスの幅
+
   FieldInfo_S fInfo_s = field_getFieldInfo_S();
+  
+  //waveAngleにより, t0の値を変えないとちょうどいいところにピークが来なため,それを計算.
+  const double center_peak = (fInfo_s.N_PX/2.0+gapX)*cos_per_c+(fInfo_s.N_PY/2+gapY)*sin_per_c; //中心にピークがくる時間
+  const double t0 = -center_peak + 100; //常に100ステップの時に,領域の中心にピークが来るようにする.
+  
   for(int i=1; i<fInfo_s.N_PX-1; i++) {
     for(int j=1; j<fInfo_s.N_PY-1; j++) {
       int k = field_index(i,j);
-      const double r = (i+gapX)*cos_per_c+(j+gapY)*sin_per_c-time; // (x*cos+y*sin)/C - time
+      const double r = (i+gapX)*cos_per_c+(j+gapY)*sin_per_c-(time-t0); // (x*cos+y*sin)/C - (time-t0)
       const double gaussian_coef = exp( -pow(r/beam_width, 2 ) );
-      p[k] += gaussian_coef*(EPSILON_0_S/eps[k] - 1)*cexp(I*r*w_s);      
+      p[k] += gaussian_coef*(EPSILON_0_S/eps[k] - 1)*cexp(I*r*w_s);     //p[k] -= かも(岡田さんのメール参照)
     }
   } 
 }
@@ -349,7 +360,7 @@ void setField(const int wid, const int hei, const double _h, const int pml, cons
   T_s = 2*M_PI/w_s;
 
   ray_coef = 0;  
-  waveAngle = 0;  
+//  waveAngle = 0;  
 
   ntff_info.top = N_PY - N_PML - 5;
   ntff_info.bottom = N_PML + 5;

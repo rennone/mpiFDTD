@@ -64,11 +64,11 @@ static double eps(double x, double y, int col, int row)
 
 double ( *multiLayerModel_EPS(void))(double, double, int, int)
 {
-  width_s[0] = field_toCellUnit(300);
-  width_s[1] = field_toCellUnit(300);
-  thickness_s[0] = field_toCellUnit(100);
-  thickness_s[1] = field_toCellUnit(50);
-  layerNum = 10;
+  width_s[0]     = field_toCellUnit(300);
+  width_s[1]     = field_toCellUnit(300);
+  thickness_s[0] = field_toCellUnit(90);
+  thickness_s[1] = field_toCellUnit(90);
+  layerNum = 8;
   ep[0] = 1.56*1.56*EPSILON_0_S;
   ep[1] = 1*1*EPSILON_0_S;
 

@@ -104,7 +104,6 @@ void ntffTM_Frequency( dcomplex *Hx, dcomplex *Hy, dcomplex *Ez, dcomplex result
 
 void ntffTM_TimeTranslate(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, dcomplex *Eth, dcomplex *Eph)
 {
-  FieldInfo fInfo = field_getFieldInfo();
   const double w_s = field_getOmega();
   //1.0/(4*M_PI*C_0_S*R0)*
   const double complex coef = 1.0/(4*M_PI*C_0_S*R0)*csqrt( 2*M_PI*C_0_S/(I*w_s) );
@@ -120,6 +119,7 @@ void ntffTM_TimeTranslate(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, dcomplex *Et
     double sz = -cos(theta); //宇野先生の本では -sin(theta)になってる
     double px = -sin(phi);
     double py = cos(phi);
+    
     //TODO maxTime = nInfo.arraySize ??
     for(int i=0; i < maxTime; i++)
     {
