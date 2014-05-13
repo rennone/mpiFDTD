@@ -68,8 +68,26 @@ void idle(void)
 }
 #endif
 
+//ファイルからのパラメータ呼び出し
+void readConfig()
+{
+  FILE *fp = NULL;
+  if( !(fp = fopen("config.txt", "r")) )
+  {
+    printf("cannot find config.txt\n");
+  }
+  int err;
+  char buf[1024];
+  while( fgets(buf, 1024, fp) != NULL)
+  {
+    printf("%s",buf);
+  }
+  fclose(fp);
+}
+
 int main( int argc, char *argv[] )
 {
+  readConfig();
   MPI_Init( 0, 0 );
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
