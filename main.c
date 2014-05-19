@@ -99,7 +99,7 @@ int main( int argc, char *argv[] )
   field_info.pml         = 10;
   field_info.lambda_nm   = 500;
   field_info.stepNum     = 2000;
-  enum MODEL   modelType = MIE_CYLINDER; // モデルの種類
+  enum MODEL   modelType = MORPHO_SCALE;//MIE_CYLINDER; // モデルの種類
   
   enum SOLVER solverType;
   if(rank == 0)

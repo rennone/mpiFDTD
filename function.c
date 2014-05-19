@@ -23,3 +23,34 @@ FILE* openFile(const char* file_name)
   }
   return fp;
 }
+
+
+#ifdef MAC_OS
+
+#include <sys/stat.h>
+#include <unistd.h>
+bool makeDirectory(const char* name)
+{
+  if(mkdir(name,   S_IRUSR | S_IWUSR | S_IXUSR |         /* rwx */
+    S_IRGRP | S_IWGRP | S_IXGRP |         /* rwx */
+           S_IROTH | S_IXOTH | S_IXOTH ) == 0)
+  {
+    printf("make directory %s\n",name);
+  } else {
+    //作れなかったときは、多分すでに存在するとき.
+    printf("%s is already exist\n", name);
+  }
+}
+void moveDirectory(const char* name)
+{
+  if(chdir(name)==0)
+  {
+    printf("move to %s\n",name);
+  } else {
+    printf("cannot move to %s\n",name);
+    exit(2);
+  }
+}
+
+#endif
+

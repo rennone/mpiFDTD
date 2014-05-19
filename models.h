@@ -7,7 +7,8 @@ enum MODEL
   MIE_CYLINDER,
   SHELF,
   NONSHELF,
-  LAYER
+  LAYER,
+  MORPHO_SCALE
 };
 
 enum MODE{

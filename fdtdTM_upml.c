@@ -26,7 +26,6 @@ static dcomplex *By = NULL;
 //--------------------for NTFF --------------------//
 static dcomplex *Ux,*Uy,*Wz;
 
-
 static double *C_JZ = NULL, *C_MX = NULL, *C_MY = NULL;
 static double *C_JZHXHY = NULL, *C_MXEZ = NULL, *C_MYEZ = NULL;
 static double *C_DZ = NULL, *C_BX = NULL, *C_BY = NULL;
@@ -71,8 +70,8 @@ static void init(void)
 //Finish
 static void finish(void)
 {
-  FILE *fpRe = openFile("TM_UPML/Eth_r.txt");
-  FILE *fpIm = openFile("TM_UPML/Eth_i.txt");
+  FILE *fpRe = openFile("Eth_r.txt");
+  FILE *fpIm = openFile("Eth_i.txt");
   ntffTM_TimeOutput(Ux,Uy,Wz,fpRe, fpIm);
   
   /*

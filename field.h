@@ -144,6 +144,13 @@ extern void field_outputElliptic(const char *fileName,double complex* data); //
 extern void field_outputAllDataComplex(const char *fileName,double complex* data); //
 extern void field_outputAllDataDouble(const char *fileName,double* data); //
 
+
+// for(i=1..N_PX-1)
+//   for(j=1..N_PY-1) と同じ
+#define FAST_FOR_FOR(k, fInfo_s) \
+  for(int k=fInfo_s.N_PY+1, last = fInfo_s.N_CELL-fInfo_s.N_PY; k<last; k+=2) \
+    for(int endRow = k+fInfo_s.N_PY-2; k<endRow; k++)
+
 //--------------------for debug--------------------//
 static inline void field_debugPrint(double complex *A)
 {

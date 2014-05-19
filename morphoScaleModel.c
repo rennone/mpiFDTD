@@ -1,23 +1,21 @@
-#include "multiLayerModel.h"
+#include "morphoScaleModel.h"
 #include "field.h"
 #include "function.h"
 #include <math.h>
 
 double width_s[2];     //幅
+double widthOnTopRate; //頂上だと幅が何倍になるか(基本0~1)
 double thickness_s[2]; //厚さ
 double ep[2];           //誘電率 = n*n*ep0
 int layerNum;          //枚数
 bool notsymmetry;      //左右比対称
 
-//col : D_Xモード row : D_Yモード
-//x,yを中心に, 計算領域のセルと同じ大きさの領域を調べる
 static double eps(double x, double y, int col, int row)
 {
   FieldInfo_S fInfo_s = field_getFieldInfo_S();
-
   double width = max(width_s[0], width_s[1]);
   double thick = thickness_s[0] + thickness_s[1];
-  double height = thick*layerNum;
+  double height = thick*layerNum;  
 
   //領域の中心から, 下にheight/2ずれた位置がレイヤの下部
   int oy = fInfo_s.N_PY/2 - height/2;
@@ -42,22 +40,23 @@ static double eps(double x, double y, int col, int row)
       
       //thickで割ったあまり(double型なのでこんなやり方をしている)
       double modY = sy - floor(sy/thick)*thick;
-
+      
       //境界上のときは両方の平均になる(普通は無い).
       if(modY == thickness_s[0]) {
         s[0] += 0.5*(fabs(sx) < width_s[0]/2);
         s[1] += 0.5*(fabs(sx) < width_s[1]/2);
         continue;
       }
-
+      
       int k = (modY > thickness_s[0]); //どっちの屈折率にいるか調べる
 
       if (sx < 0 && notsymmetry)
         k = 1-k;		//左右で反転, 互い違いでなかったら反転しない
-      
-      if(abs(sx) < width_s[k]/2)
-        s[k] +=1;     
 
+      double p = 1-sy /height; //現在の高さを0~1で; 1=>頂上
+      double _wid = width_s[k]*(p + (1-p)*widthOnTopRate);
+      if(abs(sx) < _wid/2)
+        s[k] +=1;
     }    
   }
 
@@ -66,8 +65,30 @@ static double eps(double x, double y, int col, int row)
   return EPSILON_0_S*(1-s[0]-s[1]) + ep[0]*s[0] + ep[1]*s[1];
 }
 
-double ( *multiLayerModel_EPS(void))(double, double, int, int)
+#include <stdlib.h>
+
+double ( *morphoScaleModel_EPS(void))(double, double, int, int)
 {
+  FILE *fp = NULL;
+  if( !(fp = fopen("config.txt", "r")))
+  {
+    printf("cannot find config.txt of morphoScaleModel\n");
+    exit(2);
+  }
+  int err;
+  char buf[1024];
+  while( fgets(buf, 1024, fp) != NULL)
+  {
+    if(buf[0] == '#' || buf[0] == '\0' || buf[0] == '\n')
+      continue;
+    // #より後ろはカット
+    char* p = strstr(buf,"#"); //#の位置を探す
+    if( p != NULL){
+      strncpy(buf, buf, p-buf+1);
+    }
+    printf("%d\n",atoi(buf));
+    //fscanf(fp, "width=%lf;%lf")
+  }
   width_s[0]     = field_toCellUnit(300);
   width_s[1]     = field_toCellUnit(300);
   thickness_s[0] = field_toCellUnit(90);
@@ -76,7 +97,7 @@ double ( *multiLayerModel_EPS(void))(double, double, int, int)
   ep[0] = 1.56*1.56*EPSILON_0_S;
   ep[1] = 1*1*EPSILON_0_S;
 
-  notsymmetry = true;
-
+  widthOnTopRate = 0.2; //頂上になると幅が半分になる
+  notsymmetry = false;
   return eps;
 }
