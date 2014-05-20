@@ -38,6 +38,9 @@ static void setTM()
 
   getDrawData = getDataZ;
   printf("TM mode \n");
+
+  makeDirectory("TM");
+  moveDirectory("TM");
 }
 
 static void setTE()
@@ -53,6 +56,8 @@ static void setTE()
 
   getDrawData = getDataY;
   printf("TE mode \n");
+  makeDirectory("TE");
+  moveDirectory("TE");
 }
 
 static void setTMupml()
@@ -68,6 +73,8 @@ static void setTMupml()
 
   getDrawData = getDataZ;
   printf("TM UPML mode \n");
+  makeDirectory("TM_UPML");
+  moveDirectory("TM_UPML");
 }
 
 static void setTEupml()
@@ -83,6 +90,8 @@ static void setTEupml()
 
   getDrawData = getDataY;
   printf("TE UPML mode \n");
+  makeDirectory("TE_UPML");
+  moveDirectory("TE_UPML");
 }
 
 static void setMPITMupml(){
@@ -98,6 +107,8 @@ static void setMPITMupml(){
   
   getDrawData = getDataZ;
   printf("MPI TM UPML mode \n");
+  makeDirectory("MPI_TM_UPML");
+  moveDirectory("MPI_TM_UPML");
 }
 
 static void setMPITEupml(){
@@ -114,6 +125,8 @@ static void setMPITEupml(){
   getDrawData = getDataY;
   
   printf("MPI TE UPML mode \n");
+  makeDirectory("MPI_TE_UPML");
+  moveDirectory("MPI_TE_UPML");
 }
 
 static void setSolver(enum SOLVER solver)
@@ -136,7 +149,7 @@ static void setSolver(enum SOLVER solver)
     break;
   case MPI_TE_UPML_2D:
     setMPITEupml();
-    break;    
+    break;
   default:
     printf("error, not implement simulator (simulator.c)\n");
     exit(2);

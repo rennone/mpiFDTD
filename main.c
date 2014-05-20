@@ -4,6 +4,7 @@
 #include <complex.h>
 #include "simulator.h"
 #include "field.h"
+#include "parser.h"
 
 #ifdef USE_OPENGL
 #include "drawer.h"
@@ -69,39 +70,54 @@ void idle(void)
 #endif
 
 //ファイルからのパラメータ呼び出し
-void readConfig()
-{
-  FILE *fp = NULL;
-  if( !(fp = fopen("config.txt", "r")) )
-  {
-    printf("cannot find config.txt\n");
-  }
+void readField(FILE *fp, FieldInfo *field_info)
+{  
   int err;
-  char buf[1024];
-  while( fgets(buf, 1024, fp) != NULL)
-  {
-    printf("%s",buf);
-  }
-  fclose(fp);
+  char buf[1024],tmp[1024];
+
+  parser_nextLine(fp, buf);
+  field_info->width_nm    = atoi(buf);
+
+  parser_nextLine(fp, buf);
+  field_info->height_nm   = atoi(buf);
+
+  parser_nextLine(fp, buf);
+  field_info->h_u_nm      = atoi(buf);
+
+  parser_nextLine(fp, buf);
+  field_info->pml         = atoi(buf);
+
+  parser_nextLine(fp, buf);
+  field_info->lambda_nm   = strtod(buf,tmp);
+
+  parser_nextLine(fp, buf);
+  field_info->stepNum     = atoi(buf);
 }
 
 int main( int argc, char *argv[] )
 {
-  readConfig();
+  FILE *fp = NULL;
+  if( !(fp = fopen("config.txt", "r")) )
+  {
+    printf("cannot find config.txt of main\n");
+  }
+
+  FieldInfo field_info;
+  readField( fp, &field_info);
+
   MPI_Init( 0, 0 );
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  
-  FieldInfo field_info;
-  field_info.width_nm    = 2560;
-  field_info.height_nm   = 2560;
-  field_info.h_u_nm      = 10;
-  field_info.pml         = 10;
-  field_info.lambda_nm   = 500;
-  field_info.stepNum     = 2000;
-  enum MODEL   modelType = MORPHO_SCALE;//MIE_CYLINDER; // モデルの種類
-  
+
+  char buf[1024], tmp[1024];
+  enum MODEL  modelType = MORPHO_SCALE;//MIE_CYLINDER; // モデルの種類  
   enum SOLVER solverType;
+
+  printf("===========FieldSetting=======\n");
+  printf("fieldSize(nm) = (%d, %d) \nh_u = %d \npml = %d\n", field_info.width_nm, field_info.height_nm,
+         field_info.h_u_nm, field_info.pml);
+  printf("lambda(nm) = %lf  \nstep = %d\n", field_info.lambda_nm, field_info.stepNum);
+  printf("==============================\n");
   if(rank == 0)
     solverType  = TM_UPML_2D;        // 計算方法
   else

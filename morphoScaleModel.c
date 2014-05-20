@@ -1,6 +1,7 @@
 #include "morphoScaleModel.h"
 #include "field.h"
 #include "function.h"
+#include "parser.h"
 #include <math.h>
 
 double width_s[2];     //幅
@@ -75,29 +76,46 @@ double ( *morphoScaleModel_EPS(void))(double, double, int, int)
     printf("cannot find config.txt of morphoScaleModel\n");
     exit(2);
   }
+  
   int err;
-  char buf[1024];
-  while( fgets(buf, 1024, fp) != NULL)
-  {
-    if(buf[0] == '#' || buf[0] == '\0' || buf[0] == '\n')
-      continue;
-    // #より後ろはカット
-    char* p = strstr(buf,"#"); //#の位置を探す
-    if( p != NULL){
-      strncpy(buf, buf, p-buf+1);
-    }
-    printf("%d\n",atoi(buf));
-    //fscanf(fp, "width=%lf;%lf")
-  }
-  width_s[0]     = field_toCellUnit(300);
-  width_s[1]     = field_toCellUnit(300);
-  thickness_s[0] = field_toCellUnit(90);
-  thickness_s[1] = field_toCellUnit(90);
-  layerNum = 8;
-  ep[0] = 1.56*1.56*EPSILON_0_S;
-  ep[1] = 1*1*EPSILON_0_S;
+  char buf[1024], tmp[1024];
 
-  widthOnTopRate = 0.2; //頂上になると幅が半分になる
-  notsymmetry = false;
+  // 9文よみこみ
+  for(int i=0; i<9; i++)
+  {
+    if( !parser_nextLine(fp, buf) )
+    {
+      printf("parse error, config.txt at MorphoScaleModel.c");
+      exit(2);
+    }
+    
+    if(i==6)
+    {
+      widthOnTopRate = strtod(buf, tmp);
+    }
+    else if(i == 7)
+    {
+      //最後の行はレイヤの数
+      layerNum = atoi(buf);
+    }
+    else if(i==8)
+    {
+      notsymmetry = atoi(buf);
+    }
+    else
+    {
+      if( i%3 == 0)
+        width_s[i/3] = field_toCellUnit(atoi(buf));
+      else if( i%3 == 1)
+        thickness_s[i/3] = field_toCellUnit(atoi(buf));
+      else
+      {
+        double n = strtod(buf, tmp);
+        ep[i/3] = n * n * EPSILON_0_S;
+      }
+    }
+  }
+  fclose(fp);
+
   return eps;
 }

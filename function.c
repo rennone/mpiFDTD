@@ -38,7 +38,7 @@ bool makeDirectory(const char* name)
     printf("make directory %s\n",name);
   } else {
     //作れなかったときは、多分すでに存在するとき.
-    printf("%s is already exist\n", name);
+    printf("directory %s is already exist\n", name);
   }
 }
 void moveDirectory(const char* name)
