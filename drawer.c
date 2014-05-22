@@ -7,6 +7,7 @@
 #include <string.h>
 #include <math.h>
 #include <GL/glew.h>
+
 #ifdef MAC_OS
 #include <GLUT/glut.h>
 #endif

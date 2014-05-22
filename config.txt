@@ -3,6 +3,10 @@
 # スペースやタブは使わない.
 # 単位は[nm]
 
-FieldSetting
-
+2560  #width
+2560  #heiht
+10    #h_u
+10    #pml
+500   #lambda
+2000  #step
 

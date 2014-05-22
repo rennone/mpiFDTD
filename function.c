@@ -24,11 +24,10 @@ FILE* openFile(const char* file_name)
   return fp;
 }
 
-
-#ifdef MAC_OS
-
+#if defined(MAC_OS) || defined(LINUX_OS)
 #include <sys/stat.h>
 #include <unistd.h>
+
 bool makeDirectory(const char* name)
 {
   if(mkdir(name,   S_IRUSR | S_IWUSR | S_IXUSR |         /* rwx */

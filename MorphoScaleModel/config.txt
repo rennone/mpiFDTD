@@ -1,6 +1,7 @@
 # これはコメント
 # 一つの物質の, 幅, 厚さ, 屈折率
-500  #width[0]
+
+300  #width[0]
 90   #thickness[0]
 1.56 #n
 
@@ -8,8 +9,6 @@
 90  #thickness[1]
 1   #n
 
+0.05 #先端の幅の割合0~1 1で細くならない
 8  #layerNum
-
-
-
-
+1 #notsymmetry 1=> true 0 => false
