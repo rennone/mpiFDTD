@@ -15,6 +15,7 @@ double (*circleModel_EPS(double x, double y, double r))(double, double, int , in
   posx = x;
   posy = y;
   epsilon = 1.6*1.6*EPSILON_0_S;
+  
   return eps;
 }
 

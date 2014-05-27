@@ -53,8 +53,10 @@ static void update(void)
 {
   calcJD();
   calcE();
+  
 //  field_scatteredWave(Ez, EPS_EZ, 0, 0); //Ezは格子点上に配置されているので,ずれは(0,0)
   field_scatteredPulse(Ez, EPS_EZ, 0, 0); //Ezは格子点上に配置されているので,ずれは(0,0)
+  
   calcMB();  
   calcH();
   ntffTM_TimeCalc(Hx,Hy,Ez,Ux,Uy,Wz);
@@ -70,33 +72,16 @@ static void init(void)
 //Finish
 static void finish(void)
 {
-  FILE *fpRe = openFile("Eth_r.txt");
-  FILE *fpIm = openFile("Eth_i.txt");
-  ntffTM_TimeOutput(Ux,Uy,Wz,fpRe, fpIm);
+  char re[1024], im[1024];
+  sprintf(re, "%d[deg]_Eth_r.txt", (int)field_getWaveAngle());
+  sprintf(im, "%d[deg]_Eth_i.txt", (int)field_getWaveAngle());
+  FILE *fpRe = openFile(re);
+  FILE *fpIm = openFile(im);
   
-  /*
-    const int maxTime = field_getMaxTime();
-    NTFFInfo nInfo = field_getNTFFInfo();
-  dcomplex *Eth, *Eph;  
-  Eth = newDComplex(360*nInfo.arraySize);
-  Eph = newDComplex(360*nInfo.arraySize);  
-  ntffTM_TimeTranslate(Ux,Uy,Wz,Eth,Eph);  
-  FILE *fpR = openFile("TM_UPML/Eth_r.txt");
-  FILE *fpI = openFile("TM_UPML/Eth_i.txt");
-  for(int ang=0; ang<360; ang++)
-  {
-    int k= ang*nInfo.arraySize;
-    for(int i=0; i < maxTime; i++)
-    {
-        fprintf(fpR,"%.20lf " , creal(Eth[k+i]));
-        fprintf(fpI,"%.20lf " , cimag(Eth[k+i]));  
-    }
-    fprintf(fpR,"\n");
-    fprintf(fpI,"\n");
-  }
-  free(Eth);
-  free(Eph);
-  */
+  ntffTM_TimeOutput(Ux,Uy,Wz,fpRe, fpIm);
+  fclose(fpRe);
+  fclose(fpIm);
+
   freeMemories();
 }
 

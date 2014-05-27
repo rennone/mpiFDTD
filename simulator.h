@@ -20,6 +20,7 @@ extern void simulator_init(FieldInfo field_info, enum MODEL model, enum SOLVER s
 extern void simulator_calc(void);
 extern bool simulator_isFinish(void);
 extern void simulator_finish(void);
+extern void simulator_reset(void); //条件はそのままで, 電磁波の状態だけリセットする.
 extern double complex* simulator_getDrawingData();
 extern double *simulator_getEps();
 

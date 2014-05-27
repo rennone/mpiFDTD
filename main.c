@@ -22,6 +22,8 @@
 #include <GL/glut.h>
 #endif
 
+int numProc = 0;
+
 void drawField()
 {
   FieldInfo_S sInfo = field_getFieldInfo_S();
@@ -57,12 +59,19 @@ void display()
 void idle(void)
 {
   simulator_calc();
-
-  if( simulator_isFinish() )  {
+  
+  if( simulator_isFinish())
+  {
     MPI_Barrier(MPI_COMM_WORLD);
     simulator_finish();
-//    MPI_Finalize();
-    exit(0);
+    if( field_getWaveAngle() < 90 )
+    {      
+      simulator_reset();
+      field_setWaveAngle(field_getWaveAngle()+45);
+    }else{
+      //    MPI_Finalize();
+      exit(0);
+    }
   }
   glutPostRedisplay();  //再描画
 //  MPI_Barrier(MPI_COMM_WORLD);
@@ -92,6 +101,12 @@ void readField(FILE *fp, FieldInfo *field_info)
 
   parser_nextLine(fp, buf);
   field_info->stepNum     = atoi(buf);
+
+  printf("===========FieldSetting=======\n");
+  printf("fieldSize(nm) = (%d, %d) \nh_u = %d \npml = %d\n", field_info->width_nm, field_info->height_nm,
+         field_info->h_u_nm, field_info->pml);
+  printf("lambda(nm) = %lf  \nstep = %d\n", field_info->lambda_nm, field_info->stepNum);
+  printf("==============================\n");
 }
 
 int main( int argc, char *argv[] )
@@ -108,25 +123,19 @@ int main( int argc, char *argv[] )
   MPI_Init( 0, 0 );
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  char buf[1024], tmp[1024];
-  enum MODEL  modelType = MORPHO_SCALE;//MIE_CYLINDER; // モデルの種類  
+  MPI_Comm_size(MPI_COMM_WORLD, &numProc);
+  enum MODEL  modelType = MIE_CYLINDER; // モデルの種類  
   enum SOLVER solverType;
-
-  printf("===========FieldSetting=======\n");
-  printf("fieldSize(nm) = (%d, %d) \nh_u = %d \npml = %d\n", field_info.width_nm, field_info.height_nm,
-         field_info.h_u_nm, field_info.pml);
-  printf("lambda(nm) = %lf  \nstep = %d\n", field_info.lambda_nm, field_info.stepNum);
-  printf("==============================\n");
-  if(rank == 0)
-    solverType  = TM_UPML_2D;        // 計算方法
-  else
+  
+//  if(rank == 0)
+//    solverType  = TM_UPML_2D;        // 計算方法
+//  else
     solverType  = TE_UPML_2D;        // 計算方法
   
   simulator_init(field_info, modelType, solverType);
-
   
-  field_setWaveAngle(-90);
+  field_setWaveAngle(0);
+  
 #ifdef USE_OPENGL
   SubFieldInfo_S subInfo = field_getSubFieldInfo_S();
   

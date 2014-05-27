@@ -79,7 +79,7 @@ double ( *morphoScaleModel_EPS(void))(double, double, int, int)
   
   int err;
   char buf[1024], tmp[1024];
-
+  double n[2];
   // 9文よみこみ
   for(int i=0; i<9; i++)
   {
@@ -110,13 +110,25 @@ double ( *morphoScaleModel_EPS(void))(double, double, int, int)
         thickness_s[i/3] = field_toCellUnit(atoi(buf));
       else
       {
-        double n = strtod(buf, tmp);
-        ep[i/3] = n * n * EPSILON_0_S;
+        n[i/3] = strtod(buf, tmp);
+        ep[i/3] = n[i/3] * n[i/3] * EPSILON_0_S;
       }
     }
   }
   fclose(fp);
 
-  
+  char str[1024];
+
+  sprintf(str, "w(%d,%d)d(%d,%d)",
+          (int)field_toPhisycalUnit(width_s[0]), (int)field_toPhisycalUnit(width_s[1]),
+          (int)field_toPhisycalUnit(thickness_s[0]), (int)field_toPhisycalUnit(thickness_s[1])
+    );  
+  makeDirectory(str);
+  moveDirectory(str);
+
+  char str2[1024];
+  sprintf(str2, "n(%.2lf,%.2lf)(%d,%.2lf)", n[0],n[1],layerNum, widthOnTopRate);
+  makeDirectory(str2);
+  moveDirectory(str2);
   return eps;
 }

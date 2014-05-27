@@ -178,6 +178,12 @@ void simulator_init(FieldInfo field_info, enum MODEL model, enum SOLVER solver)
   gettimeofday(&timer1, NULL); //開始時間の取得
 }
 
+void simulator_reset()
+{
+  (*initMethod)();
+  gettimeofday(&timer1, NULL); //開始時間の取得
+}
+
 void simulator_finish()
 {  
   printf("finish at %d step \n", (int)field_getTime());

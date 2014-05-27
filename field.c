@@ -340,35 +340,3 @@ static void mpiSplit(void)
   subFieldInfo_s.OFFSET_X  = coordinates[0] * subFieldInfo_s.SUB_N_X; //ランクのインデックスではなく, セル単位のオフセットなのでSUB_N_Xずれる
   subFieldInfo_s.OFFSET_Y  = coordinates[1] * subFieldInfo_s.SUB_N_Y;
 }
-
-/*
-void setField(const int wid, const int hei, const double _h, const int pml, const double lambda, double maxstep)
-{
-  H_u = _h;
-  N_PX = field_toCellUnit(wid);
-  N_PY = field_toCellUnit(hei);
-  N_PML = pml;  
-  N_X = N_PX - 2*N_PML;
-  N_Y = N_PY - 2*N_PML;
-  N_CELL = N_PX * N_PY; //全セル数 
-  time = 0;
-  maxTime = maxstep;
-  
-  lambda_s = field_toCellUnit(lambda);
-  k_s = 2*M_PI/lambda_s;
-  w_s = C_0_S*k_s;
-  T_s = 2*M_PI/w_s;
-
-  ray_coef = 0;  
-//  waveAngle = 0;  
-
-  ntff_info.top = N_PY - N_PML - 5;
-  ntff_info.bottom = N_PML + 5;
-  ntff_info.left = N_PML + 5;
-  ntff_info.right = N_PX - N_PML - 5;
-
-  double len = (ntff_info.top - ntff_info.bottom)/2;
-  ntff_info.RFperC = len*2;
-  ntff_info.arraySize = maxTime + 2*ntff_info.RFperC;
-}
-*/

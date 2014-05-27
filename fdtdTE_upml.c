@@ -163,8 +163,8 @@ static inline void update(void)
   calcJD();
   calcE();
 
-//  field_scatteredPulse(Ey, EPS_EY, 0, 0.5); //Eyは格子点より上に0.5ずれた位置に配置
-  field_scatteredWave(Ey, EPS_EY, 0, 0.5);
+  field_scatteredPulse(Ey, EPS_EY, 0, 0.5); //Eyは格子点より上に0.5ずれた位置に配置
+//  field_scatteredWave(Ey, EPS_EY, 0, 0.5);
   
 //  fastCalcMB();
 //  fastCalcH();
