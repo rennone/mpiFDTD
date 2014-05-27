@@ -3,12 +3,14 @@
 #include "function.h"
 #include "parser.h"
 #include <math.h>
+#include <stdlib.h>
+#include <mpi.h>
 
 double width_s[2];     //幅
-double widthOnTopRate; //頂上だと幅が何倍になるか(基本0~1)
+double widthOnTopRate; //頂上に置ける幅の縮小率(基本0~1)
 double thickness_s[2]; //厚さ
 double n[2];
-double ep[2];           //誘電率 = n*n*ep0
+double ep_s[2];           //誘電率 = n*n*ep0_s
 int layerNum;          //枚数
 bool notsymmetry;      //左右比対称
 
@@ -64,10 +66,8 @@ static double eps(double x, double y, int col, int row)
 
   s[0] /= 32.0*32.0;
   s[1] /= 32.0*32.0;
-  return EPSILON_0_S*(1-s[0]-s[1]) + ep[0]*s[0] + ep[1]*s[1];
+  return EPSILON_0_S*(1-s[0]-s[1]) + ep_s[0]*s[0] + ep_s[1]*s[1];
 }
-
-#include <stdlib.h>
 
 void readConfig()
 {
@@ -111,7 +111,7 @@ void readConfig()
       else
       {
         n[i/3] = strtod(buf, tmp);
-        ep[i/3] = n[i/3] * n[i/3] * EPSILON_0_S;
+        ep_s[i/3] = n[i/3] * n[i/3] * EPSILON_0_S;
       }
     }
   }
@@ -119,15 +119,39 @@ void readConfig()
 }
 
 double ( *morphoScaleModel_EPS(void))(double, double, int, int)
-{  
-  readConfig();
+{
+  int rank, numProc;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &numProc);
+
+  if(rank == 0)
+  {
+    readConfig();
+      
+    for(int i=1; i<numProc; i++)
+    {
+      MPI_Send(&width_s, 2, MPI_DOUBLE, i, 0, MPI_COMM_WORLD);
+      MPI_Send(&widthOnTopRate, 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD);
+      MPI_Send(&thickness_s, 2, MPI_DOUBLE, i, 2, MPI_COMM_WORLD);
+      MPI_Send(&ep_s, 2, MPI_DOUBLE, i, 3, MPI_COMM_WORLD);
+      MPI_Send(&layerNum, 1, MPI_INT, i, 4, MPI_COMM_WORLD);
+      MPI_Send(&notsymmetry, 1, MPI_INT, i, 5, MPI_COMM_WORLD);
+    }
+  } else {
+    MPI_Status status;
+    MPI_Recv(&width_s, 2, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, &status);
+    MPI_Recv(&widthOnTopRate, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &status);
+    MPI_Recv(&thickness_s, 2, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD, &status);
+    MPI_Recv(&ep_s, 2, MPI_DOUBLE, 0, 3, MPI_COMM_WORLD, &status);
+    MPI_Recv(&layerNum, 1, MPI_INT, 0, 4, MPI_COMM_WORLD, &status);
+    MPI_Recv(&notsymmetry, 1, MPI_INT, 0, 5, MPI_COMM_WORLD, &status);
+  }  
   
   char str[1024];
   sprintf(str, "w%d_%d_d%d_%d",
           (int)field_toPhisycalUnit(width_s[0]), (int)field_toPhisycalUnit(width_s[1]),
           (int)field_toPhisycalUnit(thickness_s[0]), (int)field_toPhisycalUnit(thickness_s[1])
-    );
-  
+    );  
   makeDirectory(str);
   moveDirectory(str);
   
@@ -135,5 +159,6 @@ double ( *morphoScaleModel_EPS(void))(double, double, int, int)
   sprintf(str2, "n%.2lf-%.2lf_m%d_r%.2lf", n[0],n[1],layerNum, widthOnTopRate);
   makeDirectory(str2);
   moveDirectory(str2);
+
   return eps;
 }

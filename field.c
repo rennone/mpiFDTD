@@ -104,8 +104,7 @@ void field_init(FieldInfo field_info)
   waveInfo_s.Omega_s  = C_0_S*waveInfo_s.K_s;
   waveInfo_s.Angle_deg   = fieldInfo.angle_deg;
 
-  //小領域のパラメータを保存
-  mpiSplit();
+  mpiSplit();  //小領域のパラメータを計算
 
   // 下位バージョンとの互換性の為
   H_u = fieldInfo.h_u_nm;  

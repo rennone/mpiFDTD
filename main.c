@@ -34,7 +34,7 @@ Config config;
 #include <GL/glut.h>
 #endif
 
-void drawField()
+static void drawField()
 {
   FieldInfo_S sInfo = field_getFieldInfo_S();
   drawer_paintImage(0,0, sInfo.N_X, sInfo.N_Y, sInfo.N_PX, sInfo.N_PY,
@@ -43,7 +43,7 @@ void drawField()
                     simulator_getEps());
 }
 
-void drawSubField()
+static void drawSubField()
 {
   SubFieldInfo_S subInfo = field_getSubFieldInfo_S();
   drawer_paintImage(1,1, subInfo.SUB_N_X, subInfo.SUB_N_Y, subInfo.SUB_N_PX, subInfo.SUB_N_PY,
@@ -52,7 +52,7 @@ void drawSubField()
                     simulator_getEps());  
 }
 
-void display()
+static void display()
 {
   glEnableClientState( GL_VERTEX_ARRAY );
   glEnableClientState( GL_TEXTURE_COORD_ARRAY );
@@ -66,21 +66,21 @@ void display()
   glutSwapBuffers();
 }
 
-void idle(void)
+static void idle(void)
 {
   simulator_calc();
   
   if( simulator_isFinish())
   {
     MPI_Barrier(MPI_COMM_WORLD);
-    simulator_finish();
     if( field_getWaveAngle() < config.endAngle )
     {      
       simulator_reset();
       int angle = field_getWaveAngle()+config.deltaAngle*numProc;
       field_setWaveAngle(angle);
     }else{
-      //    MPI_Finalize();
+      simulator_finish();
+      MPI_Finalize();
       exit(0);
     }
   }
@@ -91,8 +91,14 @@ void idle(void)
 #endif
 
 //ファイルからのパラメータ呼び出し
-void readField(FILE *fp, FieldInfo *field_info)
-{  
+static void readConfig(FieldInfo *field_info)
+{
+  FILE *fp = NULL;
+  if( !(fp = fopen("config.txt", "r")) )
+  {
+    printf("cannot find config.txt of main\n");
+  }
+
   int err;
   char buf[1024],tmp[1024];
 
@@ -131,11 +137,12 @@ void readField(FILE *fp, FieldInfo *field_info)
   //Solver情報
   parser_nextLine(fp, buf);
   config.SolverType = atoi(buf);
+
+  fclose(fp);
 }
 
 int main( int argc, char *argv[] )
 {
-
   MPI_Init( 0, 0 );
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &numProc);
@@ -143,14 +150,9 @@ int main( int argc, char *argv[] )
   FieldInfo field_info;
   //同時にファイルを読み込むのはヤバいので, rank0だけが読み込んで同期する
   if(rank == 0)
-  {
-    printf("rank %d",rank);
-    FILE *fp = NULL;
-    if( !(fp = fopen("config.txt", "r")) )
-    {
-      printf("cannot find config.txt of main\n");
-    }
-    readField(fp, &field_info);
+  {  
+    
+    readConfig(&field_info);
     
     printf("===========FieldSetting=======\n");
     printf("fieldSize(nm) = (%d, %d) \nh_u = %d \npml = %d\n", field_info.width_nm, field_info.height_nm,
@@ -159,33 +161,31 @@ int main( int argc, char *argv[] )
 
     printf("angle = %d .. %d (delta = %d)\n", config.startAngle, config.endAngle, config.deltaAngle);
     printf("==============================\n");
-  }  
+  }
 
-//configを同期
-  //intの配列に変換
-  int field[20];
-  
-  if(rank ==0)
+  MPI_Barrier(MPI_COMM_WORLD);
+  printf("rank = %d, angle = %d\n", rank, field_info.angle_deg);
+
+  //configを同期
+  if(rank == 0)
   {
     for(int i=1; i<numProc; i++)
     {
       MPI_Send((int*)&field_info, sizeof(FieldInfo)/sizeof(int), MPI_INT, i, 0, MPI_COMM_WORLD);
-      MPI_Send((int*)&config, sizeof(FieldInfo)/sizeof(int), MPI_INT, i, 0, MPI_COMM_WORLD);
+      MPI_Send((int*)&config, sizeof(FieldInfo)/sizeof(int), MPI_INT, i, 1, MPI_COMM_WORLD);
     }
   }else{
     MPI_Status status;
     MPI_Recv((int*)&field_info, sizeof(FieldInfo)/sizeof(int), MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
-    MPI_Recv((int*)&config, sizeof(FieldInfo)/sizeof(int), MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
-  }  
+    MPI_Recv((int*)&config, sizeof(FieldInfo)/sizeof(int), MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
+  }
+  
   field_info.angle_deg = config.startAngle + config.deltaAngle*rank;
 
   //シミュレーションの初期化. 同時に, 必要なディレクトリまで移動している.
-  simulator_init(field_info, config.ModelType, config.SolverType);
-
-  
+  simulator_init(field_info, config.ModelType, config.SolverType);  
   
   MPI_Barrier(MPI_COMM_WORLD); //(情報表示がずれないように)全員一緒に始める
-  printf("rank = %d, angle = %d\n", rank, field_info.angle_deg);
   
 #ifdef USE_OPENGL
   SubFieldInfo_S subInfo = field_getSubFieldInfo_S();
@@ -208,13 +208,24 @@ int main( int argc, char *argv[] )
 
 #ifndef USE_OPENGL
   //only calculate mode
-  while(!simulator_isFinish())
+  while(1)
   {
-    simulator_calc();    
+    while(!simulator_isFinish()) {
+      simulator_calc();    
+    }
+    
+    MPI_Barrier(MPI_COMM_WORLD);
+    if( field_getWaveAngle() < config.endAngle )
+    {      
+      simulator_reset();
+      int angle = field_getWaveAngle()+config.deltaAngle*numProc;
+      field_setWaveAngle(angle);
+    } else {
+      simulator_finish();
+      break;
+    }
   }
-//  MPI_Barrier(MPI_COMM_WORLD);
-  simulator_finish();
-//  MPI_Finalize();
+  MPI_Finalize();
 #endif
 
   return 1;
