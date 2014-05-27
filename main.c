@@ -164,7 +164,6 @@ int main( int argc, char *argv[] )
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
-  printf("rank = %d, angle = %d\n", rank, field_info.angle_deg);
 
   //configを同期
   if(rank == 0)
@@ -172,12 +171,12 @@ int main( int argc, char *argv[] )
     for(int i=1; i<numProc; i++)
     {
       MPI_Send((int*)&field_info, sizeof(FieldInfo)/sizeof(int), MPI_INT, i, 0, MPI_COMM_WORLD);
-      MPI_Send((int*)&config, sizeof(FieldInfo)/sizeof(int), MPI_INT, i, 1, MPI_COMM_WORLD);
+      MPI_Send((int*)&config, sizeof(Config)/sizeof(int), MPI_INT, i, 1, MPI_COMM_WORLD);
     }
   }else{
     MPI_Status status;
     MPI_Recv((int*)&field_info, sizeof(FieldInfo)/sizeof(int), MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
-    MPI_Recv((int*)&config, sizeof(FieldInfo)/sizeof(int), MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
+    MPI_Recv((int*)&config, sizeof(Config)/sizeof(int), MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
   }
   
   field_info.angle_deg = config.startAngle + config.deltaAngle*rank;
@@ -186,7 +185,7 @@ int main( int argc, char *argv[] )
   simulator_init(field_info, config.ModelType, config.SolverType);  
   
   MPI_Barrier(MPI_COMM_WORLD); //(情報表示がずれないように)全員一緒に始める
-  
+  printf("rank=%d, angle=%d\n",rank, field_info.angle_deg);
 #ifdef USE_OPENGL
   SubFieldInfo_S subInfo = field_getSubFieldInfo_S();
   
