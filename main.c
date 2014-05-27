@@ -23,6 +23,7 @@
 #endif
 
 int numProc = 0;
+int startAngle = 0, endAngle = 0, deltaAngle = 1;
 
 void drawField()
 {
@@ -64,10 +65,10 @@ void idle(void)
   {
     MPI_Barrier(MPI_COMM_WORLD);
     simulator_finish();
-    if( field_getWaveAngle() < 90 )
+    if( field_getWaveAngle() < endAngle )
     {      
       simulator_reset();
-      field_setWaveAngle(field_getWaveAngle()+45);
+      field_setWaveAngle(field_getWaveAngle()+deltaAngle*numProc);
     }else{
       //    MPI_Finalize();
       exit(0);
@@ -102,11 +103,15 @@ void readField(FILE *fp, FieldInfo *field_info)
   parser_nextLine(fp, buf);
   field_info->stepNum     = atoi(buf);
 
-  printf("===========FieldSetting=======\n");
-  printf("fieldSize(nm) = (%d, %d) \nh_u = %d \npml = %d\n", field_info->width_nm, field_info->height_nm,
-         field_info->h_u_nm, field_info->pml);
-  printf("lambda(nm) = %lf  \nstep = %d\n", field_info->lambda_nm, field_info->stepNum);
-  printf("==============================\n");
+//入射角度
+  parser_nextLine(fp, buf);
+  startAngle = atoi(buf);
+
+  parser_nextLine(fp, buf);
+  endAngle = atoi(buf);
+
+  parser_nextLine(fp, buf);
+  deltaAngle = atoi(buf);  
 }
 
 int main( int argc, char *argv[] )
@@ -130,12 +135,24 @@ int main( int argc, char *argv[] )
 //  if(rank == 0)
 //    solverType  = TM_UPML_2D;        // 計算方法
 //  else
-    solverType  = TE_UPML_2D;        // 計算方法
-  
+  solverType  = TE_UPML_2D;        // 計算方法
+
+  field_info.angle_deg = startAngle + deltaAngle*rank;    
   simulator_init(field_info, modelType, solverType);
-  
-  field_setWaveAngle(0);
-  
+
+  if(rank == 0)
+  {
+    printf("===========FieldSetting=======\n");
+    printf("fieldSize(nm) = (%d, %d) \nh_u = %d \npml = %d\n", field_info.width_nm, field_info.height_nm,
+           field_info.h_u_nm, field_info.pml);
+    printf("lambda(nm) = %lf  \nstep = %d\n", field_info.lambda_nm, field_info.stepNum);
+
+    printf("angle = %d .. %d (delta = %d)\n", startAngle, endAngle, deltaAngle);
+    printf("==============================\n");
+  }
+
+  MPI_Barrier(MPI_COMM_WORLD); //(情報表示がずれないように)全員一緒に始める
+  printf("rank = %d, angle = %d\n", rank, field_info.angle_deg);
 #ifdef USE_OPENGL
   SubFieldInfo_S subInfo = field_getSubFieldInfo_S();
   

@@ -97,7 +97,7 @@ void initField(FieldInfo field_info)
   waveInfo_s.T_s      = waveInfo_s.Lambda_s/C_0_S;
   waveInfo_s.K_s      = 2*M_PI/waveInfo_s.Lambda_s;
   waveInfo_s.Omega_s  = C_0_S*waveInfo_s.K_s;
-  waveInfo_s.Angle_deg   = 0; //0°
+  waveInfo_s.Angle_deg   = fieldInfo.angle_deg;
 
   //小領域のパラメータを保存
   mpiSplit();
