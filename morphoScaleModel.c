@@ -127,7 +127,7 @@ double ( *morphoScaleModel_EPS(void))(double, double, int, int)
   moveDirectory(str);
 
   char str2[1024];
-  sprintf(str2, "n=%.2lf-%.2lf_m=%dr=%.2lf)", n[0],n[1],layerNum, widthOnTopRate);
+  sprintf(str2, "n=%.2lf-%.2lf_m=%dr=%.2lf", n[0],n[1],layerNum, widthOnTopRate);
   makeDirectory(str2);
   moveDirectory(str2);
   return eps;
