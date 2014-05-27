@@ -41,6 +41,7 @@ static void setCoefficient(void);
 
 static void update(void);
 static void finish(void);
+static void reset(void);
 static void init(void);
 
 static void calcJD(void);
@@ -63,14 +64,14 @@ static void update(void)
 }
 
 //Initialize
-static void init(void)
+static void init()
 {
   allocateMemories();
   setCoefficient(); 
 }
 
 //Finish
-static void finish(void)
+static void finish()
 {
   char re[1024], im[1024];
   sprintf(re, "%d[deg]_Eth_r.txt", (int)field_getWaveAngle());
@@ -85,6 +86,33 @@ static void finish(void)
   freeMemories();
 }
 
+//Reset -> メモリとかは解放せず, もう一度シミュレーションを行うよう
+static void reset()
+{
+  char re[1024], im[1024];
+  sprintf(re, "%d[deg]_Eth_r.txt", (int)field_getWaveAngle());
+  sprintf(im, "%d[deg]_Eth_i.txt", (int)field_getWaveAngle());
+  FILE *fpRe = openFile(re);
+  FILE *fpIm = openFile(im);
+  
+  ntffTM_TimeOutput(Ux,Uy,Wz,fpRe, fpIm);
+  fclose(fpRe);
+  fclose(fpIm);
+
+//計算領域の初期化
+  memset(Hx, 0, sizeof(double complex)*N_CELL);
+  memset(Hy, 0, sizeof(double complex)*N_CELL);
+  memset(Ez, 0, sizeof(double complex)*N_CELL);
+
+  memset(Mx, 0, sizeof(double complex)*N_CELL);
+  memset(My, 0, sizeof(double complex)*N_CELL);
+  memset(Jz, 0, sizeof(double complex)*N_CELL);
+
+  memset(Bx, 0, sizeof(double complex)*N_CELL);
+  memset(By, 0, sizeof(double complex)*N_CELL);
+  memset(Dz, 0, sizeof(double complex)*N_CELL);
+}
+
 //:public
 void (* fdtdTM_upml_getUpdate(void))(void)
 {
@@ -94,6 +122,11 @@ void (* fdtdTM_upml_getUpdate(void))(void)
 void (* fdtdTM_upml_getFinish(void))(void)
 {
   return finish;
+}
+
+void (* fdtdTM_upml_getReset(void))(void)
+{
+  return reset;
 }
 
 void (* fdtdTM_upml_getInit(void))(void)
@@ -242,7 +275,7 @@ static void setCoefficient(void){
 
 static void allocateMemories()
 {
-    Ez = newDComplex(N_CELL);
+  Ez = newDComplex(N_CELL);
   Dz = newDComplex(N_CELL);
   Jz = newDComplex(N_CELL);
   

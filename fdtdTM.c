@@ -21,6 +21,7 @@ static double *EPS_EZ = NULL, *EPS_HX = NULL, *EPS_HY = NULL;
 //  メンバ関数      //
 static void update(void);
 static void finish(void);
+static void reset(void);
 static void init(void);
 static inline void calcE(void);
 static inline void calcH(void);
@@ -36,6 +37,11 @@ void (* fdtdTM_getUpdate(void))(void)
 void (* fdtdTM_getFinish(void))(void)
 {
   return finish;
+}
+
+void (* fdtdTM_getReset(void))(void)
+{
+  return reset;
 }
 
 void (* fdtdTM_getInit(void))(void)
@@ -145,6 +151,15 @@ static inline double EPSHY(const int i, const int j){
 }
 
 //----------private getter--------------//
+
+static void reset()
+{
+  memset(Hx, 0, sizeof(double complex)*N_CELL);
+  memset(Hy, 0, sizeof(double complex)*N_CELL);
+  memset(Ezx,0, sizeof(double complex)*N_CELL);
+  memset(Ezy,0, sizeof(double complex)*N_CELL);
+  memset(Ez,0, sizeof(double complex)*N_CELL);  
+}
 
 static void init(){
   Hx = (double complex*)malloc(sizeof(double complex)*N_CELL);

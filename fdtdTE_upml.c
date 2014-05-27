@@ -37,6 +37,7 @@ static dcomplex *Uz, *Wx, *Wy;
 //------prototype--------//
 static void update(void);
 static void finish(void);
+static void reset(void);
 static void init(void);
 
 //高速化したcalculation
@@ -63,6 +64,11 @@ void (* fdtdTE_upml_getUpdate(void))(void)
 void (* fdtdTE_upml_getFinish(void))(void)
 {
   return finish;
+}
+
+void (* fdtdTE_upml_getReset(void))(void)
+{
+  return reset;
 }
 
 void (* fdtdTE_upml_getInit(void))(void)
@@ -129,6 +135,30 @@ static void finish(){
     fprintf(fpI,"\n");
   }  
 */
+}
+
+static void reset()
+{
+  char re[1024], im[1024];
+  sprintf(re, "%d[deg]_Eph_r.txt", (int)field_getWaveAngle());
+  sprintf(im, "%d[deg]_Eph_i.txt", (int)field_getWaveAngle());
+  FILE *fpR = openFile(re);
+  FILE *fpI = openFile(im);
+  ntffTE_TimeOutput(Wx, Wy, Uz, re, im);
+  fclose(fpR);
+  fclose(fpI);
+
+  memset(Ex, 0, sizeof(double complex)*N_CELL);
+  memset(Ey, 0, sizeof(double complex)*N_CELL);
+  memset(Hz, 0, sizeof(double complex)*N_CELL);
+
+  memset(Jx, 0, sizeof(double complex)*N_CELL);
+  memset(Jy, 0, sizeof(double complex)*N_CELL);
+  memset(Mz, 0, sizeof(double complex)*N_CELL);
+
+  memset(Dx, 0, sizeof(double complex)*N_CELL);
+  memset(Dy, 0, sizeof(double complex)*N_CELL);
+  memset(Bz, 0, sizeof(double complex)*N_CELL);
 }
 
 

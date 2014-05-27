@@ -4,10 +4,12 @@
 
 extern void (* fdtdTM_upml_getUpdate(void))(void);
 extern void (* fdtdTM_upml_getFinish(void))(void);
+extern void (* fdtdTM_upml_getReset(void))(void);
 extern void (* fdtdTM_upml_getInit(void))(void);
 extern dcomplex* fdtdTM_upml_getHx(void);
 extern dcomplex* fdtdTM_upml_getHy(void);
 extern dcomplex* fdtdTM_upml_getEz(void);
+
 
 extern double* fdtdTM_upml_getEps();
 #endif

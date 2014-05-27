@@ -4,6 +4,7 @@
 
 extern void (* mpi_fdtdTM_upml_getUpdate(void))(void);
 extern void (* mpi_fdtdTM_upml_getFinish(void))(void);
+extern void (* mpi_fdtdTM_upml_getReset(void))(void);
 extern void (* mpi_fdtdTM_upml_getInit(void))(void);
 extern double complex* mpi_fdtdTM_upml_getHx(void);
 extern double complex* mpi_fdtdTM_upml_getHy(void);

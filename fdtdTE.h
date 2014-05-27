@@ -4,6 +4,7 @@
 
 extern void(*fdtdTE_getUpdate(void))(void);
 extern void(*fdtdTE_getFinish(void))(void);
+extern void(*fdtdTE_getReset(void))(void);
 extern void(*fdtdTE_getInit(void))(void);
 
 extern double complex* fdtdTE_getEx(void);

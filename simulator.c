@@ -20,6 +20,7 @@ static double complex* (*getDataY)() = NULL;
 static double complex* (*getDataZ)() = NULL;
 static void (* finishMethod)() = NULL;
 static void (* initMethod)() = NULL;
+static void (* resetMethod)() = NULL;
 static double complex* (*getDrawData)() = NULL;
 static double* (* getEpsMethod )() = NULL;
 
@@ -30,7 +31,7 @@ static void setTM()
   update       = fdtdTM_getUpdate();
   initMethod   = fdtdTM_getInit();
   finishMethod = fdtdTM_getFinish();
-
+  resetMethod  = fdtdTM_getReset();
   getEpsMethod = fdtdTM_getEps;
   getDataX = fdtdTM_getHx;
   getDataY = fdtdTM_getHy;
@@ -48,7 +49,8 @@ static void setTE()
   update       = fdtdTE_getUpdate();
   initMethod   = fdtdTE_getInit();
   finishMethod = fdtdTE_getFinish();
-
+  resetMethod  = fdtdTE_getReset();
+  
   getEpsMethod = fdtdTE_getEps;
   getDataX = fdtdTE_getEx;
   getDataY = fdtdTE_getEy;
@@ -65,7 +67,8 @@ static void setTMupml()
   update       = fdtdTM_upml_getUpdate();
   initMethod   = fdtdTM_upml_getInit();
   finishMethod = fdtdTM_upml_getFinish();
-
+  resetMethod  = fdtdTM_upml_getReset();
+  
   getEpsMethod = fdtdTM_upml_getEps;
   getDataX = fdtdTM_upml_getHx;
   getDataY = fdtdTM_upml_getHy;
@@ -82,7 +85,8 @@ static void setTEupml()
   update       = fdtdTE_upml_getUpdate();
   initMethod   = fdtdTE_upml_getInit();
   finishMethod = fdtdTE_upml_getFinish();
-
+  resetMethod  = fdtdTE_upml_getReset();
+  
   getEpsMethod = fdtdTE_upml_getEps;
   getDataX = fdtdTE_upml_getEx;
   getDataY = fdtdTE_upml_getEy;
@@ -98,7 +102,8 @@ static void setMPITMupml(){
   update       = mpi_fdtdTM_upml_getUpdate();
   initMethod   = mpi_fdtdTM_upml_getInit();
   finishMethod = mpi_fdtdTM_upml_getFinish();
-
+  resetMethod  = mpi_fdtdTM_upml_getReset();
+  
   getEpsMethod = mpi_fdtdTM_upml_getEps;
   
   getDataX = mpi_fdtdTM_upml_getHx;
@@ -115,6 +120,7 @@ static void setMPITEupml(){
   update       = mpi_fdtdTE_upml_getUpdate();
   initMethod   = mpi_fdtdTE_upml_getInit();
   finishMethod = mpi_fdtdTE_upml_getFinish();
+  resetMethod  = mpi_fdtdTE_upml_getReset();
   
   getEpsMethod = mpi_fdtdTE_upml_getEps;
 
@@ -183,7 +189,7 @@ void simulator_reset()
   printf("simulator_reset \n");
 
   field_reset();   //フィールド情報をリセット
-  (*initMethod)(); //シミュレータをリセット
+  (*resetMethod)(); //シミュレータをリセット
   gettimeofday(&timer1, NULL); //開始時間の取得
 }
 

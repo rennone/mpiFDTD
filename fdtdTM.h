@@ -4,6 +4,7 @@
 
 extern void(*fdtdTM_getUpdate(void))(void);
 extern void(*fdtdTM_getFinish(void))(void);
+extern void(*fdtdTM_getReset(void))(void);
 extern void(* fdtdTM_getInit(void))(void);
 
 extern double complex* fdtdTM_getEzx(void);

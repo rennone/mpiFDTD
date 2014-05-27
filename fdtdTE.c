@@ -19,6 +19,7 @@ static double *EPS_EX=NULL, *EPS_EY=NULL, *EPS_HZ=NULL;
 //------プロトタイプ宣言--------//
 static void update(void);
 static void finish(void);
+static void reset(void);
 static void init(void);
 static inline void calcE(void);
 static inline void calcH(void);
@@ -35,6 +36,11 @@ void (* fdtdTE_getUpdate(void))(void)
 void (* fdtdTE_getFinish(void))(void)
 {
   return finish;
+}
+
+void (* fdtdTE_getReset(void))(void)
+{
+  return reset;
 }
 
 void (* fdtdTE_getInit(void))(void)
@@ -257,6 +263,18 @@ static void finish()
   if(EPS_EX != NULL){   free(EPS_EX); EPS_EX = NULL;}
   if(EPS_EY != NULL){   free(EPS_EY); EPS_EY = NULL;}
   if(EPS_HZ != NULL){   free(EPS_HZ); EPS_HZ = NULL;}
+}
+
+static void reset()
+{
+  /*
+output process
+   */
+  memset(Ex, 0, sizeof(double complex)*N_CELL);
+  memset(Ey, 0, sizeof(double complex)*N_CELL);
+  memset(Hzx,0, sizeof(double complex)*N_CELL);
+  memset(Hzy,0, sizeof(double complex)*N_CELL);
+  memset(Hz,0, sizeof(double complex)*N_CELL);
 }
 
 //Standard Scattered Wave

@@ -176,11 +176,14 @@ int main( int argc, char *argv[] )
     MPI_Status status;
     MPI_Recv((int*)&field_info, sizeof(FieldInfo)/sizeof(int), MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
     MPI_Recv((int*)&config, sizeof(FieldInfo)/sizeof(int), MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
-  }
-
+  }  
   field_info.angle_deg = config.startAngle + config.deltaAngle*rank;
+
+  //シミュレーションの初期化. 同時に, 必要なディレクトリまで移動している.
   simulator_init(field_info, config.ModelType, config.SolverType);
 
+  
+  
   MPI_Barrier(MPI_COMM_WORLD); //(情報表示がずれないように)全員一緒に始める
   printf("rank = %d, angle = %d\n", rank, field_info.angle_deg);
   

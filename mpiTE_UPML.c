@@ -50,6 +50,7 @@ static double complex *debug_W[4];
 //------prototype--------//
 static void update(void);
 static void finish(void);
+static void reset(void);
 static void init(void);
 static void initMpi(void);
 static void initDebug(void);
@@ -76,6 +77,11 @@ void (* mpi_fdtdTE_upml_getUpdate(void))(void)
 void (* mpi_fdtdTE_upml_getFinish(void))(void)
 {
   return finish;
+}
+
+void (* mpi_fdtdTE_upml_getReset(void))(void)
+{
+  return reset;
 }
 
 void (* mpi_fdtdTE_upml_getInit(void))(void)
@@ -309,6 +315,23 @@ static void finish()
   freeMemories();
   
   MPI_Finalize();
+}
+
+static void reset()
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+  /*
+output process
+   */
+  memset(Ex, 0, sizeof(double complex)*SUB_N_CELL);
+  memset(Ey, 0, sizeof(double complex)*SUB_N_CELL);
+  memset(Hz,0, sizeof(double complex)*SUB_N_CELL);
+  memset(Jx, 0, sizeof(double complex)*SUB_N_CELL);
+  memset(Jy, 0, sizeof(double complex)*SUB_N_CELL);
+  memset(Mz,0, sizeof(double complex)*SUB_N_CELL);
+  memset(Dx, 0, sizeof(double complex)*SUB_N_CELL);
+  memset(Dy, 0, sizeof(double complex)*SUB_N_CELL);
+  memset(Bz,0, sizeof(double complex)*SUB_N_CELL);  
 }
 
 static inline void calcJD(void)

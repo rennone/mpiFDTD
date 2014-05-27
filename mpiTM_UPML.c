@@ -58,6 +58,7 @@ static double *EPS_EZ = NULL, *EPS_HX = NULL, *EPS_HY = NULL;
 
 static void update(void);
 static void finish(void);
+static void reset(void);
 static void output(void);
 static void freeMemories(void);
 static void allocateMemories(void);
@@ -112,6 +113,10 @@ void (* mpi_fdtdTM_upml_getUpdate(void))(void)
 void (* mpi_fdtdTM_upml_getFinish(void))(void)
 {
   return finish;
+}
+void (* mpi_fdtdTM_upml_getReset(void))(void)
+{
+  return reset;
 }
 void (* mpi_fdtdTM_upml_getInit(void))(void)
 {
@@ -209,6 +214,21 @@ static void update(void)
   //Connection_SendRecvH();
 
   ntff();
+}
+
+static void reset()
+{
+  //最後は同期をとっておく
+  MPI_Barrier(MPI_COMM_WORLD);
+  memset(Hx, 0, sizeof(double complex)*SUB_N_CELL);
+  memset(Hy, 0, sizeof(double complex)*SUB_N_CELL);
+  memset(Ez, 0, sizeof(double complex)*SUB_N_CELL);
+  memset(Mx, 0, sizeof(double complex)*SUB_N_CELL);
+  memset(My, 0, sizeof(double complex)*SUB_N_CELL);
+  memset(Jz, 0, sizeof(double complex)*SUB_N_CELL);
+  memset(Bx, 0, sizeof(double complex)*SUB_N_CELL);
+  memset(By, 0, sizeof(double complex)*SUB_N_CELL);
+  memset(Dz, 0, sizeof(double complex)*SUB_N_CELL);  
 }
 
 //Finish
@@ -624,11 +644,9 @@ static void allocateMemories(void)
   memset(Hx, 0, sizeof(double complex)*SUB_N_CELL);
   memset(Hy, 0, sizeof(double complex)*SUB_N_CELL);
   memset(Ez, 0, sizeof(double complex)*SUB_N_CELL);
-
   memset(Mx, 0, sizeof(double complex)*SUB_N_CELL);
   memset(My, 0, sizeof(double complex)*SUB_N_CELL);
   memset(Jz, 0, sizeof(double complex)*SUB_N_CELL);
-
   memset(Bx, 0, sizeof(double complex)*SUB_N_CELL);
   memset(By, 0, sizeof(double complex)*SUB_N_CELL);
   memset(Dz, 0, sizeof(double complex)*SUB_N_CELL);
