@@ -119,7 +119,7 @@ double ( *morphoScaleModel_EPS(void))(double, double, int, int)
 
   char str[1024];
 
-  sprintf(str, "w_%d-%dd_%d-%d",
+  sprintf(str, "w=%d_%d_d=%d_%d",
           (int)field_toPhisycalUnit(width_s[0]), (int)field_toPhisycalUnit(width_s[1]),
           (int)field_toPhisycalUnit(thickness_s[0]), (int)field_toPhisycalUnit(thickness_s[1])
     );  
@@ -127,7 +127,7 @@ double ( *morphoScaleModel_EPS(void))(double, double, int, int)
   moveDirectory(str);
 
   char str2[1024];
-  sprintf(str2, "n_%.2lf-%.2lfm_%dr_%.2lf)", n[0],n[1],layerNum, widthOnTopRate);
+  sprintf(str2, "n=%.2lf-%.2lf_m=%dr=%.2lf)", n[0],n[1],layerNum, widthOnTopRate);
   makeDirectory(str2);
   moveDirectory(str2);
   return eps;

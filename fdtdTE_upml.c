@@ -106,8 +106,8 @@ static void finish(){
   Eph = newDComplex(360*nInfo.arraySize);
   ntffTE_TimeTranslate(Wx,Wy,Uz,Eth,Eph);
     
-  FILE *fpR = openFile("TE_UPML/Eph_r.txt");
-  FILE *fpI = openFile("TE_UPML/Eph_i.txt");
+  FILE *fpR = openFile("Eph_r.txt");
+  FILE *fpI = openFile("Eph_i.txt");
   for(int ang=0; ang<360; ang++)
   {
     int k= ang*nInfo.arraySize;

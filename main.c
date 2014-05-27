@@ -70,7 +70,8 @@ void idle(void)
     if( field_getWaveAngle() < endAngle )
     {      
       simulator_reset();
-      field_setWaveAngle(field_getWaveAngle()+deltaAngle*numProc);
+      int angle = field_getWaveAngle()+deltaAngle*numProc;
+      field_setWaveAngle(angle);
     }else{
       //    MPI_Finalize();
       exit(0);
