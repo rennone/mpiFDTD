@@ -8,6 +8,7 @@ static const double R0 = 1.0e6;
 dcomplex *debug_U[4],*debug_W[4];
 
 //---------------------- ntff--------------------//
+
 void ntffTE_TimeTranslate(dcomplex *Wx, dcomplex *Wy,dcomplex *Uz, dcomplex *Eth, dcomplex *Eph)
 {
   const double w_s = field_getOmega();
@@ -144,6 +145,30 @@ static inline void calc(double time_plus_timeShift, dcomplex eh,  dcomplex *UW_a
       }
     }    
   }
+}
+
+
+void ntffTE_TimeOutput(dcomplex *Wx, dcomplex *Wy, dcomplex *Uz, FILE *fpRe, FILE *fpIm)
+{
+  const int maxTime = field_getMaxTime();
+  NTFFInfo nInfo = field_getNTFFInfo();
+  dcomplex *Eth, *Eph;  
+  Eth = newDComplex(360*nInfo.arraySize);
+  Eph = newDComplex(360*nInfo.arraySize);
+  ntffTE_TimeTranslate(Wx,Wy,Uz,Eth,Eph);
+  for(int ang=0; ang<360; ang++)
+  {
+    int k= ang*nInfo.arraySize;
+    for(int i=0; i < maxTime; i++)
+    {
+      fprintf(fpRe,"%.20lf " , creal(Eph[k+i]));
+      fprintf(fpIm,"%.20lf " , cimag(Eph[k+i]));  
+    }
+    fprintf(fpRe,"\n");
+    fprintf(fpIm,"\n");
+  }  
+  free(Eth);
+  free(Eph);
 }
 
 //積分路では, セル

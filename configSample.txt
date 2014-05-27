@@ -10,3 +10,13 @@
 500   #lambda
 2000  #step
 
+#入射角度 deg
+0     #start
+90    #end
+5     #Δdeg
+
+#Model -> models.hを見る
+3
+
+#Solver -> simulator.hを見る
+2

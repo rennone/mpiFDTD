@@ -9,6 +9,7 @@
 int numProc = 0;
 int startAngle = 0, endAngle = 0, deltaAngle = 1;
 enum MODEL  ModelType;
+enum SOLVER SolverType;
 
 // 以下 OPEN_GLの関数
 #ifdef USE_OPENGL
@@ -120,6 +121,11 @@ void readField(FILE *fp, FieldInfo *field_info)
   //モデルの種類
   parser_nextLine(fp, buf);
   ModelType = atoi(buf);
+
+  //Solver情報
+  parser_nextLine(fp, buf);
+  SolverType = atoi(buf);
+
 }
 
 int main( int argc, char *argv[] )
@@ -138,15 +144,17 @@ int main( int argc, char *argv[] )
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &numProc);
 //  enum MODEL  modelType = MORPHO_SCALE;//MIE_CYLINDER; // モデルの種類  
-  enum SOLVER solverType;
-  
+//  enum SOLVER solverType;
+
+//  solverType = TM_UPML_2D;
+
 //  if(rank == 0)
 //    solverType  = TM_UPML_2D;        // 計算方法
 //  else
-  solverType  = TE_UPML_2D;        // 計算方法
+//  solverType  = TE_UPML_2D;        // 計算方法
 
   field_info.angle_deg = startAngle + deltaAngle*rank;    
-  simulator_init(field_info, ModelType, solverType);
+  simulator_init(field_info, ModelType, SolverType);
 
   if(rank == 0)
   {

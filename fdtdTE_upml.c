@@ -99,15 +99,24 @@ static void init(){
 
 //---------------------メモリの解放--------------------//
 static void finish(){
+  char re[1024], im[1024];
+  sprintf(re, "%d[deg]_Eph_r.txt", (int)field_getWaveAngle());
+  sprintf(im, "%d[deg]_Eph_i.txt", (int)field_getWaveAngle());
+  FILE *fpR = openFile(re);
+  FILE *fpI = openFile(im);
+  ntffTE_TimeOutput(Wx, Wy, Uz, re, im);
+  fclose(fpR);
+  fclose(fpI);
+  freeMemories();
+/*
   const int maxTime = field_getMaxTime();
   NTFFInfo nInfo = field_getNTFFInfo();
   dcomplex *Eth, *Eph;
   Eth = newDComplex(360*nInfo.arraySize);
   Eph = newDComplex(360*nInfo.arraySize);
   ntffTE_TimeTranslate(Wx,Wy,Uz,Eth,Eph);
-    
-  FILE *fpR = openFile("Eph_r.txt");
-  FILE *fpI = openFile("Eph_i.txt");
+
+
   for(int ang=0; ang<360; ang++)
   {
     int k= ang*nInfo.arraySize;
@@ -119,8 +128,7 @@ static void finish(){
     fprintf(fpR,"\n");
     fprintf(fpI,"\n");
   }  
-
-  freeMemories();
+*/
 }
 
 
