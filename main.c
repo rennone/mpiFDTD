@@ -6,6 +6,11 @@
 #include "field.h"
 #include "parser.h"
 
+int numProc = 0;
+int startAngle = 0, endAngle = 0, deltaAngle = 1;
+enum MODEL  ModelType;
+
+// 以下 OPEN_GLの関数
 #ifdef USE_OPENGL
 #include "drawer.h"
 #define WINDOW_WIDTH 300
@@ -21,10 +26,6 @@
 #ifndef MAC_OS
 #include <GL/glut.h>
 #endif
-
-int numProc = 0;
-int startAngle = 0, endAngle = 0, deltaAngle = 1;
-enum MODEL  ModelType;
 
 void drawField()
 {
@@ -78,6 +79,7 @@ void idle(void)
   glutPostRedisplay();  //再描画
 //  MPI_Barrier(MPI_COMM_WORLD);
 }
+// 以上 OPENGLの関数
 #endif
 
 //ファイルからのパラメータ呼び出し
