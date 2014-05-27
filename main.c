@@ -169,8 +169,8 @@ int main( int argc, char *argv[] )
   {
     for(int i=1; i<numProc; i++)
     {
-      MPI_Send((int*)&field_info, sizeof(FieldInfo)/sizeof(int), MPI_INT, 1, 0, MPI_COMM_WORLD);
-      MPI_Send((int*)&config, sizeof(FieldInfo)/sizeof(int), MPI_INT, 1, 0, MPI_COMM_WORLD);
+      MPI_Send((int*)&field_info, sizeof(FieldInfo)/sizeof(int), MPI_INT, i, 0, MPI_COMM_WORLD);
+      MPI_Send((int*)&config, sizeof(FieldInfo)/sizeof(int), MPI_INT, i, 0, MPI_COMM_WORLD);
     }
   }else{
     MPI_Status status;
