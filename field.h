@@ -22,7 +22,7 @@ typedef struct FieldInfo
   int width_nm, height_nm; // 領域のサイズ
   int h_u_nm;              //1セルの大きさ
   int pml;                 //pmlレイヤの大きさ(セル数)
-  double lambda_nm;        //波長
+  int lambda_nm;        //波長
   int angle_deg;       //入射角度
   int stepNum;             //計算ステップ
 }FieldInfo;
@@ -99,7 +99,8 @@ extern int field_getSubNcell();
 extern int ind(const int, const int);
 
 //フィールドの横,縦の大きさ, 1セルのサイズ, pmlレイヤの数, 波長(nm), 計算ステップ
-extern void initField(FieldInfo field_info);
+extern void field_init(FieldInfo field_info);
+extern void field_reset(void);
 //extern void setField(const int wid, const int hei, const double h, const int pml, const double lambda, const double step);
 
 //pml用のσを取ってくる

@@ -7,6 +7,7 @@
 double width_s[2];     //幅
 double widthOnTopRate; //頂上だと幅が何倍になるか(基本0~1)
 double thickness_s[2]; //厚さ
+double n[2];
 double ep[2];           //誘電率 = n*n*ep0
 int layerNum;          //枚数
 bool notsymmetry;      //左右比対称
@@ -68,7 +69,7 @@ static double eps(double x, double y, int col, int row)
 
 #include <stdlib.h>
 
-double ( *morphoScaleModel_EPS(void))(double, double, int, int)
+void readConfig()
 {
   FILE *fp = NULL;
   if( !(fp = fopen("config.txt", "r")))
@@ -76,10 +77,9 @@ double ( *morphoScaleModel_EPS(void))(double, double, int, int)
     printf("cannot find config.txt of morphoScaleModel\n");
     exit(2);
   }
-  
+
   int err;
   char buf[1024], tmp[1024];
-  double n[2];
   // 9文よみこみ
   for(int i=0; i<9; i++)
   {
@@ -116,16 +116,21 @@ double ( *morphoScaleModel_EPS(void))(double, double, int, int)
     }
   }
   fclose(fp);
+}
 
+double ( *morphoScaleModel_EPS(void))(double, double, int, int)
+{  
+  readConfig();
+  
   char str[1024];
-
   sprintf(str, "w%d_%d_d%d_%d",
           (int)field_toPhisycalUnit(width_s[0]), (int)field_toPhisycalUnit(width_s[1]),
           (int)field_toPhisycalUnit(thickness_s[0]), (int)field_toPhisycalUnit(thickness_s[1])
-    );  
+    );
+  
   makeDirectory(str);
   moveDirectory(str);
-
+  
   char str2[1024];
   sprintf(str2, "n%.2lf-%.2lf_m%d_r%.2lf", n[0],n[1],layerNum, widthOnTopRate);
   makeDirectory(str2);

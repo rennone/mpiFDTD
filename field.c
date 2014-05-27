@@ -79,7 +79,12 @@ double field_toPhisycalUnit(const double cellUnit){
   return cellUnit*fieldInfo.h_u_nm;//物理単位(nm)に変換
 }
 
-void initField(FieldInfo field_info)
+void field_reset()
+{
+  time = 0;
+}
+
+void field_init(FieldInfo field_info)
 {
   //フィールド情報の保存(最初にしないとtoCellUnit, PhisicalUnitが使えない.
   fieldInfo = field_info;

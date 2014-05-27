@@ -6,10 +6,16 @@
 #include "field.h"
 #include "parser.h"
 
-int numProc = 0;
-int startAngle = 0, endAngle = 0, deltaAngle = 1;
-enum MODEL  ModelType;
-enum SOLVER SolverType;
+typedef struct Config
+{
+  int startAngle, endAngle, deltaAngle;
+  enum MODEL ModelType;
+  enum SOLVER SolverType;
+}Config;
+
+int rank;
+int numProc;
+Config config;
 
 // 以下 OPEN_GLの関数
 #ifdef USE_OPENGL
@@ -68,10 +74,10 @@ void idle(void)
   {
     MPI_Barrier(MPI_COMM_WORLD);
     simulator_finish();
-    if( field_getWaveAngle() < endAngle )
+    if( field_getWaveAngle() < config.endAngle )
     {      
       simulator_reset();
-      int angle = field_getWaveAngle()+deltaAngle*numProc;
+      int angle = field_getWaveAngle()+config.deltaAngle*numProc;
       field_setWaveAngle(angle);
     }else{
       //    MPI_Finalize();
@@ -110,65 +116,74 @@ void readField(FILE *fp, FieldInfo *field_info)
 
 //入射角度
   parser_nextLine(fp, buf);
-  startAngle = atoi(buf);
+  config.startAngle = atoi(buf);
 
   parser_nextLine(fp, buf);
-  endAngle = atoi(buf);
+  config.endAngle = atoi(buf);
 
   parser_nextLine(fp, buf);
-  deltaAngle = atoi(buf);
+  config.deltaAngle = atoi(buf);
 
   //モデルの種類
   parser_nextLine(fp, buf);
-  ModelType = atoi(buf);
+  config.ModelType = atoi(buf);
 
   //Solver情報
   parser_nextLine(fp, buf);
-  SolverType = atoi(buf);
-
+  config.SolverType = atoi(buf);
 }
 
 int main( int argc, char *argv[] )
 {
-  FILE *fp = NULL;
-  if( !(fp = fopen("config.txt", "r")) )
-  {
-    printf("cannot find config.txt of main\n");
-  }
-
-  FieldInfo field_info;
-  readField( fp, &field_info);
 
   MPI_Init( 0, 0 );
-  int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &numProc);
-//  enum MODEL  modelType = MORPHO_SCALE;//MIE_CYLINDER; // モデルの種類  
-//  enum SOLVER solverType;
 
-//  solverType = TM_UPML_2D;
-
-//  if(rank == 0)
-//    solverType  = TM_UPML_2D;        // 計算方法
-//  else
-//  solverType  = TE_UPML_2D;        // 計算方法
-
-  field_info.angle_deg = startAngle + deltaAngle*rank;    
-  simulator_init(field_info, ModelType, SolverType);
-
+  FieldInfo field_info;
+  //同時にファイルを読み込むのはヤバいので, rank0だけが読み込んで同期する
   if(rank == 0)
   {
+    printf("rank %d",rank);
+    FILE *fp = NULL;
+    if( !(fp = fopen("config.txt", "r")) )
+    {
+      printf("cannot find config.txt of main\n");
+    }
+    readField(fp, &field_info);
+    
     printf("===========FieldSetting=======\n");
     printf("fieldSize(nm) = (%d, %d) \nh_u = %d \npml = %d\n", field_info.width_nm, field_info.height_nm,
            field_info.h_u_nm, field_info.pml);
-    printf("lambda(nm) = %lf  \nstep = %d\n", field_info.lambda_nm, field_info.stepNum);
+    printf("lambda(nm) = %d  \nstep = %d\n", field_info.lambda_nm, field_info.stepNum);
 
-    printf("angle = %d .. %d (delta = %d)\n", startAngle, endAngle, deltaAngle);
+    printf("angle = %d .. %d (delta = %d)\n", config.startAngle, config.endAngle, config.deltaAngle);
     printf("==============================\n");
+  }  
+
+//configを同期
+  //intの配列に変換
+  int field[20];
+  
+  if(rank ==0)
+  {
+    for(int i=1; i<numProc; i++)
+    {
+      MPI_Send((int*)&field_info, sizeof(FieldInfo)/sizeof(int), MPI_INT, 1, 0, MPI_COMM_WORLD);
+      MPI_Send((int*)&config, sizeof(FieldInfo)/sizeof(int), MPI_INT, 1, 0, MPI_COMM_WORLD);
+    }
+  }else{
+    MPI_Status status;
+    MPI_Recv((int*)&field_info, sizeof(FieldInfo)/sizeof(int), MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
+    MPI_Recv((int*)&config, sizeof(FieldInfo)/sizeof(int), MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
   }
+
+  field_info.angle_deg = config.startAngle + config.deltaAngle*rank;
+  simulator_init(field_info, config.ModelType, config.SolverType);
 
   MPI_Barrier(MPI_COMM_WORLD); //(情報表示がずれないように)全員一緒に始める
   printf("rank = %d, angle = %d\n", rank, field_info.angle_deg);
+  
 #ifdef USE_OPENGL
   SubFieldInfo_S subInfo = field_getSubFieldInfo_S();
   

@@ -167,7 +167,7 @@ void simulator_calc(){
 void simulator_init(FieldInfo field_info, enum MODEL model, enum SOLVER solver)
 {
   //横幅(nm), 縦幅(nm), 1セルのサイズ(nm), pmlレイヤの数, 波長(nm), 計算ステップ
-  initField(field_info);
+  field_init(field_info);
 
   //NO_MODEL. MIE_CYLINDER, SHELF, NONSHELF
   // UNDONE : SHELF, NONSHELFモデル
@@ -180,13 +180,16 @@ void simulator_init(FieldInfo field_info, enum MODEL model, enum SOLVER solver)
 
 void simulator_reset()
 {
-  (*initMethod)();
+  printf("simulator_reset \n");
+
+  field_reset();   //フィールド情報をリセット
+  (*initMethod)(); //シミュレータをリセット
   gettimeofday(&timer1, NULL); //開始時間の取得
 }
 
 void simulator_finish()
 {  
-  printf("finish at %d step \n", (int)field_getTime());
+  printf("simulator_finish at %d step \n", (int)field_getTime());
   gettimeofday(&timer2,NULL);
   printf("time = %lf \n", timer2.tv_sec-timer1.tv_sec+(timer2.tv_usec-timer1.tv_usec)*1e-6);
 
