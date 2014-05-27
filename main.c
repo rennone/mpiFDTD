@@ -24,6 +24,7 @@
 
 int numProc = 0;
 int startAngle = 0, endAngle = 0, deltaAngle = 1;
+enum MODEL  ModelType;
 
 void drawField()
 {
@@ -111,7 +112,11 @@ void readField(FILE *fp, FieldInfo *field_info)
   endAngle = atoi(buf);
 
   parser_nextLine(fp, buf);
-  deltaAngle = atoi(buf);  
+  deltaAngle = atoi(buf);
+
+  //モデルの種類
+  parser_nextLine(fp, buf);
+  ModelType = atoi(buf);
 }
 
 int main( int argc, char *argv[] )
@@ -129,7 +134,7 @@ int main( int argc, char *argv[] )
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &numProc);
-  enum MODEL  modelType = MIE_CYLINDER; // モデルの種類  
+//  enum MODEL  modelType = MORPHO_SCALE;//MIE_CYLINDER; // モデルの種類  
   enum SOLVER solverType;
   
 //  if(rank == 0)
@@ -138,7 +143,7 @@ int main( int argc, char *argv[] )
   solverType  = TE_UPML_2D;        // 計算方法
 
   field_info.angle_deg = startAngle + deltaAngle*rank;    
-  simulator_init(field_info, modelType, solverType);
+  simulator_init(field_info, ModelType, solverType);
 
   if(rank == 0)
   {
