@@ -194,7 +194,7 @@ void simulator_reset()
 }
 
 void simulator_finish()
-{  
+{
   printf("simulator_finish at %d step \n", (int)field_getTime());
   gettimeofday(&timer2,NULL);
   printf("time = %lf \n", timer2.tv_sec-timer1.tv_sec+(timer2.tv_usec-timer1.tv_usec)*1e-6);

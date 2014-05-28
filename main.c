@@ -148,10 +148,9 @@ int main( int argc, char *argv[] )
   MPI_Comm_size(MPI_COMM_WORLD, &numProc);
 
   FieldInfo field_info;
-  //同時にファイルを読み込むのはヤバいので, rank0だけが読み込んで同期する
+  //同時にファイルを読み込むのはヤバい気がするので, rank0だけが読み込んで同期する
   if(rank == 0)
-  {  
-    
+  {    
     readConfig(&field_info);
     
     printf("===========FieldSetting=======\n");
@@ -162,8 +161,6 @@ int main( int argc, char *argv[] )
     printf("angle = %d .. %d (delta = %d)\n", config.startAngle, config.endAngle, config.deltaAngle);
     printf("==============================\n");
   }
-
-  MPI_Barrier(MPI_COMM_WORLD);
 
   //configを同期
   if(rank == 0)
@@ -213,7 +210,7 @@ int main( int argc, char *argv[] )
       simulator_calc();    
     }
     
-    MPI_Barrier(MPI_COMM_WORLD);
+//    MPI_Barrier(MPI_COMM_WORLD);
     if( field_getWaveAngle() < config.endAngle )
     {      
       simulator_reset();
@@ -224,7 +221,7 @@ int main( int argc, char *argv[] )
       break;
     }
   }
-  MPI_Finalize();
+  MPI_Finalize(); //プロセスごとにFinalizeしてもok
 #endif
 
   return 1;

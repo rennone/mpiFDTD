@@ -80,3 +80,8 @@ double ( *multiLayerModel_EPS(void))(double, double, int, int)
 
   return eps;
 }
+
+bool multiLayerModel_isFinish(void)
+{
+  return true;
+}

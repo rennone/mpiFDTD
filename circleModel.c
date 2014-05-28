@@ -73,3 +73,8 @@ void (*circleModel_output(void))(FILE *, double complex*)
 {
   return output;
 }
+
+bool circleModel_isFinish()
+{
+  return true;
+}

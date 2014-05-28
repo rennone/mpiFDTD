@@ -14,6 +14,9 @@ double ep_s[2];           //誘電率 = n*n*ep0_s
 int layerNum;          //枚数
 bool notsymmetry;      //左右比対称
 
+//物質の方の厚さの最大の厚さ, Δ
+double maxThickness1, deltaThichness1;
+
 static double eps(double x, double y, int col, int row)
 {
   FieldInfo_S fInfo_s = field_getFieldInfo_S();
@@ -136,6 +139,7 @@ double ( *morphoScaleModel_EPS(void))(double, double, int, int)
       MPI_Send(&ep_s, 2, MPI_DOUBLE, i, 3, MPI_COMM_WORLD);
       MPI_Send(&layerNum, 1, MPI_INT, i, 4, MPI_COMM_WORLD);
       MPI_Send(&notsymmetry, 1, MPI_INT, i, 5, MPI_COMM_WORLD);
+      MPI_Send(&n, 2, MPI_DOUBLE, i, 6, MPI_COMM_WORLD);
     }
   } else {
     MPI_Status status;
@@ -145,6 +149,7 @@ double ( *morphoScaleModel_EPS(void))(double, double, int, int)
     MPI_Recv(&ep_s, 2, MPI_DOUBLE, 0, 3, MPI_COMM_WORLD, &status);
     MPI_Recv(&layerNum, 1, MPI_INT, 0, 4, MPI_COMM_WORLD, &status);
     MPI_Recv(&notsymmetry, 1, MPI_INT, 0, 5, MPI_COMM_WORLD, &status);
+    MPI_Recv(&n, 2, MPI_DOUBLE, 0, 6, MPI_COMM_WORLD, &status);
   }  
   
   char str[1024];
@@ -161,4 +166,9 @@ double ( *morphoScaleModel_EPS(void))(double, double, int, int)
   moveDirectory(str2);
 
   return eps;
+}
+
+bool morphoScaleModel_isFinish()
+{
+  return true;
 }

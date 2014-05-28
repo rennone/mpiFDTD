@@ -78,8 +78,10 @@ static void finish()
   sprintf(im, "%d[deg]_Eth_i.txt", (int)field_getWaveAngle());
   FILE *fpRe = openFile(re);
   FILE *fpIm = openFile(im);
-  
+
   ntffTM_TimeOutput(Ux,Uy,Wz,fpRe, fpIm);
+  printf("saved %s & %s \n", re, im);
+  
   fclose(fpRe);
   fclose(fpIm);
 
@@ -93,9 +95,9 @@ static void reset()
   sprintf(re, "%d[deg]_Eth_r.txt", (int)field_getWaveAngle());
   sprintf(im, "%d[deg]_Eth_i.txt", (int)field_getWaveAngle());
   FILE *fpRe = openFile(re);
-  FILE *fpIm = openFile(im);  
+  FILE *fpIm = openFile(im);
   ntffTM_TimeOutput(Ux,Uy,Wz,fpRe, fpIm);
-  
+  printf("saved %s & %s \n", re, im);
   fclose(fpRe);
   fclose(fpIm);
 
