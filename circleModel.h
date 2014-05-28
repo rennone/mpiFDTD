@@ -4,6 +4,7 @@
 #include <complex.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "bool.h"
 extern double (*circleModel_EPS(double x, double y, double radius))(double, double, int,int);
 extern void (*circleModel_output(void))(FILE *, double complex*);
 
