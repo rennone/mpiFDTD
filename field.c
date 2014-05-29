@@ -127,7 +127,7 @@ void field_init(FieldInfo field_info)
   
   /* NTFF設定 */
   ntff_info.cx     = N_PX/2;
-  ntff_info.cx     = N_PY/2;
+  ntff_info.cy     = N_PY/2;
   ntff_info.top    = N_PY - N_PML - 5;
   ntff_info.bottom = N_PML + 5;
   ntff_info.left   = N_PML + 5;
