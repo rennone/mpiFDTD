@@ -10,9 +10,9 @@ double width_s[2];     //幅
 double widthOnTopRate; //頂上に置ける幅の縮小率(基本0~1)
 double thickness_s[2]; //厚さ
 double n[2];
-double ep_s[2];           //誘電率 = n*n*ep0_s
+double ep_s[2];        //誘電率 = n*n*ep0_s
 int layerNum;          //枚数
-bool notsymmetry;      //左右比対称
+bool asymmetry;      //左右比対称
 
 //物質の方の厚さの最大の厚さ, Δ
 double maxThickness1, deltaThichness1;
@@ -57,7 +57,7 @@ static double eps(double x, double y, int col, int row)
       
       int k = (modY > thickness_s[0]); //どっちの屈折率にいるか調べる
 
-      if (sx < 0 && notsymmetry)
+      if (sx < 0 && asymmetry)
         k = 1-k;		//左右で反転, 互い違いでなかったら反転しない
 
       double p = 1-sy /height; //現在の高さを0~1で; 1=>頂上
@@ -72,9 +72,10 @@ static double eps(double x, double y, int col, int row)
   return EPSILON_0_S*(1-s[0]-s[1]) + ep_s[0]*s[0] + ep_s[1]*s[1];
 }
 
-void readConfig()
+static void readConfig()
 {
   FILE *fp = NULL;
+  
   if( !(fp = fopen("config.txt", "r")))
   {
     printf("cannot find config.txt of morphoScaleModel\n");
@@ -91,7 +92,7 @@ void readConfig()
       printf("parse error, config.txt at MorphoScaleModel.c");
       exit(2);
     }
-    
+    printf("%s",buf);
     if(i==6)
     {
       widthOnTopRate = strtod(buf, tmp);
@@ -103,7 +104,7 @@ void readConfig()
     }
     else if(i==8)
     {
-      notsymmetry = atoi(buf);
+      asymmetry = atoi(buf);
     }
     else
     {
@@ -119,10 +120,15 @@ void readConfig()
     }
   }
   fclose(fp);
+
+  printf("========MorphoScaleModel=======\n");
+  printf("width(%.1lf,%.1lf) thickness(%.1lf,%.1lf) n(%.3lf,%.3lf)\n",width_s[0], width_s[1], thickness_s[0], thickness_s[1], n[0], n[1]);
+  printf("LayerNum=%d, rate=%.3lf\n",layerNum, widthOnTopRate);
+  printf("==============================\n");
 }
 
 double ( *morphoScaleModel_EPS(void))(double, double, int, int)
-{
+{  
   int rank, numProc;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &numProc);
@@ -130,7 +136,6 @@ double ( *morphoScaleModel_EPS(void))(double, double, int, int)
   if(rank == 0)
   {
     readConfig();
-      
     for(int i=1; i<numProc; i++)
     {
       MPI_Send(&width_s, 2, MPI_DOUBLE, i, 0, MPI_COMM_WORLD);
@@ -138,7 +143,7 @@ double ( *morphoScaleModel_EPS(void))(double, double, int, int)
       MPI_Send(&thickness_s, 2, MPI_DOUBLE, i, 2, MPI_COMM_WORLD);
       MPI_Send(&ep_s, 2, MPI_DOUBLE, i, 3, MPI_COMM_WORLD);
       MPI_Send(&layerNum, 1, MPI_INT, i, 4, MPI_COMM_WORLD);
-      MPI_Send(&notsymmetry, 1, MPI_INT, i, 5, MPI_COMM_WORLD);
+      MPI_Send(&asymmetry, 1, MPI_INT, i, 5, MPI_COMM_WORLD);
       MPI_Send(&n, 2, MPI_DOUBLE, i, 6, MPI_COMM_WORLD);
     }
   } else {
@@ -148,27 +153,46 @@ double ( *morphoScaleModel_EPS(void))(double, double, int, int)
     MPI_Recv(&thickness_s, 2, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD, &status);
     MPI_Recv(&ep_s, 2, MPI_DOUBLE, 0, 3, MPI_COMM_WORLD, &status);
     MPI_Recv(&layerNum, 1, MPI_INT, 0, 4, MPI_COMM_WORLD, &status);
-    MPI_Recv(&notsymmetry, 1, MPI_INT, 0, 5, MPI_COMM_WORLD, &status);
+    MPI_Recv(&asymmetry, 1, MPI_INT, 0, 5, MPI_COMM_WORLD, &status);
     MPI_Recv(&n, 2, MPI_DOUBLE, 0, 6, MPI_COMM_WORLD, &status);
-  }  
+  }
   
+  return eps;
+}
+
+//正しいディレクトリまで移動.
+void morphoScaleModel_moveDirectory()
+{
   char str[1024];
-  sprintf(str, "w%d_%d_d%d_%d",
-          (int)field_toPhisycalUnit(width_s[0]), (int)field_toPhisycalUnit(width_s[1]),
-          (int)field_toPhisycalUnit(thickness_s[0]), (int)field_toPhisycalUnit(thickness_s[1])
-    );  
+
+  if(asymmetry){
+    sprintf(str, "w%d_%d_d%d_%d",
+            (int)field_toPhisycalUnit(width_s[0]), (int)field_toPhisycalUnit(width_s[1]),
+            (int)field_toPhisycalUnit(thickness_s[0]), (int)field_toPhisycalUnit(thickness_s[1])
+      );    
+  }
+  else{
+    sprintf(str, "w%d_%d_d%d_%d_symm",
+            (int)field_toPhisycalUnit(width_s[0]), (int)field_toPhisycalUnit(width_s[1]),
+            (int)field_toPhisycalUnit(thickness_s[0]), (int)field_toPhisycalUnit(thickness_s[1])
+      );
+  }
+  
   makeDirectory(str);
   moveDirectory(str);
   
   char str2[1024];
   sprintf(str2, "n%.2lf-%.2lf_m%d_r%.2lf", n[0],n[1],layerNum, widthOnTopRate);
   makeDirectory(str2);
-  moveDirectory(str2);
-
-  return eps;
+  moveDirectory(str2);  
 }
 
 bool morphoScaleModel_isFinish()
 {
-  return true;
+  //幅を10nm増やす
+  width_s[0] += field_toCellUnit(500);
+  width_s[1] += field_toCellUnit(500);
+
+  FieldInfo_S fInfo_s = field_getFieldInfo_S();
+  return width_s[0] > fInfo_s.N_X*2/3; //全体の横幅の半分になるまでする.
 }

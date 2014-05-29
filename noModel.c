@@ -27,6 +27,3 @@ bool noModel_isFinish(void)
 {
   return true;
 }
-
-
-

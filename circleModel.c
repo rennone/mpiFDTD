@@ -76,5 +76,11 @@ void (*circleModel_output(void))(FILE *, double complex*)
 
 bool circleModel_isFinish()
 {
-  return true;
+  radius += field_toCellUnit(200);
+  return radius > field_toCellUnit(2000);
+}
+
+void circleModel_moveDirectory()
+{
+  
 }

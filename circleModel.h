@@ -9,4 +9,5 @@ extern double (*circleModel_EPS(double x, double y, double radius))(double, doub
 extern void (*circleModel_output(void))(FILE *, double complex*);
 
 extern bool circleModel_isFinish(void);
+extern void circleModel_moveDirectory(void);
 #endif

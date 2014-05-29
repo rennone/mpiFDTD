@@ -10,40 +10,57 @@
 
 static double (*epsMethod)(double, double, int, int);
 static bool (*isFinishMethod)(void);
-
+static void (*moveDirectoryMethod)(void);
+static char *dir;
 static void noModel(void)
 {
   //no material
   moveDirectory("NoModel");
   epsMethod = noModel_EPS();
-  isFinishMethod = noModel_isFinish();
+  isFinishMethod = noModel_isFinish;
+
 }
 
 static void circleModel(void)
 {
-  moveDirectory("MieCylinderModel");
+  dir = "MieCylinderModel";
+  moveDirectory(dir);
   //cylinder material whitch radius = lambda, origin = center of field
-  epsMethod = circleModel_EPS(N_PX*0.5, N_PY*0.5, field_getLambda());
-  isFinishMethod = circleModel_isFinish();
+  epsMethod = circleModel_EPS(N_PX*0.5, N_PY*0.5, field_getLambda());  
+  isFinishMethod = circleModel_isFinish;
+  
+  moveDirectoryMethod = circleModel_moveDirectory;
 }
 
 static void multiLayerModel()
 {
   moveDirectory("MultiLayerModel");
-  epsMethod = multiLayerModel_EPS();
-  isFinishMethod = multiLayerModel_isFinish();
+  epsMethod = multiLayerModel_EPS();  
+  isFinishMethod = multiLayerModel_isFinish;
+
+  printf("not implemented MoveDirectoryMethod");
+  exit(2);
 }
 
 static void morphoScaleModel()
 {
-  moveDirectory("MorphoScaleModel");
+  dir = "MorphoScaleModel";
+  moveDirectory(dir);
   epsMethod = morphoScaleModel_EPS();
-  isFinishMethod = morphoScaleModel_isFinish();
+  isFinishMethod = morphoScaleModel_isFinish;
+  moveDirectoryMethod = morphoScaleModel_moveDirectory;
 }
 
 bool models_isFinish()
 {
   return (*isFinishMethod)();
+}
+
+//モデルを変更したときに,一度rootまで戻るので,再度ネストする用
+void models_moveDirectory()
+{
+  moveDirectory(dir);
+  (*moveDirectoryMethod)();
 }
 
 void setModel(enum MODEL model)
@@ -64,6 +81,8 @@ void setModel(enum MODEL model)
     morphoScaleModel();
     break;
   }
+   (*moveDirectoryMethod)();
+  //models_moveDirectory();
 }
 
 double models_eps(double x, double y, enum MODE mode){
