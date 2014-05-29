@@ -2,6 +2,7 @@
 #include "models.h"
 #include "noModel.h"
 #include "circleModel.h"
+#include "concentricCircleModel.h"
 #include "multiLayerModel.h"
 #include "morphoScaleModel.h"
 #include "bool.h"
@@ -51,6 +52,17 @@ static void morphoScaleModel()
   moveDirectoryMethod = morphoScaleModel_moveDirectory;
 }
 
+static void concentricCircleModel()
+{
+  dir = "ConcentricCircleModel";
+  makeDirectory(dir);
+  moveDirectory(dir);
+  epsMethod = concentricCircleModel_EPS();
+//  epsMethod           = conc_eps;//concentricCircleModel_EPS();
+  isFinishMethod      = concentricCircleModel_isFinish;
+  moveDirectoryMethod = concentricCircleModel_moveDirectory;
+}
+
 bool models_isFinish()
 {
   return (*isFinishMethod)();
@@ -80,12 +92,15 @@ void setModel(enum MODEL model)
   case MORPHO_SCALE:
     morphoScaleModel();
     break;
+  case CONCENTRIC_CIRCLE:
+    concentricCircleModel();
+    break;
   }
    (*moveDirectoryMethod)();
-  //models_moveDirectory();
 }
 
-double models_eps(double x, double y, enum MODE mode){
+double models_eps(double x, double y, enum MODE mode)
+{
   double epsilon = EPSILON_0_S;
   switch(mode){
   case D_X :

@@ -6,5 +6,5 @@ extern void morphoScaleModel_init();
 extern double ( *morphoScaleModel_EPS(void))(double, double, int, int);
 extern bool morphoScaleModel_isFinish(void);
 
-extern void morphoScaleModel_moveDirectory();
+extern void morphoScaleModel_moveDirectory(void);
 #endif

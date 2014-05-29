@@ -190,9 +190,12 @@ void morphoScaleModel_moveDirectory()
 bool morphoScaleModel_isFinish()
 {
   //幅を10nm増やす
-  width_s[0] += field_toCellUnit(500);
-  width_s[1] += field_toCellUnit(500);
-
+//  width_s[0] += field_toCellUnit(500);
+//  width_s[1] += field_toCellUnit(500);
+  thickness_s[0] += field_toCellUnit(10);
+  thickness_s[1] += field_toCellUnit(10);
+  
   FieldInfo_S fInfo_s = field_getFieldInfo_S();
-  return width_s[0] > fInfo_s.N_X*2/3; //全体の横幅の半分になるまでする.
+//  return width_s[0] > fInfo_s.N_X*2/3;          //全体の横幅の半分になるまでする.
+  return thickness_s[0] > field_toCellUnit(100);          //全体の横幅の半分になるまでする.
 }

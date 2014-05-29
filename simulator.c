@@ -199,6 +199,7 @@ void simulator_init(FieldInfo field_info, enum MODEL model, enum SOLVER solver)
 
 void simulator_solverInit()
 {
+  makeDirectory(solverDir);
   moveDirectory(solverDir);
   (*initMethod)();
 }
