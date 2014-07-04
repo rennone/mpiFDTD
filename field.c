@@ -20,7 +20,6 @@ static const int H_s = 1;
 static double H_u;         //1セルの大きさ(nm)
 static double time;     //ステップ数
 static double ray_coef; //波をゆっくり入れる為の係数;
-//static double waveAngle;//入射角
 static double lambda_s; //波長 
 static double k_s;      //波数 
 static double w_s;      //角周波数
@@ -82,6 +81,7 @@ double field_toPhisycalUnit(const double cellUnit){
 void field_reset()
 {
   time = 0;
+  ray_coef = 0;
 }
 
 void field_init(FieldInfo field_info)
@@ -96,7 +96,7 @@ void field_init(FieldInfo field_info)
   fieldInfo_s.N_X   = fieldInfo_s.N_PX - 2*fieldInfo_s.N_PML;
   fieldInfo_s.N_Y   = fieldInfo_s.N_PY - 2*fieldInfo_s.N_PML;
   fieldInfo_s.N_CELL= fieldInfo_s.N_PY*fieldInfo_s.N_PX;
-
+  
   //入射波パラメータの計算
   waveInfo_s.Lambda_s = field_toCellUnit(fieldInfo.lambda_nm);
   waveInfo_s.T_s      = waveInfo_s.Lambda_s/C_0_S;
@@ -123,7 +123,6 @@ void field_init(FieldInfo field_info)
   T_s = 2*M_PI/w_s;
 
   ray_coef  = 0;  
-//  waveAngle = 0;
   
   /* NTFF設定 */
   ntff_info.cx     = N_PX/2;
@@ -175,9 +174,9 @@ void field_scatteredPulse(dcomplex *p, double *eps, double gapX, double gapY)
 
   FieldInfo_S fInfo_s = field_getFieldInfo_S();
   
-  //waveAngleにより, t0の値を変えないとちょうどいいところにピークが来なため,それを計算.
+  //waveAngleにより, t0の値を変えないとちょうどいいところにピークが来ないため,それを計算.
   const double center_peak = (fInfo_s.N_PX/2.0+gapX)*cos_per_c+(fInfo_s.N_PY/2+gapY)*sin_per_c; //中心にピークがくる時間
-  const double t0 = -center_peak + 100; //常に100ステップの時に,領域の中心にピークが来るようにする.
+  const double t0 = -center_peak + 100; //常に300ステップの時に,領域の中心にピークが来るようにする.
   
   for(int i=1; i<fInfo_s.N_PX-1; i++) {
     for(int j=1; j<fInfo_s.N_PY-1; j++) {

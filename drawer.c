@@ -117,7 +117,8 @@ void drawer_paintImage(int left, int bottom, int right, int top, int width, int 
   double x,y;
   
   for(i=0,x=left; i<TEX_NX && x<right; i++, x+=u){
-    for(j=0,y=bottom; j<TEX_NY && y<top; j++, y+=u){
+    for(j=0,y=bottom; j<TEX_NY && y<top; j++, y+=u)
+    {
       cphi = cbilinear(phis,x,y,width,height);
       colorTransform(colorMode(cphi), &c);
       texColor[i][j] = c;

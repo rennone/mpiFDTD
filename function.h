@@ -10,4 +10,5 @@ extern double dbilinear(double *p, double x, double y, int width, int height);
 extern FILE* openFile(const char* file_name);
 extern bool makeDirectory(const char*);
 extern void moveDirectory(const char*);
+
 #endif

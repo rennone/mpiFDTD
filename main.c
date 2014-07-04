@@ -15,7 +15,9 @@ typedef struct Config
   enum SOLVER SolverType;
 }Config;
 
-
+#define ST_PHI 0
+#define EN_PHI 0
+#define DELTA_PHI 5
 
 // 以下 OPEN_GLの関数
 #ifdef USE_OPENGL
@@ -132,6 +134,15 @@ static void calcFieldSize(FieldInfo *fInfo, int x_nm, int y_nm)
   //モデルのサイズ + (pml + ntff)*2 + 余白
   fInfo->width_nm  = x_nm + fInfo->h_u_nm*(fInfo->pml + 5)*2 + 200;
   fInfo->height_nm = y_nm + fInfo->h_u_nm*(fInfo->pml + 5)*2 + 200;
+
+  bool square = false;
+  if(square)
+  {
+    if(fInfo->width_nm > fInfo->height_nm)
+      fInfo->height_nm = fInfo->width_nm;
+    else
+      fInfo->width_nm = fInfo->height_nm;
+  }
 }
 
 static void initParameter()
@@ -140,10 +151,9 @@ static void initParameter()
   config.field_info.pml       = 10;
   config.field_info.lambda_nm = 500;
   config.field_info.stepNum   = 1500;
-  config.startAngle = 0;
-  config.endAngle   = 0;
-  config.deltaAngle = 5;
-  
+  config.startAngle = ST_PHI;
+  config.endAngle   = EN_PHI;
+  config.deltaAngle = DELTA_PHI;  
   config.SolverType = TM_UPML_2D;
 
   int x_nm, y_nm;
@@ -156,15 +166,14 @@ static void initParameter()
 int main( int argc, char *argv[] )
 {
   getcwd(root, 512); //カレントディレクトリを保存
-
-  models_setModel(LAYER);
+  
+  models_setModel(MIE_CYLINDER);
   
   MPI_Init( 0, 0 );
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &numProc);
 
 //  initConfigFromText();
-
   initParameter();  //パラメータを設定
   
   //プロセスごとに角度を分ける
@@ -174,7 +183,7 @@ int main( int argc, char *argv[] )
   if(config.field_info.angle_deg > config.endAngle)
     exit(0);
   
-  //シミュレーションの初期化. 同時に, 必要なディレクトリまで移動している.
+  //シミュレーションの初期化.
   simulator_init(config.field_info, config.ModelType, config.SolverType);  
   
   MPI_Barrier(MPI_COMM_WORLD); //(情報表示がずれないように)全員一緒に始める
@@ -227,7 +236,7 @@ int main( int argc, char *argv[] )
   
   int windowX = 1.0*subInfo.OFFSET_X / subInfo.SUB_N_PX * WINDOW_WIDTH;
   int windowY = 800-1.0*subInfo.OFFSET_Y/subInfo.SUB_N_PY * WINDOW_HEIGHT - WINDOW_HEIGHT;
-  enum COLOR_MODE colorMode = CABS;
+  enum COLOR_MODE colorMode = CREAL;
   glutInit(&argc, argv);
   glutInitWindowPosition(windowX,windowY);
   glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -251,10 +260,10 @@ int main( int argc, char *argv[] )
 static void drawField()
 {
   FieldInfo_S sInfo = field_getFieldInfo_S();
-  drawer_paintImage(0,0, sInfo.N_X, sInfo.N_Y, sInfo.N_PX, sInfo.N_PY,
+  drawer_paintImage(sInfo.N_PML, sInfo.N_PML, sInfo.N_PX-sInfo.N_PML, sInfo.N_PY-sInfo.N_PML, sInfo.N_PX, sInfo.N_PY,
                     simulator_getDrawingData());
   
-  drawer_paintModel(0,0, sInfo.N_X, sInfo.N_Y, sInfo.N_PX, sInfo.N_PY,
+  drawer_paintModel(sInfo.N_PML, sInfo.N_PML, sInfo.N_PX-sInfo.N_PML, sInfo.N_PY-sInfo.N_PML, sInfo.N_PX, sInfo.N_PY,
                     simulator_getEps());
 }
 

@@ -186,13 +186,10 @@ void simulator_calc(){
 void simulator_init(FieldInfo field_info, enum MODEL model, enum SOLVER solver)
 {
   //横幅(nm), 縦幅(nm), 1セルのサイズ(nm), pmlレイヤの数, 波長(nm), 計算ステップ
-  field_init(field_info);
+  field_init(field_info); //フィールドの初期化
 
-  //NO_MODEL. MIE_CYLINDER, SHELF, NONSHELF
-  // UNDONE : SHELF, NONSHELFモデル
-  setModel(model);  //次にこれ,  モデル(散乱体)を定義
-
-  setSolver(solver);//Solverの設定と初期化
+  models_initModel();   //モデルの初期化
+  setSolver(solver);    //Solverの設定と初期化
 
   gettimeofday(&timer1, NULL); //開始時間の取得
 }
