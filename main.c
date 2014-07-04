@@ -182,6 +182,7 @@ int main( int argc, char *argv[] )
   //必要以上の入射角度をしようとしてもスルー
   if(config.field_info.angle_deg > config.endAngle)
     {
+      printf("rank%d is finish\n",rank);
       MPI_Finalize(); //プロセスごとにFinalizeしてもok
       exit(0); //call finalize before exit()
     }
