@@ -5,9 +5,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "bool.h"
-extern double (*circleModel_EPS(double x, double y, double radius))(double, double, int,int);
+extern double (*circleModel_EPS(void))(double, double, int,int);
 extern void (*circleModel_output(void))(FILE *, double complex*);
-
 extern bool circleModel_isFinish(void);
 extern void circleModel_moveDirectory(void);
+extern void circleModel_init(void);
+extern void circleModel_needSize(int *x_nm,int *y_nm);
 #endif
