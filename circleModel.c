@@ -66,7 +66,7 @@ bool circleModel_isFinish()
 void circleModel_moveDirectory()
 {
   char buf[512];
-  sprintf(buf,"radisu_%dnm", radius_nm);
+  sprintf(buf,"radius_%dnm", radius_nm);
   makeDirectory(buf);
   moveDirectory(buf);
 }

@@ -15,7 +15,7 @@ typedef struct Config
   enum SOLVER SolverType;
 }Config;
 
-#define ST_PHI 0
+#define ST_PHI -90
 #define EN_PHI 0
 #define DELTA_PHI 5
 
@@ -167,7 +167,7 @@ int main( int argc, char *argv[] )
 {
   getcwd(root, 512); //カレントディレクトリを保存
   
-  models_setModel(MIE_CYLINDER);
+  models_setModel(LAYER); //MIE_CYLINDER
   
   MPI_Init( 0, 0 );
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
