@@ -19,6 +19,7 @@ void ntffTE_TimeTranslate(dcomplex *Wx, dcomplex *Wy,dcomplex *Uz, dcomplex *Eth
   NTFFInfo nInfo = field_getNTFFInfo();
 
   double theta = 0;
+  //NTFF TE Translate
   for(int ang=0; ang<360; ang++)
   {
     double phi = ang*M_PI/180.0;

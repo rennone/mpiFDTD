@@ -1,4 +1,4 @@
-#include "field.h"
+//#include "field.h"
 #include "models.h"
 #include "noModel.h"
 #include "circleModel.h"
@@ -28,12 +28,11 @@ static void noModel(void)
 static void circleModel(void)
 {
   dir = "MieCylinderModel";
-  epsMethod = circleModel_EPS(N_PX*0.5, N_PY*0.5, field_getLambda());  
-  isFinishMethod = circleModel_isFinish;  
-  moveDirectoryMethod = circleModel_moveDirectory;
-
-  printf("not implemented circleModel");
-  exit(2);
+  epsMethod           = circleModel_EPS();
+  isFinishMethod      = circleModel_isFinish;  
+  needSizeMethod      = circleModel_needSize;
+  initModelMethod     = circleModel_init;
+  moveDirectoryMethod = circleModel_moveDirectory;  
 }
 
 static void multiLayerModel()
@@ -105,7 +104,7 @@ void models_setModel(enum MODEL model)
 
 double models_eps(double x, double y, enum MODE mode)
 {
-  double epsilon = EPSILON_0_S;
+  double epsilon;
   switch(mode){
   case D_X :
     epsilon = (*epsMethod)(x, y, 1, 0);
@@ -113,7 +112,10 @@ double models_eps(double x, double y, enum MODE mode)
     epsilon = (*epsMethod)(x, y, 0, 1);
   case D_XY :
     epsilon = (*epsMethod)(x, y, 1, 1);
+  default:
+    epsilon = (*epsMethod)(x, y, 1, 1);
   }
+  
   return epsilon;
 }
 

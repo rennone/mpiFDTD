@@ -10,8 +10,61 @@
   right(k)  = k+SUB_N_PY
 */
 
-static const double R0 = 1.0e6;
+static double R0 = 1.0e6;
 
+static int sub_tp, sub_bm, sub_rt, sub_lt;
+static bool IN_TP, IN_BM, IN_LT, IN_RT;
+static int sub_ylt, sub_yrt;
+static int sub_xtp, sub_xbm;
+static dcomplex *Ux, *Uy, *Wz;
+
+void ntffTM_init()
+{
+  NTFFInfo nInfo = field_getNTFFInfo();
+  
+  Ux = newDComplex(nInfo.arraySize * 360);
+  Uy = newDComplex(nInfo.arraySize * 360);
+  Wz = newDComplex(nInfo.arraySize * 360);
+
+  R0 = 1.0e6 * field_toCellUnit(500);//* field_getLambda_S();
+
+  double cx = nInfo.cx;
+  double cy = nInfo.cy;
+  
+  int tp = nInfo.top;    int bm = nInfo.bottom;  //上下
+  int rt = nInfo.right;  int lt = nInfo.left;	 //左右
+
+  SubFieldInfo_S subInfo_s = field_getSubFieldInfo_S();
+  
+  sub_tp = tp - subInfo_s.OFFSET_Y;  sub_bm = bm - subInfo_s.OFFSET_Y;
+  sub_rt = rt - subInfo_s.OFFSET_X;  sub_lt = lt - subInfo_s.OFFSET_X;
+
+  //以下どれかでも満たせば積分路上に無い
+  bool outX = sub_rt <= 0 || sub_lt >= subInfo_s.SUB_N_PX-1; //rtより右, もしくはltより左の小領域
+  bool outY = sub_tp <= 0 || sub_bm >= subInfo_s.SUB_N_PY-1; //tpより上, もしくはbmより下の小領域
+  
+  // 小領域内にどの積分面が存在するか
+  IN_TP = (0 < sub_tp && sub_tp < subInfo_s.SUB_N_PY-1) && !outX;
+  IN_BM = (0 < sub_bm && sub_bm < subInfo_s.SUB_N_PY-1) && !outX;
+  IN_RT = (0 < sub_rt && sub_rt < subInfo_s.SUB_N_PX-1) && !outY;
+  IN_LT = (0 < sub_lt && sub_lt < subInfo_s.SUB_N_PX-1) && !outY;
+
+  sub_ylt=-1, sub_yrt=-2;
+  if(IN_TP || IN_BM)
+  {
+    sub_yrt = min(subInfo_s.SUB_N_PX-2, max( 1, sub_rt) );
+    sub_ylt = min(subInfo_s.SUB_N_PX-2, max( 1, sub_lt) );
+  }
+
+  sub_xtp=-2, sub_xbm=-1;
+  if(IN_RT || IN_LT)
+  {
+    sub_xbm = min(subInfo_s.SUB_N_PY-2, max( 1, sub_bm+1) );  //bm,tpですでに計算しているため, ひとつずれる
+    sub_xtp = min(subInfo_s.SUB_N_PY-2, max( 1, sub_tp-1) );  //
+  }
+  printf("Rank=%d\ninTp=%d, inBm=%d, inLt=%d, inRt=%d\n offset(%d,%d)\n",subInfo_s.Rank,IN_TP, IN_BM, IN_RT,IN_LT, subInfo_s.OFFSET_X, subInfo_s.OFFSET_Y);
+
+}
 //周波数領域のNTFF
 void ntffTM_Frequency( dcomplex *Hx, dcomplex *Hy, dcomplex *Ez, dcomplex resultEz[360])
 {
@@ -110,7 +163,8 @@ void ntffTM_TimeTranslate(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, dcomplex *Et
   const int maxTime = field_getMaxTime();
   NTFFInfo nInfo = field_getNTFFInfo();  
   double theta = 0;
-  double ToRad = M_PI/180.0; 
+  double ToRad = M_PI/180.0;
+  //TM Time Translate
   for(int ang=0, k=0; ang<360; ang++, k+=nInfo.arraySize)
   {
     double phi = ang*ToRad;
@@ -127,8 +181,8 @@ void ntffTM_TimeTranslate(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, dcomplex *Et
       double complex WPH = 0 + 0;
       double complex UTH = Ux[k+i]*sx + Uy[k+i]*sy + 0;
       double complex UPH = Ux[k+i]*px + Uy[k+i]*py;
-      double complex ETH  = coef*(-Z_0_S*WTH-UPH);
-      double complex EPH  = coef*(-Z_0_S*WPH+UTH);
+      double complex ETH = coef*(-Z_0_S*WTH-UPH);
+      double complex EPH = coef*(-Z_0_S*WPH+UTH);
       
       Eth[k+i] = ETH; //TODO : 物理単位に変換
       Eph[k+i] = EPH;

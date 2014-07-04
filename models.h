@@ -1,6 +1,7 @@
 #ifndef _MODELS_H
 #define _MODELS_H
 
+#include "bool.h"
 enum MODEL
 {
   NO_MODEL,

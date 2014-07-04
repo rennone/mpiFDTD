@@ -514,23 +514,23 @@ static void setCoefficient()
       double eps = EPSILON_0_S;
       double sig_z = 0;
 
-      C_JX[k] = (2*eps - sig_ex_y)/(2*eps + sig_ex_y);
-      C_JXHZ[k] = (2*eps)/(2*eps + sig_ex_y);
-      C_DX[k] = (2*eps - sig_z) / (2*eps + sig_z);
+      C_JX[k]    = (2*eps - sig_ex_y) / (2*eps + sig_ex_y);
+      C_JXHZ[k]  = (2*eps)            / (2*eps + sig_ex_y);
+      C_DX[k]    = (2*eps - sig_z)    / (2*eps + sig_z);
       C_DXJX1[k] = (2*eps + sig_ex_x) / (2*eps + sig_z);
       C_DXJX0[k] = (2*eps - sig_ex_x) / (2*eps + sig_z);
 
-      C_JY[k] = (2*eps - sig_z) / (2*eps + sig_z);
-      C_JYHZ[k] = (2*eps)/(2*eps + sig_z);
-      C_DY[k] = (2*eps - sig_ey_x) / (2*eps + sig_ey_x);
+      C_JY[k]    = (2*eps - sig_z)    / (2*eps + sig_z);
+      C_JYHZ[k]  = (2*eps)            / (2*eps + sig_z);
+      C_DY[k]    = (2*eps - sig_ey_x) / (2*eps + sig_ey_x);
       C_DYJY1[k] = (2*eps + sig_ey_y) / (2*eps + sig_ey_x);
       C_DYJY0[k] = (2*eps - sig_ey_y) / (2*eps + sig_ey_x);
 
-      C_MZ[k] = (2*eps - sig_hz_x) / (2*eps + sig_hz_x );
-      C_MZEXEY[k] = (2*eps) / (2*eps + sig_hz_x);
-      C_BZ[k] = (2*eps - sig_hz_y) / (2*eps + sig_hz_y);
-      C_BZMZ1[k] = (2*eps + sig_z) / (2*eps + sig_hz_y);
-      C_BZMZ0[k] = (2*eps - sig_z) / (2*eps + sig_hz_y);
+      C_MZ[k]    = (2*eps - sig_hz_x) / (2*eps + sig_hz_x );
+      C_MZEXEY[k]= (2*eps)            / (2*eps + sig_hz_x);
+      C_BZ[k]    = (2*eps - sig_hz_y) / (2*eps + sig_hz_y);
+      C_BZMZ1[k] = (2*eps + sig_z)    / (2*eps + sig_hz_y);
+      C_BZMZ0[k] = (2*eps - sig_z)    / (2*eps + sig_hz_y);
     }
   }  
 }
