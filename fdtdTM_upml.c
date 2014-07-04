@@ -67,7 +67,9 @@ static void update(void)
 static void init()
 {
   allocateMemories();
-  setCoefficient(); 
+  setCoefficient();
+
+  ntffTM_init();
 }
 
 //Finish
