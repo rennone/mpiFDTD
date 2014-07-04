@@ -181,7 +181,10 @@ int main( int argc, char *argv[] )
 
   //必要以上の入射角度をしようとしてもスルー
   if(config.field_info.angle_deg > config.endAngle)
-    exit(0);
+    {
+      MPI_Finalize(); //プロセスごとにFinalizeしてもok
+      exit(0); //call finalize before exit()
+    }
   
   //シミュレーションの初期化.
   simulator_init(config.field_info, config.ModelType, config.SolverType);  
@@ -311,7 +314,7 @@ static void idle(void)
 
   //角度も終わったらシミュレーションは終わる
   simulator_finish();
-  MPI_Finalize();
+  MPI_Finalize();  //call finalize before exit()
   exit(0);
 /*
   //角度も終わった => モデルを変える
