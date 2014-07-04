@@ -2,6 +2,7 @@
 #include "circleModel.h"
 #include "field.h"
 #include "function.h"
+
 static double radius;
 static double epsilon;
 static double posx;
@@ -11,9 +12,11 @@ static double eps(double, double, int, int);
 
 double (*circleModel_EPS(double x, double y, double r))(double, double, int , int)
 {
-  radius = r;
-  posx = x;
-  posy = y;
+  radius = field_toCellUnit(500);
+  FieldInfo_S fInfo_s = field_getFieldInfo_S();
+  posx   = fInfo_s.N_PX/2;
+  posy   = fInfo_s.N_PY/2;
+  
   epsilon = 1.6*1.6*EPSILON_0_S;
   
   return eps;
@@ -39,15 +42,17 @@ static double eps(double x, double y, int col, int row)
     return epsilon;
 
   //さらに32*32分割し媒質内と媒質外の数を求めepsilonを決定する
+  double split = 32;
+  double half_split = split/2;
   double sum=0;
-  for(double i=-16+0.5; i<16; i+=1){
-    for(double j=-16+0.5; j<16; j+=1){
-      if(pow(dx+col*i/32.0, 2.0) + pow(dy+row*j/32.0, 2.0) <= radius*radius)
+  for(double i=-half_split+0.5; i<half_split; i+=1){
+    for(double j=-half_split+0.5; j<half_split; j+=1){
+      if(pow(dx+col*i/split, 2.0) + pow(dy+row*j/split, 2.0) <= radius*radius)
 	sum+=1;
     }
   }
   
-  sum /= 32.0*32.0;
+  sum /= split*split;
   return epsilon*sum + EPSILON_0_S*(1-sum);
 }
 

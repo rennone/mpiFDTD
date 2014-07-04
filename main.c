@@ -99,14 +99,8 @@ static void readConfig(FieldInfo *field_info)
   fclose(fp);
 }
 
-int main( int argc, char *argv[] )
+static void initConfigFromText()
 {
-  getcwd(root, 512); //カレントディレクトリを保存
-  
-  MPI_Init( 0, 0 );
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &numProc);
-
   //同時にファイルを読み込むのはヤバい気がするので, rank0だけが読み込んで同期する
   if(rank == 0)
   {    
@@ -119,21 +113,61 @@ int main( int argc, char *argv[] )
     printf("angle = %d .. %d (delta = %d)\n", config.startAngle, config.endAngle, config.deltaAngle);
     printf("==============================\n");
   }
-
+    
   //configを同期
   if(rank == 0)
   {
     for(int i=1; i<numProc; i++)
     {
-//      MPI_Send((int*)&config.field_info, sizeof(FieldInfo)/sizeof(int), MPI_INT, i, 0, MPI_COMM_WORLD);
       MPI_Send((int*)&config, sizeof(Config)/sizeof(int), MPI_INT, i, 1, MPI_COMM_WORLD);
     }
   }else{
     MPI_Status status;
-//    MPI_Recv((int*)&config.field_info, sizeof(FieldInfo)/sizeof(int), MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
     MPI_Recv((int*)&config, sizeof(Config)/sizeof(int), MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
   }
+}
 
+static void calcFieldSize(FieldInfo *fInfo, int x_nm, int y_nm)
+{
+  //モデルのサイズ + (pml + ntff)*2 + 余白
+  fInfo->width_nm  = x_nm + fInfo->h_u_nm*(fInfo->pml + 5)*2 + 200;
+  fInfo->height_nm = y_nm + fInfo->h_u_nm*(fInfo->pml + 5)*2 + 200;
+}
+
+static void initParameter()
+{
+  config.field_info.h_u_nm    = 10;
+  config.field_info.pml       = 10;
+  config.field_info.lambda_nm = 500;
+  config.field_info.stepNum   = 1500;
+  config.startAngle = 0;
+  config.endAngle   = 0;
+  config.deltaAngle = 5;
+  
+  config.SolverType = TM_UPML_2D;
+
+  int x_nm, y_nm;
+  models_needSize(&x_nm, &y_nm);
+  calcFieldSize(&config.field_info, x_nm, y_nm);
+
+  printf("%d, %d\n", config.field_info.width_nm, config.field_info.height_nm);
+}
+
+int main( int argc, char *argv[] )
+{
+  getcwd(root, 512); //カレントディレクトリを保存
+
+  models_setModel(LAYER);
+  
+  MPI_Init( 0, 0 );
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &numProc);
+
+//  initConfigFromText();
+
+  initParameter();  //パラメータを設定
+  
+  //プロセスごとに角度を分ける
   config.field_info.angle_deg = config.startAngle + config.deltaAngle*rank;
 
   //必要以上の入射角度をしようとしてもスルー
@@ -152,30 +186,37 @@ int main( int argc, char *argv[] )
   {
     while(1)
     {
+      //シミュレーションをまわす
       while(!simulator_isFinish()) {
         simulator_calc();    
       }
-      
-      //入射角度を変えて再計算
-      if( field_getWaveAngle() < config.endAngle )
+
+      //シミュレーション終わったら, 入射角度を変えて再計算
+      int angle = field_getWaveAngle()+config.deltaAngle*numProc;
+      if( angle <= config.endAngle )
       {      
-        simulator_reset();
-        int angle = field_getWaveAngle()+config.deltaAngle*numProc;
+        simulator_reset();      
         field_setWaveAngle(angle);
       } else {
         simulator_finish();
         break;
-      }    
+      }
     }
 
+    break;
+    /*
+    //一旦シミュレーションは終了する.
+    simulator_finish();
     //モデルを変更して再計算する
-    if ( !models_isFinish() )
-    {
+    if ( !models_isFinish() ) {      
       moveDirectory(root);    //カレントディレクトリを元に戻す.
       models_moveDirectory(); //もう一度潜る
+      //フィールドもかえる必要があるかも
       simulator_solverInit(); //モデルが変わったのでソルバーも再計算する.
-      simulator_reset();
-    }
+    } else
+    {
+      break;
+      }*/
   }
   MPI_Finalize(); //プロセスごとにFinalizeしてもok
 #endif
@@ -212,6 +253,7 @@ static void drawField()
   FieldInfo_S sInfo = field_getFieldInfo_S();
   drawer_paintImage(0,0, sInfo.N_X, sInfo.N_Y, sInfo.N_PX, sInfo.N_PY,
                     simulator_getDrawingData());
+  
   drawer_paintModel(0,0, sInfo.N_X, sInfo.N_Y, sInfo.N_PX, sInfo.N_PY,
                     simulator_getEps());
 }
@@ -242,36 +284,44 @@ static void display()
 static void idle(void)
 {
   simulator_calc();
-  
-  if( simulator_isFinish())
-  {
-//入射角度がすべて終わったかどうか
-    if( field_getWaveAngle() < config.endAngle )
-    {      
-      simulator_reset();
-      int angle = field_getWaveAngle()+config.deltaAngle*numProc;
-      field_setWaveAngle(angle);
-    }else
-    {
-      //モデルの変更もしない
-      if( models_isFinish() )
-      {
-        simulator_finish();
-        MPI_Finalize();
-        exit(0);        
-      }
-      else
-      {
-        //モデルを変更して再計算する
-        moveDirectory(root);    //カレントディレクトリを元に戻す.
-        models_moveDirectory(); //もう一度潜る
-        simulator_solverInit(); //モデルが変わったのでソルバーも再計算する.
-        simulator_reset();
-      }
-    }
+
+  //シミュレーションが続くなら再描画して終わり
+  if( !simulator_isFinish() ){
+    glutPostRedisplay();  //再描画
+    return;
   }
-  glutPostRedisplay();  //再描画
-//  MPI_Barrier(MPI_COMM_WORLD);
+
+  //シミュレーションが終わった => 角度を変える
+  int angle = field_getWaveAngle()+config.deltaAngle*numProc;
+  if( angle <= config.endAngle )
+  {      
+    simulator_reset();
+    field_setWaveAngle(angle);
+    return;
+  }
+
+  //角度も終わったらシミュレーションは終わる
+  simulator_finish();
+  MPI_Finalize();
+  exit(0);
+/*
+  //角度も終わった => モデルを変える
+  if( models_isFinish() )
+  {
+    //モデルの変更もしない場合は終わる
+    simulator_finish();
+    MPI_Finalize();
+    exit(0);        
+  }
+  else
+  {
+    simulator_reset();
+    //モデルを変更して再計算する
+    moveDirectory(root);    //カレントディレクトリを元に戻す.
+    models_moveDirectory(); //もう一度潜る    
+    simulator_solverInit(); //モデルが変わったのでソルバーも再計算する.
+    }*/
+
 }
 // 以上 OPENGLの関数
 #endif
