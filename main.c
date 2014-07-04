@@ -189,8 +189,9 @@ int main( int argc, char *argv[] )
   
   //シミュレーションの初期化.
   simulator_init(config.field_info, config.ModelType, config.SolverType);  
-  
-  MPI_Barrier(MPI_COMM_WORLD); //(情報表示がずれないように)全員一緒に始める
+
+  //exitしたプロセスがあると停止してしまうのでMPI_Finalizeは使えない
+//  MPI_Barrier(MPI_COMM_WORLD); //(情報表示がずれないように)全員一緒に始める
   printf("rank=%d, angle=%d\n",rank, config.field_info.angle_deg);
   
 #ifndef USE_OPENGL
