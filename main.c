@@ -207,6 +207,16 @@ bool nextSimulation(int progress, bool *changeModel)
   return false;
 }
 
+static void screenshot()
+{
+  //その構造で,角度がST_PHIのやつだけが画像を保存する.
+  if(config.field_info.angle_deg == ST_PHI)
+  {
+    FieldInfo_S fInfo_s = field_getFieldInfo_S();
+    drawer_outputImage("image.bmp", simulator_getDrawingData(), simulator_getEps(), fInfo_s.N_PX, fInfo_s.N_PY);
+  }  
+}
+
 int main( int argc, char *argv[] )
 {
   getcwd(root, 512); //カレントディレクトリを保存
@@ -232,6 +242,8 @@ int main( int argc, char *argv[] )
   //シミュレーションの初期化.
   simulator_init(config.field_info);
 
+  screenshot();
+  
   //exitしたプロセスがあると停止してしまうのでMPI_Finalizeは使えない
 //  MPI_Barrier(MPI_COMM_WORLD); //(情報表示がずれないように)全員一緒に始める
   printf("rank=%d, angle=%d\n",rank, config.field_info.angle_deg);
@@ -260,6 +272,8 @@ int main( int argc, char *argv[] )
       calcFieldSize(&config.field_info);        //フィールドサイズの再計算
       moveDir(); //ディレクトリの移動
       simulator_init(config.field_info);
+      screenshot();
+  
     } else {
       simulator_reset(); //変化してなければ,データの書き出しと電磁波の値だけ0に戻す.
       field_setWaveAngle(config.field_info.angle_deg); //角度だけ変える.
@@ -321,9 +335,9 @@ static void display()
   glEnableClientState( GL_TEXTURE_COORD_ARRAY );
 
   drawField(); //分割しない全体領域の描画
-  //drawSubField();  //分割された領域の描画
-  
-  drawer_draw();     
+  //drawSubField();  //分割された領域の描画  
+  drawer_draw();
+
   glDisableClientState( GL_VERTEX_ARRAY );
   glDisableClientState( GL_TEXTURE_COORD_ARRAY );
   glutSwapBuffers();
@@ -357,53 +371,11 @@ static void idle(void)
     moveDir();    
     //シミュレーションの初期化.
     simulator_init(config.field_info);
+    screenshot();
   } else {
     simulator_reset();
     field_setWaveAngle(config.field_info.angle_deg);
   }
-  /*
-  //シミュレーションが終わった => 角度を変える
-  int angle = field_getWaveAngle()+config.deltaAngle*numProc;
-  if( angle <= config.endAngle )
-  {      
-    simulator_reset();
-    field_setWaveAngle(angle);
-    return;
-  }
-
-  //角度も終わったらシミュレーションは終わる
-  simulator_finish();
-  
-  //角度も終わった => モデルを変える
-  if( models_isFinish() )
-  {
-    //モデルの変更もしない場合は終わる
-    MPI_Finalize();
-    exit(0);
-  }
-  else
-  {
-    //モデルを変更して再計算する
-    moveDirectory(root);    //カレントディレクトリを元に戻す.
-    models_moveDirectory(); //もう一度潜る
-
-//    calcFieldSize();
-    initParameter();  //パラメータを設定
-  
-    //プロセスごとに角度を分ける
-    config.field_info.angle_deg = config.startAngle + config.deltaAngle*rank;
-
-    //必要以上の入射角度をしようとしてもスルー
-    if(config.field_info.angle_deg > config.endAngle)
-    {
-      printf("rank%d is finish\n",rank);
-      MPI_Finalize(); //プロセスごとにFinalizeしてもok
-      exit(0); //call finalize before exit()
-    }  
-    //シミュレーションの初期化.
-    simulator_init(config.field_info, config.ModelType, config.SolverType);  
-  }
-  */
 
 }
 // 以上 OPENGLの関数

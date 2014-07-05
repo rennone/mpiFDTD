@@ -244,5 +244,5 @@ bool simulator_isFinish(void)
 //屈折率のマップを取ってくる
 double *simulator_getEps()
 {
-  return getEpsMethod();  
+  return (*getEpsMethod)();  
 }
