@@ -3,15 +3,22 @@
 #include "function.h"
 #include <math.h>
 
+/*
+ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに互い違いにならない(左右で幅が異なってしまうから).
+ */
 //横幅
 #define ST_WIDTH_NM 300
 #define EN_WIDTH_NM 300
 #define DELTA_WIDTH_NM 10
 
 //ラメラの厚さ
-#define ST_THICK_NM 30
-#define EN_THICK_NM 160
-#define DELTA_THICK_NM 10
+#define ST_THICK_NM_0 140
+#define EN_THICK_NM_0 160
+#define DELTA_THICK_NM_0 10
+
+#define ST_THICK_NM_1 80
+#define EN_THICK_NM_1 160
+#define DELTA_THICK_NM_1 10
 
 //ラメラの枚数
 #define LAYER_NUM 8
@@ -19,38 +26,51 @@
 //互い違い
 #define ASYMMETRY true
 
+//中心に以下の幅で軸となる枝を入れる => 軸の屈折率はN_1になる
+#define BRANCH_NM 50
+
 //屈折率
-#define N_1 1.0
-#define N_2 1.56
+#define N_0 1.0
+#define N_1 1.56
 
-static int width_nm[2] = {ST_WIDTH_NM, ST_WIDTH_NM};
-static int thickness_nm[2] = {ST_THICK_NM, ST_THICK_NM};
+//先端における横幅の割合
+#define ST_EDGE_RATE 0.5
+#define EN_EDGE_RATE 1.0
+#define DELTA_EDGE_RATE 0.1
+
+//ラメラの曲率 (1で四角形のまま, 0.0で最もカーブする)
+#define CURVE 0.8
+
+static int width_nm[2]     = {ST_WIDTH_NM, ST_WIDTH_NM};
+static int thickness_nm[2] = {ST_THICK_NM_0, ST_THICK_NM_1};
 static int layerNum = LAYER_NUM;     //枚数
+static int branch_width_nm = BRANCH_NM; //枝の幅
 
+static double branch_width_s; //枝の幅
 static double width_s[2];     //幅
 static double thickness_s[2]; //厚さ
 
 static double ep_s[2];        //誘電率 = n*n*ep0
 
-//先端における横幅の割合
-
-#define ST_EDGE_RATE 1.0
-#define EN_EDGE_RATE 1.0
-#define DELTA_EDGE_RATE 0.1
 static double edge_width_rate = ST_EDGE_RATE;
 
-//ラメラの曲率 (1で四角形のまま, 0.0で最もカーブする)
-#define CURVE 1.0
-static double c;
+static double c0, c1; //2次関数の比例定数
 
-static double calc_width(double sy, double wid, double hei, double modY, int k)
+static double calc_width(double sx, double sy, double wid, double hei, double modY, int k)
 {
   double p = 1 - sy/hei;
   double new_wid = wid*(p + (1-p)*edge_width_rate);
 
-  //2次関数で曲率計算
+  //ラメラの下を基準とした位置を求める
   double dh = k==0 ? modY : modY - thickness_s[0];
-  
+  double c  = k==0 ? c0 : c1;
+
+//互い違いの場合はdhを再計算
+  if(ASYMMETRY && sx < 0){
+    dh = (k==1 ? modY : modY - thickness_s[1]);
+  }
+
+  //2次関数で横幅を計算
   return c*pow((dh-thickness_s[k]/2),2) + new_wid;
 }
 
@@ -85,24 +105,35 @@ static double eps(double x, double y, int col, int row)
       //上下に飛び出ていないか確認
       if(sy < 0 || sy > height)
         continue;
+
+      double p = 1 - sy/height;
+      //枝の部分
+      if(abs(sx) < branch_width_s*p)
+      {
+        s[1] += 1;
+        continue;
+      }
       
       //thickで割ったあまり(double型なのでこんなやり方をしている)
       double modY = sy - floor(sy/thick)*thick;
 
       //境界上のときは両方の平均になる(普通は無い).
-      if(modY == thickness_s[0]) {
+      if( modY == thickness_s[0]) {
         s[0] += 0.5*(fabs(sx) < width_s[0]/2);
         s[1] += 0.5*(fabs(sx) < width_s[1]/2);
         continue;
       }
 
-      int k = (modY > thickness_s[0]); //どっちの屈折率にいるか調べる
 
-      if (sx < 0 && ASYMMETRY)
-        k = 1-k;		//左右で反転, 互い違いでなかったら反転しない
-
-//      double p = 1 - sy/height;
-      double wid = calc_width(sy, width_s[k], height, modY, k);
+      //どっちの屈折率にいるか調べる
+      int k;
+      if (sx < 0 && ASYMMETRY) {
+        k = (modY < thickness_s[1]); //互い違いかつ左側は, 1が下にある
+      } else {
+        k = (modY > thickness_s[0]); //それ以外は0が下にある
+      }
+      
+      double wid = calc_width(sx, sy, width_s[k], height, modY, k);
       if(abs(sx) < wid/2) //width_s[k]
         s[k] +=1;
     }    
@@ -118,22 +149,28 @@ double ( *multiLayerModel_EPS(void))(double, double, int, int)
   return eps;
 }
 
-bool multiLayerModel_isFinish(void)
+//構造を一つ進める
+static bool nextStructure()
 {
-  thickness_nm[0] += DELTA_THICK_NM;
-  thickness_nm[1] += DELTA_THICK_NM;
+  thickness_nm[0] += DELTA_THICK_NM_0;
+  thickness_nm[1] += DELTA_THICK_NM_1;
 
-  if(thickness_nm[0] > EN_THICK_NM)
+  if(thickness_nm[0] > EN_THICK_NM_0)
   {
-    thickness_nm[0] = ST_THICK_NM;
-    thickness_nm[1] = ST_THICK_NM;
+    thickness_nm[0] = ST_THICK_NM_0;
+    thickness_nm[1] = ST_THICK_NM_1;
 
     edge_width_rate += DELTA_EDGE_RATE;
     if(edge_width_rate > EN_EDGE_RATE)
       return true;
   }
      
-  return false;
+  return false;  
+}
+
+bool multiLayerModel_isFinish(void)
+{
+  return nextStructure();
 }
 
 void multiLayerModel_needSize(int *x_nm, int *y_nm)
@@ -144,8 +181,18 @@ void multiLayerModel_needSize(int *x_nm, int *y_nm)
 
 void multiLayerModel_moveDirectory()
 {
+  if(ASYMMETRY){
+    makeDirectory("asymmetry");
+    moveDirectory("asymmetry");
+  } else {
+    makeDirectory("symmetry");
+    moveDirectory("symmetry");
+  }
+  
   char buf[512];
-  sprintf(buf, "thick_%dnm_layer_%d_sym_%d", thickness_nm[0], layerNum, ASYMMETRY);
+  
+  sprintf(buf, "thick%d_%d_layer%d_edge%d",
+          thickness_nm[0], thickness_nm[1], layerNum, (int)(edge_width_rate*10));
   makeDirectory(buf);
   moveDirectory(buf);
 }
@@ -156,8 +203,10 @@ void multiLayerModel_init()
   width_s[1]     = field_toCellUnit(width_nm[1]);
   thickness_s[0] = field_toCellUnit(thickness_nm[0]);
   thickness_s[1] = field_toCellUnit(thickness_nm[1]);
-  ep_s[0] = N_1*N_1*EPSILON_0_S;
-  ep_s[1] = N_2*N_2*EPSILON_0_S;
+  ep_s[0] = N_0*N_0*EPSILON_0_S;
+  ep_s[1] = N_1*N_1*EPSILON_0_S;
 
-  c = 4*width_s[0]*(CURVE-1)/thickness_s[0]/thickness_s[0];
+  branch_width_s = field_toCellUnit(branch_width_nm);
+  c0 = 4*width_s[0]*(CURVE-1)/thickness_s[0]/thickness_s[0];
+  c1 = 4*width_s[1]*(CURVE-1)/thickness_s[1]/thickness_s[1];
 }
