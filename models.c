@@ -99,7 +99,7 @@ void models_setModel(enum MODEL model)
   }
   
   //ディレクトリの移動
-  models_moveDirectory();
+//  models_moveDirectory();
 }
 
 double models_eps(double x, double y, enum MODE mode)

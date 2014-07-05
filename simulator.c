@@ -3,6 +3,7 @@
 #include <string.h>
 #include "simulator.h"
 #include "field.h"
+#include "function.h"
 
 #include "mpiTM_UPML.h"
 #include "mpiTE_UPML.h"
@@ -172,9 +173,12 @@ static void setSolver(enum SOLVER solver)
     exit(2);
     break;
   }
+}
+
+void simulator_moveDirectory()
+{
   makeDirectory(solverDir);
   moveDirectory(solverDir);
-  (*initMethod)(); //Solverの初期化, EPS, Coeffの設定  
 }
 
 void simulator_calc(){
@@ -183,14 +187,18 @@ void simulator_calc(){
   field_nextStep();   //時間を一つ進める  
 }
 
-void simulator_init(FieldInfo field_info, enum MODEL model, enum SOLVER solver)
+void simulator_setSolver(enum SOLVER solver)
+{
+  setSolver(solver);    //Solverの設定と初期化
+}
+
+void simulator_init(FieldInfo field_info)
 {
   //横幅(nm), 縦幅(nm), 1セルのサイズ(nm), pmlレイヤの数, 波長(nm), 計算ステップ
   field_init(field_info); //フィールドの初期化
-
   models_initModel();   //モデルの初期化
-  setSolver(solver);    //Solverの設定と初期化
-
+  (*initMethod)(); //Solverの初期化, EPS, Coeffの設定
+  
   gettimeofday(&timer1, NULL); //開始時間の取得
 }
 

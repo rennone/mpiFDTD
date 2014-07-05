@@ -12,11 +12,11 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 #define DELTA_WIDTH_NM 10
 
 //ラメラの厚さ
-#define ST_THICK_NM_0 140
+#define ST_THICK_NM_0 160
 #define EN_THICK_NM_0 160
 #define DELTA_THICK_NM_0 10
 
-#define ST_THICK_NM_1 80
+#define ST_THICK_NM_1 160
 #define EN_THICK_NM_1 160
 #define DELTA_THICK_NM_1 10
 
@@ -34,7 +34,7 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 #define N_1 1.56
 
 //先端における横幅の割合
-#define ST_EDGE_RATE 0.5
+#define ST_EDGE_RATE 1.0
 #define EN_EDGE_RATE 1.0
 #define DELTA_EDGE_RATE 0.1
 
@@ -108,7 +108,7 @@ static double eps(double x, double y, int col, int row)
 
       double p = 1 - sy/height;
       //枝の部分
-      if(abs(sx) < branch_width_s*p)
+      if(abs(sx) < branch_width_s*(p + (1-p)*edge_width_rate))
       {
         s[1] += 1;
         continue;
@@ -162,9 +162,11 @@ static bool nextStructure()
 
     edge_width_rate += DELTA_EDGE_RATE;
     if(edge_width_rate > EN_EDGE_RATE)
+    {
+      printf("there are no models which hasn't been simulated yet\n");
       return true;
+    }
   }
-     
   return false;  
 }
 
@@ -191,8 +193,8 @@ void multiLayerModel_moveDirectory()
   
   char buf[512];
   
-  sprintf(buf, "thick%d_%d_layer%d_edge%d",
-          thickness_nm[0], thickness_nm[1], layerNum, (int)(edge_width_rate*10));
+  sprintf(buf, "thick%d_%d_layer%d_edge%.1lf",
+          thickness_nm[0], thickness_nm[1], layerNum, edge_width_rate);
   makeDirectory(buf);
   moveDirectory(buf);
 }

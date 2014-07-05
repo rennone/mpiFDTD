@@ -6,6 +6,7 @@
 #include "models.h"
 #include "field.h"
 #include "parser.h"
+#include "function.h"
 
 typedef struct Config
 {
@@ -16,7 +17,7 @@ typedef struct Config
 }Config;
 
 #define ST_PHI -90
-#define EN_PHI 0
+#define EN_PHI -85
 #define DELTA_PHI 5
 
 // 以下 OPEN_GLの関数
@@ -101,6 +102,20 @@ static void readConfig(FieldInfo *field_info)
   fclose(fp);
 }
 
+static void moveDir()
+{
+  moveDirectory(root);
+  models_moveDirectory();
+
+  //h_uの大きさでディレクトリを作る=> TimeNTFFではH_Uが重要なため
+  char buf[128];
+  sprintf(buf,"hu_%dnm",config.field_info.h_u_nm);
+  makeDirectory(buf);
+  moveDirectory(buf);
+
+  simulator_moveDirectory();  
+}
+
 static void initConfigFromText()
 {
   //同時にファイルを読み込むのはヤバい気がするので, rank0だけが読み込んで同期する
@@ -129,8 +144,11 @@ static void initConfigFromText()
   }
 }
 
-static void calcFieldSize(FieldInfo *fInfo, int x_nm, int y_nm)
+static void calcFieldSize(FieldInfo *fInfo)
 {
+  int x_nm, y_nm;
+  models_needSize(&x_nm, &y_nm);
+  
   //モデルのサイズ + (pml + ntff)*2 + 余白
   fInfo->width_nm  = x_nm + fInfo->h_u_nm*(fInfo->pml + 5)*2 + 200;
   fInfo->height_nm = y_nm + fInfo->h_u_nm*(fInfo->pml + 5)*2 + 200;
@@ -151,14 +169,14 @@ static void initParameter()
   config.field_info.pml       = 10;
   config.field_info.lambda_nm = 500;
   config.field_info.stepNum   = 1500;
+  config.field_info.angle_deg = ST_PHI;
   config.startAngle = ST_PHI;
   config.endAngle   = EN_PHI;
-  config.deltaAngle = DELTA_PHI;  
-  config.SolverType = TM_UPML_2D;
-
-  int x_nm, y_nm;
-  models_needSize(&x_nm, &y_nm);
-  calcFieldSize(&config.field_info, x_nm, y_nm);
+  config.deltaAngle = DELTA_PHI;
+  config.SolverType = -1; //Note : 使用してはいけない
+  config.ModelType = -1; //Note : 使用してはいけない
+  
+  calcFieldSize(&config.field_info);
 
   printf("%d, %d\n", config.field_info.width_nm, config.field_info.height_nm);
 }
@@ -166,34 +184,35 @@ static void initParameter()
 //次のシミュレーションパラメータを探す
 //progress : 現在の状態からどれだけ進むかのステップ数
 //最初はrankだけ進んで, 2回目以降はnumProcだけ進む
-bool nextSimulation(int progress)
+//changeModelはモデルの構造が変化したか => フィールドを書き換える必要があるか
+//戻り値 : シミュレーションが終了かどうか
+bool nextSimulation(int progress, bool *changeModel)
 {
-  bool changeModel = false;
+  (*changeModel) = false;
   //プロセス数の分だけ進む
   for(int i=0; i<progress; i++)
   {    
-    config.field_info.angle_deg += config.delta_phi; //入射角度を増やす
+    config.field_info.angle_deg += config.deltaAngle; //入射角度を増やす
 
     //入射角度が全部終わったら, 構造を変える
     if(config.field_info.angle_deg > config.endAngle)
     {
       config.field_info.angle_deg = config.startAngle;
-      changeModel = true;
+      (*changeModel) = true;
       if(models_isFinish()) {
-        MPI_Finalize();
-        exit(0);
+        return true;
       }
     }
   }
-  return chengeModel;
+  return false;
 }
-
 
 int main( int argc, char *argv[] )
 {
   getcwd(root, 512); //カレントディレクトリを保存
   
-  models_setModel(LAYER); //MIE_CYLINDER
+  models_setModel(LAYER);       //MIE_CYLINDER
+  simulator_setSolver(TM_UPML_2D);
   
   MPI_Init( 0, 0 );
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -201,15 +220,17 @@ int main( int argc, char *argv[] )
 
 //  initConfigFromText();
   initParameter();  //パラメータを設定
-  
-
-  config.field_info.angle_deg = config.startAngle;
+  moveDir();
   
  //プロセスごとに別のシミュレーションをする.
-  nextSimulation(rank);
+  bool changeModel;
+  if( nextSimulation(rank, &changeModel) == true){
+    MPI_Finalize();
+    exit(0);
+  }
   
   //シミュレーションの初期化.
-  simulator_init(config.field_info, config.ModelType, config.SolverType);  
+  simulator_init(config.field_info);
 
   //exitしたプロセスがあると停止してしまうのでMPI_Finalizeは使えない
 //  MPI_Barrier(MPI_COMM_WORLD); //(情報表示がずれないように)全員一緒に始める
@@ -217,30 +238,34 @@ int main( int argc, char *argv[] )
   
 #ifndef USE_OPENGL
   //only calculate mode
+
   while(1)
   {
-    while(1)
-    {
-      //シミュレーションをまわす
-      while(!simulator_isFinish()) {
-        simulator_calc();    
-      }
+    //シミュレーションをまわす
+    while(!simulator_isFinish()) {
+      simulator_calc();    
+    }
 
-      //モデルが変わったかどうか
-      bool changeModel = nextSimulation(numProc); //ここで,モデル(のnm変数)は変わっている
-      if(changeModel)
-      {
-        simulator_finish(); //
-        initParameter();
-        moveDirectory(root);    //カレントディレクトリを元に戻す.
-        models_moveDirectory(); //もう一度潜る
-        simulator_init(config.field_info, config.ModelType, config.SolverType);  
-      } else {
-        simulator_reset();
-        field_setWaveAngle(config.field_info.angle_deg);
-      }
+    //numProc次のシミュレーションにする. 角度が変わるか構造(nm変数のみ)が変わるか
+    if( nextSimulation(numProc, &changeModel) == true)
+    {
+      simulator_finish(); //シミュレーションの終わり
+      break;
+    }
+
+    //モデルが変化したかどうか
+    if(changeModel)
+    {
+      simulator_finish();     //変化したら, メモリを解放させる為にシミュレーションを終了させる
+      calcFieldSize(&config.field_info);        //フィールドサイズの再計算
+      moveDir(); //ディレクトリの移動
+      simulator_init(config.field_info);
+    } else {
+      simulator_reset(); //変化してなければ,データの書き出しと電磁波の値だけ0に戻す.
+      field_setWaveAngle(config.field_info.angle_deg); //角度だけ変える.
     }
   }
+
   MPI_Finalize(); //プロセスごとにFinalizeしてもok
 #endif
 
@@ -314,6 +339,29 @@ static void idle(void)
     return;
   }
 
+  bool changeModel;
+
+  //シミュレーションを進める.
+  if( nextSimulation(numProc, &changeModel) == true )
+  {
+    simulator_finish();
+    MPI_Finalize();
+    exit(0);
+  }
+
+  if( changeModel ){
+    simulator_finish(); //シミュレーションを終える.
+    
+    //モデルを変更して再計算する
+    calcFieldSize(&config.field_info);   
+    moveDir();    
+    //シミュレーションの初期化.
+    simulator_init(config.field_info);
+  } else {
+    simulator_reset();
+    field_setWaveAngle(config.field_info.angle_deg);
+  }
+  /*
   //シミュレーションが終わった => 角度を変える
   int angle = field_getWaveAngle()+config.deltaAngle*numProc;
   if( angle <= config.endAngle )
@@ -324,14 +372,14 @@ static void idle(void)
   }
 
   //角度も終わったらシミュレーションは終わる
-  simulator_finish();  
+  simulator_finish();
   
   //角度も終わった => モデルを変える
   if( models_isFinish() )
   {
     //モデルの変更もしない場合は終わる
     MPI_Finalize();
-    exit(0);        
+    exit(0);
   }
   else
   {
@@ -339,6 +387,7 @@ static void idle(void)
     moveDirectory(root);    //カレントディレクトリを元に戻す.
     models_moveDirectory(); //もう一度潜る
 
+//    calcFieldSize();
     initParameter();  //パラメータを設定
   
     //プロセスごとに角度を分ける
@@ -346,14 +395,15 @@ static void idle(void)
 
     //必要以上の入射角度をしようとしてもスルー
     if(config.field_info.angle_deg > config.endAngle)
-      {
-	printf("rank%d is finish\n",rank);
-	MPI_Finalize(); //プロセスごとにFinalizeしてもok
-	exit(0); //call finalize before exit()
-      }  
+    {
+      printf("rank%d is finish\n",rank);
+      MPI_Finalize(); //プロセスごとにFinalizeしてもok
+      exit(0); //call finalize before exit()
+    }  
     //シミュレーションの初期化.
     simulator_init(config.field_info, config.ModelType, config.SolverType);  
-    }
+  }
+  */
 
 }
 // 以上 OPENGLの関数
