@@ -163,6 +163,32 @@ static void initParameter()
   printf("%d, %d\n", config.field_info.width_nm, config.field_info.height_nm);
 }
 
+//次のシミュレーションパラメータを探す
+//progress : 現在の状態からどれだけ進むかのステップ数
+//最初はrankだけ進んで, 2回目以降はnumProcだけ進む
+bool nextSimulation(int progress)
+{
+  bool changeModel = false;
+  //プロセス数の分だけ進む
+  for(int i=0; i<progress; i++)
+  {    
+    config.field_info.angle_deg += config.delta_phi; //入射角度を増やす
+
+    //入射角度が全部終わったら, 構造を変える
+    if(config.field_info.angle_deg > config.endAngle)
+    {
+      config.field_info.angle_deg = config.startAngle;
+      changeModel = true;
+      if(models_isFinish()) {
+        MPI_Finalize();
+        exit(0);
+      }
+    }
+  }
+  return chengeModel;
+}
+
+
 int main( int argc, char *argv[] )
 {
   getcwd(root, 512); //カレントディレクトリを保存
@@ -176,16 +202,11 @@ int main( int argc, char *argv[] )
 //  initConfigFromText();
   initParameter();  //パラメータを設定
   
-  //プロセスごとに角度を分ける
-  config.field_info.angle_deg = config.startAngle + config.deltaAngle*rank;
 
-  //必要以上の入射角度をしようとしてもスルー
-  if(config.field_info.angle_deg > config.endAngle)
-    {
-      printf("rank%d is finish\n",rank);
-      MPI_Finalize(); //プロセスごとにFinalizeしてもok
-      exit(0); //call finalize before exit()
-    }
+  config.field_info.angle_deg = config.startAngle;
+  
+ //プロセスごとに別のシミュレーションをする.
+  nextSimulation(rank);
   
   //シミュレーションの初期化.
   simulator_init(config.field_info, config.ModelType, config.SolverType);  
@@ -205,32 +226,20 @@ int main( int argc, char *argv[] )
         simulator_calc();    
       }
 
-      //シミュレーション終わったら, 入射角度を変えて再計算
-      int angle = field_getWaveAngle()+config.deltaAngle*numProc;
-      if( angle <= config.endAngle )
-      {      
-        simulator_reset();      
-        field_setWaveAngle(angle);
+      //モデルが変わったかどうか
+      bool changeModel = nextSimulation(numProc); //ここで,モデル(のnm変数)は変わっている
+      if(changeModel)
+      {
+        simulator_finish(); //
+        initParameter();
+        moveDirectory(root);    //カレントディレクトリを元に戻す.
+        models_moveDirectory(); //もう一度潜る
+        simulator_init(config.field_info, config.ModelType, config.SolverType);  
       } else {
-        simulator_finish();
-        break;
+        simulator_reset();
+        field_setWaveAngle(config.field_info.angle_deg);
       }
     }
-
-    break;
-    /*
-    //一旦シミュレーションは終了する.
-    simulator_finish();
-    //モデルを変更して再計算する
-    if ( !models_isFinish() ) {      
-      moveDirectory(root);    //カレントディレクトリを元に戻す.
-      models_moveDirectory(); //もう一度潜る
-      int x_nm, y
-      simulator_init(con); //モデルが変わったのでソルバーも再計算する.
-    } else
-    {
-      break;
-      }*/
   }
   MPI_Finalize(); //プロセスごとにFinalizeしてもok
 #endif
