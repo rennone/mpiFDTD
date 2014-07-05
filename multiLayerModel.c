@@ -9,8 +9,8 @@
 #define DELTA_WIDTH_NM 10
 
 //ラメラの厚さ
-#define ST_THICK_NM 80
-#define EN_THICK_NM 80
+#define ST_THICK_NM 90
+#define EN_THICK_NM 160
 #define DELTA_THICK_NM 10
 
 //ラメラの枚数
@@ -95,7 +95,9 @@ double ( *multiLayerModel_EPS(void))(double, double, int, int)
 
 bool multiLayerModel_isFinish(void)
 {
-  return true;
+  thickness_nm[0] += DELTA_THICK_NM;
+  thickness_nm[1] += DELTA_THICK_NM;
+  return thickness_nm[0] > EN_THICK_NM;
 }
 
 void multiLayerModel_needSize(int *x_nm, int *y_nm)

@@ -225,8 +225,8 @@ int main( int argc, char *argv[] )
     if ( !models_isFinish() ) {      
       moveDirectory(root);    //カレントディレクトリを元に戻す.
       models_moveDirectory(); //もう一度潜る
-      //フィールドもかえる必要があるかも
-      simulator_solverInit(); //モデルが変わったのでソルバーも再計算する.
+      int x_nm, y
+      simulator_init(con); //モデルが変わったのでソルバーも再計算する.
     } else
     {
       break;
@@ -315,26 +315,36 @@ static void idle(void)
   }
 
   //角度も終わったらシミュレーションは終わる
-  simulator_finish();
-  MPI_Finalize();  //call finalize before exit()
-  exit(0);
-/*
+  simulator_finish();  
+  
   //角度も終わった => モデルを変える
   if( models_isFinish() )
   {
     //モデルの変更もしない場合は終わる
-    simulator_finish();
     MPI_Finalize();
     exit(0);        
   }
   else
   {
-    simulator_reset();
     //モデルを変更して再計算する
     moveDirectory(root);    //カレントディレクトリを元に戻す.
-    models_moveDirectory(); //もう一度潜る    
-    simulator_solverInit(); //モデルが変わったのでソルバーも再計算する.
-    }*/
+    models_moveDirectory(); //もう一度潜る
+
+    initParameter();  //パラメータを設定
+  
+    //プロセスごとに角度を分ける
+    config.field_info.angle_deg = config.startAngle + config.deltaAngle*rank;
+
+    //必要以上の入射角度をしようとしてもスルー
+    if(config.field_info.angle_deg > config.endAngle)
+      {
+	printf("rank%d is finish\n",rank);
+	MPI_Finalize(); //プロセスごとにFinalizeしてもok
+	exit(0); //call finalize before exit()
+      }  
+    //シミュレーションの初期化.
+    simulator_init(config.field_info, config.ModelType, config.SolverType);  
+    }
 
 }
 // 以上 OPENGLの関数
