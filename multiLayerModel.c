@@ -9,7 +9,7 @@
 #define DELTA_WIDTH_NM 10
 
 //ラメラの厚さ
-#define ST_THICK_NM 90
+#define ST_THICK_NM 30
 #define EN_THICK_NM 160
 #define DELTA_THICK_NM 10
 
@@ -17,7 +17,7 @@
 #define LAYER_NUM 8
 
 //互い違い
-#define ASYMMETRY false
+#define ASYMMETRY true
 
 //屈折率
 #define N_1 1.0
@@ -29,7 +29,30 @@ static int layerNum = LAYER_NUM;     //枚数
 
 static double width_s[2];     //幅
 static double thickness_s[2]; //厚さ
+
 static double ep_s[2];        //誘電率 = n*n*ep0
+
+//先端における横幅の割合
+
+#define ST_EDGE_RATE 1.0
+#define EN_EDGE_RATE 1.0
+#define DELTA_EDGE_RATE 0.1
+static double edge_width_rate = ST_EDGE_RATE;
+
+//ラメラの曲率 (1で四角形のまま, 0.0で最もカーブする)
+#define CURVE 1.0
+static double c;
+
+static double calc_width(double sy, double wid, double hei, double modY, int k)
+{
+  double p = 1 - sy/hei;
+  double new_wid = wid*(p + (1-p)*edge_width_rate);
+
+  //2次関数で曲率計算
+  double dh = k==0 ? modY : modY - thickness_s[0];
+  
+  return c*pow((dh-thickness_s[k]/2),2) + new_wid;
+}
 
 //col : D_Xモード row : D_Yモード
 //x,yを中心に, 計算領域のセルと同じ大きさの領域を調べる
@@ -77,8 +100,10 @@ static double eps(double x, double y, int col, int row)
 
       if (sx < 0 && ASYMMETRY)
         k = 1-k;		//左右で反転, 互い違いでなかったら反転しない
-      
-      if(abs(sx) < width_s[k]/2)
+
+//      double p = 1 - sy/height;
+      double wid = calc_width(sy, width_s[k], height, modY, k);
+      if(abs(sx) < wid/2) //width_s[k]
         s[k] +=1;
     }    
   }
@@ -97,7 +122,18 @@ bool multiLayerModel_isFinish(void)
 {
   thickness_nm[0] += DELTA_THICK_NM;
   thickness_nm[1] += DELTA_THICK_NM;
-  return thickness_nm[0] > EN_THICK_NM;
+
+  if(thickness_nm[0] > EN_THICK_NM)
+  {
+    thickness_nm[0] = ST_THICK_NM;
+    thickness_nm[1] = ST_THICK_NM;
+
+    edge_width_rate += DELTA_EDGE_RATE;
+    if(edge_width_rate > EN_EDGE_RATE)
+      return true;
+  }
+     
+  return false;
 }
 
 void multiLayerModel_needSize(int *x_nm, int *y_nm)
@@ -109,7 +145,7 @@ void multiLayerModel_needSize(int *x_nm, int *y_nm)
 void multiLayerModel_moveDirectory()
 {
   char buf[512];
-  sprintf(buf, "thick_%dnm_layer_%d", thickness_nm[0], layerNum);
+  sprintf(buf, "thick_%dnm_layer_%d_sym_%d", thickness_nm[0], layerNum, ASYMMETRY);
   makeDirectory(buf);
   moveDirectory(buf);
 }
@@ -122,4 +158,6 @@ void multiLayerModel_init()
   thickness_s[1] = field_toCellUnit(thickness_nm[1]);
   ep_s[0] = N_1*N_1*EPSILON_0_S;
   ep_s[1] = N_2*N_2*EPSILON_0_S;
+
+  c = 4*width_s[0]*(CURVE-1)/thickness_s[0]/thickness_s[0];
 }
