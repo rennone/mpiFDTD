@@ -12,16 +12,16 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 #define DELTA_WIDTH_NM 10
 
 //ラメラの厚さ
-#define ST_THICK_NM_0 160
+#define ST_THICK_NM_0 80
 #define EN_THICK_NM_0 160
 #define DELTA_THICK_NM_0 10
 
-#define ST_THICK_NM_1 160
+#define ST_THICK_NM_1 80
 #define EN_THICK_NM_1 160
 #define DELTA_THICK_NM_1 10
 
 //ラメラの枚数
-#define LAYER_NUM 8
+#define LAYER_NUM 11
 
 //互い違い
 #define ASYMMETRY true
@@ -34,7 +34,7 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 #define N_1 1.56
 
 //先端における横幅の割合
-#define ST_EDGE_RATE 1.0
+#define ST_EDGE_RATE 0.5
 #define EN_EDGE_RATE 1.0
 #define DELTA_EDGE_RATE 0.1
 

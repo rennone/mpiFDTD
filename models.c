@@ -59,11 +59,11 @@ static void morphoScaleModel()
 static void concentricCircleModel()
 {
   dir = "ConcentricCircleModel";
-  makeDirectory(dir);
-  moveDirectory(dir);
   epsMethod = concentricCircleModel_EPS();
   isFinishMethod      = concentricCircleModel_isFinish;
   moveDirectoryMethod = concentricCircleModel_moveDirectory;
+  printf("not implemented concentricCircle Model");
+  exit(2);
 }
 
 bool models_isFinish()
@@ -74,6 +74,7 @@ bool models_isFinish()
 //モデルを変更したときに,一度rootまで戻るので,再度ネストする用
 void models_moveDirectory()
 {
+  makeDirectory(dir);
   moveDirectory(dir);
   (*moveDirectoryMethod)();
 }

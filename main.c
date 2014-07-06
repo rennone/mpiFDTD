@@ -17,7 +17,7 @@ typedef struct Config
 }Config;
 
 #define ST_PHI -90
-#define EN_PHI -85
+#define EN_PHI 0
 #define DELTA_PHI 5
 
 // 以下 OPEN_GLの関数
@@ -287,8 +287,10 @@ int main( int argc, char *argv[] )
 #ifdef USE_OPENGL
   SubFieldInfo_S subInfo = field_getSubFieldInfo_S();
   
-  int windowX = 1.0*subInfo.OFFSET_X / subInfo.SUB_N_PX * WINDOW_WIDTH;
-  int windowY = 800-1.0*subInfo.OFFSET_Y/subInfo.SUB_N_PY * WINDOW_HEIGHT - WINDOW_HEIGHT;
+  int windowX = WINDOW_WIDTH*(rank%6);
+  //1.0*subInfo.OFFSET_X / subInfo.SUB_N_PX * WINDOW_WIDTH;
+  int windowY = (WINDOW_HEIGHT+50)*(rank/6);
+  //800-1.0*subInfo.OFFSET_Y/subInfo.SUB_N_PY * WINDOW_HEIGHT - WINDOW_HEIGHT;
   enum COLOR_MODE colorMode = CREAL;
   glutInit(&argc, argv);
   glutInitWindowPosition(windowX,windowY);
