@@ -1,14 +1,20 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+static int putBmpHeader(FILE *s, int x, int y, int c);
+static int fputc4LowHigh(unsigned long d, FILE *s);
+static int fputc2LowHigh(unsigned short d, FILE *s);
+
+
 #ifdef USE_OPENGL
 
 #include "drawer.h"
 #include "function.h"
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <GL/glew.h>
 
-#include <limits.h>
+
 #include <time.h>
 
 #ifdef MAC_OS
@@ -167,68 +173,6 @@ void drawer_finish()
   printf("drawer_finish not implemented\n");
 }
 
-//--------------------public Method--------------------//
-
-//--------------------Color Trancform---------------------//
-static void colorTransform(double phi, colorf *col)
-{
-  double range = 1.0; //波の振幅  
-  double ab_phi = phi < 0 ? -phi : phi;
-  double a = ab_phi < range ? (ab_phi <  range/3.0 ? 3.0/range*ab_phi : (-3.0/4.0/range*ab_phi+1.25) ) : 0.5;
-  
-  col->r = phi > 0 ? a:0;
-  col->b = phi < 0 ? a:0;
-  col->g = min(1.0, max(0.0, -3*ab_phi+2));
-}
-
-static int putBmpHeader(FILE *s, int x, int y, int c);
-static int fputc4LowHigh(unsigned long d, FILE *s);
-static int fputc2LowHigh(unsigned short d, FILE *s);
-
-void drawer_outputImage(char *fileName, dcomplex *data, double *model, int width, int height)
-{
-  const int bpp = 24; //1ピクセルセル24ビット
-  const int datasize = height*width*(bpp>>3);//height*((((width*bpp/8) + 3) >> 2) << 2);
-  
-  GLubyte *buf = (GLubyte*)malloc(sizeof(GLubyte)*datasize);
-
-  colorf c;
-  int k=0;
-  for(int j=0; j<height; j++)
-    for(int i=0; i<width; i++)
-    {
-      colorTransform( data[i*height+j] , &c);
-      double n = 1.0-1.0/model[i*height+j];
-      buf[k]   = max(0, min(255, (c.b-n)*255));
-      buf[k+1] = max(0, min(255, (c.g-n)*255));
-      buf[k+2] = max(0, min(255, (c.r-n)*255));
-      k+=(bpp>>3);
-    }
-
-  FILE *fp = fopen(fileName, "wb");
-  if(fp==NULL)
-  {
-    printf("can not open file %s",fileName);
-    return;
-  }
-
-  if( !putBmpHeader(fp, width, height, bpp) ) {
-    printf("can not write headers");
-    fclose(fp);
-    return;
-  }
-
-  if( fwrite((unsigned char*)buf, sizeof(unsigned char), datasize, fp) != datasize)
-  {
-    printf("can not write data");
-    fclose(fp);
-    return;
-  }
-  
-  fclose(fp);
-  return;
-}
-
 void drawer_screenshot(const char *fileName)
 {
   const int width  = glutGet(GLUT_WINDOW_WIDTH);
@@ -276,6 +220,72 @@ void drawer_screenshot(const char *fileName)
   fclose(fp);
   return;
 }
+
+#endif
+
+//
+//--------------------public Method--------------------//
+
+//--------------------Color Trancform---------------------//
+static void colorTransform(double phi, colorf *col)
+{
+  double range = 1.0; //波の振幅  
+  double ab_phi = phi < 0 ? -phi : phi;
+  double a = ab_phi < range ? (ab_phi <  range/3.0 ? 3.0/range*ab_phi : (-3.0/4.0/range*ab_phi+1.25) ) : 0.5;
+  
+  col->r = phi > 0 ? a:0;
+  col->b = phi < 0 ? a:0;
+  col->g = min(1.0, max(0.0, -3*ab_phi+2));
+}
+
+void drawer_outputImage(char *fileName, dcomplex *data, double *model, int width, int height)
+{
+  const int bpp = 24; //1ピクセルセル24ビット
+  const int datasize = height*width*(bpp>>3);//height*((((width*bpp/8) + 3) >> 2) << 2);
+  
+  unsigned char *buf = (unsigned char*)malloc(sizeof(unsigned char)*datasize);
+
+  colorf c;
+  int k=0;
+  for(int j=0; j<height; j++)
+    for(int i=0; i<width; i++)
+    {
+      colorTransform( data[i*height+j] , &c);
+      double n = 1.0-1.0/model[i*height+j];
+      buf[k]   = max(0, min(255, (c.b-n)*255));
+      buf[k+1] = max(0, min(255, (c.g-n)*255));
+      buf[k+2] = max(0, min(255, (c.r-n)*255));
+      k+=(bpp>>3);
+    }
+
+  FILE *fp = fopen(fileName, "wb");
+  if(fp==NULL)
+  {
+    printf("can not open file %s",fileName);
+    free(buf);
+    return;
+  }
+
+  if( !putBmpHeader(fp, width, height, bpp) ) {
+    printf("can not write headers");
+    fclose(fp);
+    free(buf);
+    return;
+  }
+
+  if( fwrite((unsigned char*)buf, sizeof(unsigned char), datasize, fp) != datasize)
+  {
+    printf("can not write data");
+    fclose(fp);
+    free(buf);
+    return;
+  }
+
+  free(buf);
+  fclose(fp);
+  return;
+}
+
 
 /*
   putBmpHeader BMPヘッダ書出
@@ -415,8 +425,6 @@ static int fputc4LowHigh(unsigned long d, FILE *s)
   putc((d >> CHAR_BIT * 2) & 0xFF, s);
   return putc((d >> CHAR_BIT * 3) & 0xFF, s);
 }
-
-#endif
 
 
 
