@@ -38,7 +38,7 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 #define EN_EDGE_RATE 1.0
 #define DELTA_EDGE_RATE 0.1
 
-//ラメラの曲率 (1で四角形のまま, 0.0で最もカーブする)
+//ラメラの先端を丸める曲率 (1で四角形のまま, 0.0で最もカーブする)
 #define CURVE 0.8
 
 static int width_nm[2]     = {ST_WIDTH_NM, ST_WIDTH_NM};
