@@ -315,10 +315,10 @@ int main( int argc, char *argv[] )
 static void drawField()
 {
   FieldInfo_S sInfo = field_getFieldInfo_S();
-  drawer_paintImage(sInfo.N_PML, sInfo.N_PML, sInfo.N_PX-sInfo.N_PML, sInfo.N_PY-sInfo.N_PML, sInfo.N_PX, sInfo.N_PY,
+  drawer_paintImage(0, 0, sInfo.N_PX, sInfo.N_PY, sInfo.N_PX, sInfo.N_PY,
                     simulator_getDrawingData());
   
-  drawer_paintModel(sInfo.N_PML, sInfo.N_PML, sInfo.N_PX-sInfo.N_PML, sInfo.N_PY-sInfo.N_PML, sInfo.N_PX, sInfo.N_PY,
+  drawer_paintModel(0, 0, sInfo.N_PX, sInfo.N_PY, sInfo.N_PX, sInfo.N_PY,
                     simulator_getEps());
 }
 

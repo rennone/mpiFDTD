@@ -12,11 +12,11 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 #define DELTA_WIDTH_NM 10
 
 //ラメラの厚さ
-#define ST_THICK_NM_0 80
+#define ST_THICK_NM_0 30
 #define EN_THICK_NM_0 160
 #define DELTA_THICK_NM_0 10
 
-#define ST_THICK_NM_1 80
+#define ST_THICK_NM_1 30
 #define EN_THICK_NM_1 160
 #define DELTA_THICK_NM_1 10
 
@@ -27,15 +27,16 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 #define ASYMMETRY true
 
 //中心に以下の幅で軸となる枝を入れる => 軸の屈折率はN_1になる
-#define BRANCH_NM 50
+#define BRANCH_NM 30
 
 //屈折率
 #define N_0 1.0
-#define N_1 1.56
-
+//#define N_1 1.56
+//serikon
+#define N_1 8.4179 
 //先端における横幅の割合
-#define ST_EDGE_RATE 0.5
-#define EN_EDGE_RATE 1.0
+#define ST_EDGE_RATE 0.0
+#define EN_EDGE_RATE 0.4
 #define DELTA_EDGE_RATE 0.1
 
 //ラメラの曲率 (1で四角形のまま, 0.0で最もカーブする)
@@ -189,12 +190,15 @@ void multiLayerModel_moveDirectory()
   } else {
     makeDirectory("symmetry");
     moveDirectory("symmetry");
-  }
-  
+  }  
   char buf[512];
+  // make folder by index of reflaction 
+  sprintf(buf,"n_%.2lf_%.2lf", N_0, N_1);
+  makeDirectory(buf);
+  moveDirectory(buf);
   
-  sprintf(buf, "thick%d_%d_layer%d_edge%.1lf",
-          thickness_nm[0], thickness_nm[1], layerNum, edge_width_rate);
+  sprintf(buf, "thick%d_%d_layer%d_edge%.1lf_branch%d",
+          thickness_nm[0], thickness_nm[1], layerNum, edge_width_rate, branch_width_nm);
   makeDirectory(buf);
   moveDirectory(buf);
 }

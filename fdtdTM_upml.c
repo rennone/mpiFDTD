@@ -75,6 +75,8 @@ static void init()
 //Finish
 static void finish()
 {
+  char current[512];
+  getcwd(current, 512); //カレントディレクトリを保存
   char re[1024], im[1024];
   sprintf(re, "%d[deg]_Eth_r.txt", (int)field_getWaveAngle());
   sprintf(im, "%d[deg]_Eth_i.txt", (int)field_getWaveAngle());
@@ -82,7 +84,7 @@ static void finish()
   FILE *fpIm = openFile(im);
 
   ntffTM_TimeOutput(Ux,Uy,Wz,fpRe, fpIm);
-  printf("saved %s & %s \n", re, im);
+  printf("saved %s/ %s & %s \n",current, re, im);
   
   fclose(fpRe);
   fclose(fpIm);

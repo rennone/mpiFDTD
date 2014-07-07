@@ -18,6 +18,8 @@ extern void drawer_finish(void);
 extern void drawer_draw(void);
 
 #endif //USE_OPENGL
+
 extern void drawer_outputImage(char *fileName, dcomplex* data, double *model, int width, int height);
 extern void drawer_screenshot(const char* filename);
-#endif
+
+#endif //_DRAWER_H
