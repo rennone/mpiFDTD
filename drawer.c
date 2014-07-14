@@ -244,6 +244,7 @@ void drawer_outputImage(char *fileName, dcomplex *data, double *model, int width
   const int datasize = height*width*(bpp>>3);//height*((((width*bpp/8) + 3) >> 2) << 2);
   
   unsigned char *buf = (unsigned char*)malloc(sizeof(unsigned char)*datasize);
+  memset(buf, 0, sizeof(unsigned char)*datasize);
 
   colorf c;
   int k=0;

@@ -117,6 +117,11 @@ static void reset()
   memset(Bx, 0, sizeof(double complex)*N_CELL);
   memset(By, 0, sizeof(double complex)*N_CELL);
   memset(Dz, 0, sizeof(double complex)*N_CELL);
+
+  int size = sizeof(dcomplex)*field_getNTFFInfo().arraySize * 360;
+  memset(Ux, 0, size);
+  memset(Uy, 0, size);
+  memset(Wz, 0, size);
 }
 
 //:public
@@ -294,9 +299,9 @@ static void allocateMemories()
   By = (double complex*)malloc(sizeof(double complex)*N_CELL);
   
   int step = field_getNTFFInfo().arraySize;
-  Ux = (double complex*)malloc(sizeof(double complex)*360*step);
-  Uy = (double complex*)malloc(sizeof(double complex)*360*step);
-  Wz = (double complex*)malloc(sizeof(double complex)*360*step);
+  Ux = newDComplex(360*step);//(double complex*)malloc(sizeof(double complex)*360*step);
+  Uy = newDComplex(360*step);//(double complex*)malloc(sizeof(double complex)*360*step);
+  Wz = newDComplex(360*step);//(double complex*)malloc(sizeof(double complex)*360*step);
   
   C_JZ = (double *)malloc(sizeof(double)*N_CELL);
   C_MX = (double *)malloc(sizeof(double)*N_CELL);
@@ -341,10 +346,18 @@ static void freeMemories()
   if(Ez != NULL){   free(Ez); Ez = NULL;  }  
   if(Hx != NULL){   free(Hx); Hx = NULL;  }
   if(Hy != NULL){   free(Hy); Hy = NULL;  }
+
+  if(Dz != NULL){   free(Dz); Dz = NULL;  }  
+  if(Hx != NULL){   free(Hx); Hx = NULL;  }
+  if(Hy != NULL){   free(Hy); Hy = NULL;  }
   
-  if(Ux != NULL){   free(Ux); Ux = NULL;  }  
-  if(Uy != NULL){   free(Uy); Uy = NULL;  }
-  if(Wz != NULL){   free(Wz); Wz = NULL;  }
+  delete(Bx);
+  delete(By);
+  delete(Jz);
+
+  delete(Ux);
+  delete(Uy);
+  delete(Wz);
   
   if(C_JZ != NULL){ free(C_JZ); C_JZ = NULL;  }
   if(C_JZHXHY != NULL){ free(C_JZHXHY); C_JZHXHY = NULL;  }

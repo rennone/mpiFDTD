@@ -1,5 +1,13 @@
 #include "function.h"
 
+void delete(void *ptr)
+{
+  if(ptr != NULL)
+    free(ptr);
+
+  ptr = NULL;
+}
+
 double dbilinear(double *p, double x, double y, int width, int height)
 {
   int i = floor(x);

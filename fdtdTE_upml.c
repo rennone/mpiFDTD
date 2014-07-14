@@ -105,12 +105,15 @@ static void init(){
 
 //---------------------メモリの解放--------------------//
 static void finish(){
+  char current[512];
+  getcwd(current, 512); //カレントディレクトリを保存
   char re[1024], im[1024];
   sprintf(re, "%d[deg]_Eph_r.txt", (int)field_getWaveAngle());
   sprintf(im, "%d[deg]_Eph_i.txt", (int)field_getWaveAngle());
   FILE *fpR = openFile(re);
   FILE *fpI = openFile(im);
   ntffTE_TimeOutput(Wx, Wy, Uz, re, im);
+  printf("saved %s %s & %s", current, re, im);
   fclose(fpR);
   fclose(fpI);
   freeMemories();
@@ -159,6 +162,11 @@ static void reset()
   memset(Dx, 0, sizeof(double complex)*N_CELL);
   memset(Dy, 0, sizeof(double complex)*N_CELL);
   memset(Bz, 0, sizeof(double complex)*N_CELL);
+
+  int size = sizeof(dcomplex)*field_getNTFFInfo().arraySize * 360;
+  memset(Wx, 0, size);
+  memset(Wy, 0, size);
+  memset(Uz, 0, size);
 }
 
 
@@ -279,7 +287,8 @@ static void calcJD(void)
     for(int j=1; j<N_PY-1; j++){
       int k = field_index(i,j);
       double complex nowJx = Jx[k];
-      Jx[k] = C_JX[k]*Jx[k] + C_JXHZ[k]*(Hz[k] - Hz[k-1]); // Hz[k] - Hz[k]とすると,mie散乱入射角度0のときに波が真横に進む(ただのバグ)
+      //ちなみに Hz[k] - Hz[k]とすると,mie散乱入射角度0のときに波が真横に進む(理由わからんしただのバグだけどおもしろいからコメント残しておく)
+      Jx[k] = C_JX[k]*Jx[k] + C_JXHZ[k]*(Hz[k] - Hz[k-1]);        
       Dx[k] = C_DX[k]*Dx[k] + C_DXJX1[k]*Jx[k] - C_DXJX0[k]*nowJx;
     }
   }
