@@ -10,7 +10,7 @@
   right(k)  = k+SUB_N_PY
 */
 
-static double R0 = 1.0e6;
+static double R0;
 
 static int sub_tp, sub_bm, sub_rt, sub_lt;
 static bool IN_TP, IN_BM, IN_LT, IN_RT;

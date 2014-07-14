@@ -3,10 +3,14 @@
 #include "function.h"
 #include "bool.h"
 #include <math.h>
-static const double R0 = 1.0e6;
+#include <stdlib.h>
 
-dcomplex *debug_U[4],*debug_W[4];
+static double R0;
 
+void ntffTE_init()
+{
+  R0 = 1.0e6 * field_toCellUnit(500);//* field_getLambda_S();  
+}
 //---------------------- ntff--------------------//
 
 void ntffTE_TimeTranslate(dcomplex *Wx, dcomplex *Wy,dcomplex *Uz, dcomplex *Eth, dcomplex *Eph)

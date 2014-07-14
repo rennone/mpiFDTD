@@ -444,6 +444,18 @@ static void freeMemories()
   if(Ey != NULL){    free(Ey); Ey = NULL;}  
   if(Hz != NULL){    free(Hz); Hz = NULL;}
 
+  delete(Dx);
+  delete(Dy);
+  delete(Bz);
+  
+  delete(Jx);
+  delete(Jy);
+  delete(Mz);
+
+  delete(Wx);
+  delete(Wy);
+  delete(Uz);
+  
   if(C_JX!= NULL){    free(C_JX);  C_JX = NULL;}
   if(C_JXHZ!= NULL){   free(C_JXHZ); C_JXHZ = NULL;}
   if(C_DX!= NULL){   free(C_DX); C_DX = NULL;}

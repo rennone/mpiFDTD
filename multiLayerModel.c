@@ -27,8 +27,8 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 #define ASYMMETRY true
 
 //中心に以下の幅で軸となる枝を入れる => 軸の屈折率はN_1になる
-#define ST_BRANCH_NM 0
-#define EN_BRANCH_NM 0
+#define ST_BRANCH_NM 50
+#define EN_BRANCH_NM 50
 #define DELTA_BRANCH_NM 10
 
 //屈折率
@@ -38,7 +38,7 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 //#define N_1 8.4179
 
 //先端における横幅の割合
-#define ST_EDGE_RATE 1.0
+#define ST_EDGE_RATE 0.5
 #define EN_EDGE_RATE 1.0
 #define DELTA_EDGE_RATE 0.1
 
