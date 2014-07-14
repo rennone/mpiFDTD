@@ -16,8 +16,8 @@ typedef struct Config
   enum SOLVER SolverType;
 }Config;
 
-#define ST_PHI -180
-#define EN_PHI -85
+#define ST_PHI 0
+#define EN_PHI 0
 #define DELTA_PHI 5
 
 // 以下 OPEN_GLの関数
@@ -214,15 +214,15 @@ static void screenshot()
   {
     FieldInfo_S fInfo_s = field_getFieldInfo_S();
     drawer_outputImage("image.bmp", simulator_getDrawingData(), simulator_getEps(), fInfo_s.N_PX, fInfo_s.N_PY);
-  }  
+  }
 }
 
 int main( int argc, char *argv[] )
 {
   getcwd(root, 512); //カレントディレクトリを保存
   
-  models_setModel(LAYER);       //MIE_CYLINDER
-  simulator_setSolver(TM_UPML_2D);
+  models_setModel(MIE_CYLINDER);       //LAYER
+  simulator_setSolver(TE_UPML_2D);
   
   MPI_Init( 0, 0 );
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -237,13 +237,10 @@ int main( int argc, char *argv[] )
   if( nextSimulation(rank, &changeModel) == true){
     MPI_Finalize();
     exit(0);
-  }
-  
+  }  
   //シミュレーションの初期化.
   simulator_init(config.field_info);
-
-  if(config.field_info.angle_deg == ST_PHI)
-    screenshot();
+  screenshot();
   
   //exitしたプロセスがあると停止してしまうのでMPI_Finalizeは使えない
 //  MPI_Barrier(MPI_COMM_WORLD); //(情報表示がずれないように)全員一緒に始める
@@ -273,9 +270,8 @@ int main( int argc, char *argv[] )
       calcFieldSize(&config.field_info);        //フィールドサイズの再計算
       moveDir(); //ディレクトリの移動
       simulator_init(config.field_info);
-      
-      if(config.field_info.angle_deg == ST_PHI)
-	screenshot();
+     
+      screenshot();
   
     } else {
       simulator_reset(); //変化してなければ,データの書き出しと電磁波の値だけ0に戻す.
@@ -379,8 +375,7 @@ static void idle(void)
     //シミュレーションの初期化.
     simulator_init(config.field_info);
 
-    if(config.field_info.angle_deg == ST_PHI)
-      screenshot();
+    screenshot();
   } else {
     simulator_reset();
     field_setWaveAngle(config.field_info.angle_deg);
