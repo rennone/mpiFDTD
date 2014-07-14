@@ -341,10 +341,19 @@ static void freeMemories()
   if(Ez != NULL){   free(Ez); Ez = NULL;  }  
   if(Hx != NULL){   free(Hx); Hx = NULL;  }
   if(Hy != NULL){   free(Hy); Hy = NULL;  }
+
+  if(Dz != NULL){   free(Dz); Dz = NULL;  }  
+  if(Hx != NULL){   free(Hx); Hx = NULL;  }
+  if(Hy != NULL){   free(Hy); Hy = NULL;  }
+  
+  delete(Bx);
+  delete(By);
+  delete(Jz);
   
   if(Ux != NULL){   free(Ux); Ux = NULL;  }  
   if(Uy != NULL){   free(Uy); Uy = NULL;  }
   if(Wz != NULL){   free(Wz); Wz = NULL;  }
+
   
   if(C_JZ != NULL){ free(C_JZ); C_JZ = NULL;  }
   if(C_JZHXHY != NULL){ free(C_JZHXHY); C_JZHXHY = NULL;  }

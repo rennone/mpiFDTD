@@ -6,6 +6,7 @@
 #define max(a,b) (a > b ? a : b)
 #define min(a,b) (a < b ? a : b)
 
+extern void delete(void *ptr);
 extern double dbilinear(double *p, double x, double y, int width, int height);
 extern FILE* openFile(const char* file_name);
 extern bool makeDirectory(const char*);

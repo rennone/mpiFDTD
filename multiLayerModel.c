@@ -28,23 +28,22 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 
 //中心に以下の幅で軸となる枝を入れる => 軸の屈折率はN_1になる
 #define ST_BRANCH_NM 0
-#define EN_BRANCH_NM 50
+#define EN_BRANCH_NM 0
 #define DELTA_BRANCH_NM 10
-
-#define BRANCH_NM 30
 
 //屈折率
 #define N_0 1.0
 #define N_1 1.56
 //serikon
-//#define N_1 8.4179 
+//#define N_1 8.4179
+
 //先端における横幅の割合
-#define ST_EDGE_RATE 0.0
-#define EN_EDGE_RATE 0.4
+#define ST_EDGE_RATE 1.0
+#define EN_EDGE_RATE 1.0
 #define DELTA_EDGE_RATE 0.1
 
 //ラメラの曲率 (1で四角形のまま, 0.0で最もカーブする)
-#define CURVE 0.8
+#define CURVE 1.0
 
 static int width_nm[2]     = {ST_WIDTH_NM, ST_WIDTH_NM};
 static int thickness_nm[2] = {ST_THICK_NM_0, ST_THICK_NM_1};

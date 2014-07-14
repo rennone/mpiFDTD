@@ -22,10 +22,6 @@ void ntffTM_init()
 {
   NTFFInfo nInfo = field_getNTFFInfo();
   
-  //  Ux = newDComplex(nInfo.arraySize * 360);
-  //  Uy = newDComplex(nInfo.arraySize * 360);
-  //  Wz = newDComplex(nInfo.arraySize * 360);
-
   R0 = 1.0e6 * field_toCellUnit(500);//* field_getLambda_S();
 
   double cx = nInfo.cx;
