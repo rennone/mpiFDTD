@@ -16,8 +16,8 @@ typedef struct Config
   enum SOLVER SolverType;
 }Config;
 
-#define ST_PHI -90
-#define EN_PHI 0
+#define ST_PHI -180
+#define EN_PHI -85
 #define DELTA_PHI 5
 
 // 以下 OPEN_GLの関数
@@ -242,7 +242,8 @@ int main( int argc, char *argv[] )
   //シミュレーションの初期化.
   simulator_init(config.field_info);
 
-  screenshot();
+  if(config.field_info.angle_deg == ST_PHI)
+    screenshot();
   
   //exitしたプロセスがあると停止してしまうのでMPI_Finalizeは使えない
 //  MPI_Barrier(MPI_COMM_WORLD); //(情報表示がずれないように)全員一緒に始める
@@ -272,7 +273,9 @@ int main( int argc, char *argv[] )
       calcFieldSize(&config.field_info);        //フィールドサイズの再計算
       moveDir(); //ディレクトリの移動
       simulator_init(config.field_info);
-      screenshot();
+      
+      if(config.field_info.angle_deg == ST_PHI)
+	screenshot();
   
     } else {
       simulator_reset(); //変化してなければ,データの書き出しと電磁波の値だけ0に戻す.
@@ -355,6 +358,8 @@ static void idle(void)
     return;
   }
 
+  printf("finish rank %d\n",rank);
+  
   bool changeModel;
 
   //シミュレーションを進める.
@@ -370,10 +375,12 @@ static void idle(void)
     
     //モデルを変更して再計算する
     calcFieldSize(&config.field_info);   
-    moveDir();    
+    moveDir();
     //シミュレーションの初期化.
     simulator_init(config.field_info);
-    screenshot();
+
+    if(config.field_info.angle_deg == ST_PHI)
+      screenshot();
   } else {
     simulator_reset();
     field_setWaveAngle(config.field_info.angle_deg);

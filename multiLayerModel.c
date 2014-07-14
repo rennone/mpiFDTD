@@ -27,13 +27,17 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 #define ASYMMETRY true
 
 //中心に以下の幅で軸となる枝を入れる => 軸の屈折率はN_1になる
+#define ST_BRANCH_NM 0
+#define EN_BRANCH_NM 50
+#define DELTA_BRANCH_NM 10
+
 #define BRANCH_NM 30
 
 //屈折率
 #define N_0 1.0
-//#define N_1 1.56
+#define N_1 1.56
 //serikon
-#define N_1 8.4179 
+//#define N_1 8.4179 
 //先端における横幅の割合
 #define ST_EDGE_RATE 0.0
 #define EN_EDGE_RATE 0.4
@@ -45,7 +49,7 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 static int width_nm[2]     = {ST_WIDTH_NM, ST_WIDTH_NM};
 static int thickness_nm[2] = {ST_THICK_NM_0, ST_THICK_NM_1};
 static int layerNum = LAYER_NUM;     //枚数
-static int branch_width_nm = BRANCH_NM; //枝の幅
+static int branch_width_nm = ST_BRANCH_NM; //枝の幅
 
 static double branch_width_s; //枝の幅
 static double width_s[2];     //幅
@@ -164,8 +168,14 @@ static bool nextStructure()
     edge_width_rate += DELTA_EDGE_RATE;
     if(edge_width_rate > EN_EDGE_RATE)
     {
-      printf("there are no models which hasn't been simulated yet\n");
-      return true;
+      edge_width_rate = ST_EDGE_RATE;
+
+      branch_width_nm += DELTA_BRANCH_NM;
+      if(branch_width_nm > EN_BRANCH_NM)
+      	{
+	  printf("there are no models which hasn't been simulated yet\n");     
+	  return true;
+	}
     }
   }
   return false;  

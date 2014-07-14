@@ -16,15 +16,15 @@ static int sub_tp, sub_bm, sub_rt, sub_lt;
 static bool IN_TP, IN_BM, IN_LT, IN_RT;
 static int sub_ylt, sub_yrt;
 static int sub_xtp, sub_xbm;
-static dcomplex *Ux, *Uy, *Wz;
+//static dcomplex *Ux, *Uy, *Wz;
 
 void ntffTM_init()
 {
   NTFFInfo nInfo = field_getNTFFInfo();
   
-  Ux = newDComplex(nInfo.arraySize * 360);
-  Uy = newDComplex(nInfo.arraySize * 360);
-  Wz = newDComplex(nInfo.arraySize * 360);
+  //  Ux = newDComplex(nInfo.arraySize * 360);
+  //  Uy = newDComplex(nInfo.arraySize * 360);
+  //  Wz = newDComplex(nInfo.arraySize * 360);
 
   R0 = 1.0e6 * field_toCellUnit(500);//* field_getLambda_S();
 
@@ -62,8 +62,11 @@ void ntffTM_init()
     sub_xbm = min(subInfo_s.SUB_N_PY-2, max( 1, sub_bm+1) );  //bm,tpですでに計算しているため, ひとつずれる
     sub_xtp = min(subInfo_s.SUB_N_PY-2, max( 1, sub_tp-1) );  //
   }
-  printf("Rank=%d\ninTp=%d, inBm=%d, inLt=%d, inRt=%d\n offset(%d,%d)\n",subInfo_s.Rank,IN_TP, IN_BM, IN_RT,IN_LT, subInfo_s.OFFSET_X, subInfo_s.OFFSET_Y);
+}
 
+void ntffTM_finish()
+{
+  
 }
 //周波数領域のNTFF
 void ntffTM_Frequency( dcomplex *Hx, dcomplex *Hy, dcomplex *Ez, dcomplex resultEz[360])
