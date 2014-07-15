@@ -163,12 +163,13 @@ void ntffTE_TimeOutput(dcomplex *Wx, dcomplex *Wy, dcomplex *Uz, FILE *fpRe, FIL
   ntffTE_TimeTranslate(Wx,Wy,Uz,Eth,Eph);
   for(int ang=0; ang<360; ang++)
   {
-    int k= ang*nInfo.arraySize;
+    int k = ang*nInfo.arraySize;
     for(int i=0; i < maxTime; i++)
     {
       fprintf(fpRe,"%.20lf " , creal(Eph[k+i]));
-      fprintf(fpIm,"%.20lf " , cimag(Eph[k+i]));  
+      fprintf(fpIm,"%.20lf " , cimag(Eph[k+i]));   
     }
+    
     fprintf(fpRe,"\n");
     fprintf(fpIm,"\n");
   }  

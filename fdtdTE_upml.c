@@ -101,6 +101,7 @@ double* fdtdTE_upml_getEps()
 static void init(){  
   allocateMemories();
   setCoefficient();
+  ntffTE_init();
 }
 
 //---------------------メモリの解放--------------------//
@@ -112,7 +113,7 @@ static void finish(){
   sprintf(im, "%d[deg]_Eph_i.txt", (int)field_getWaveAngle());
   FILE *fpR = openFile(re);
   FILE *fpI = openFile(im);
-  ntffTE_TimeOutput(Wx, Wy, Uz, re, im);
+  ntffTE_TimeOutput(Wx, Wy, Uz, fpR, fpI);
   printf("saved %s %s & %s", current, re, im);
   fclose(fpR);
   fclose(fpI);
