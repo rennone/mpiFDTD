@@ -125,8 +125,8 @@ void drawer_paintImage(int left, int bottom, int right, int top, int width, int 
   int i,j;
   double x,y;
   
-  for(i=0,x=left; i<TEX_NX && x<right; i++, x+=u){
-    for(j=0,y=bottom; j<TEX_NY && y<top; j++, y+=u)
+  for(i=0,x=left; i<TEX_NX && x<right-1; i++, x+=u){
+    for(j=0,y=bottom; j<TEX_NY && y<top-1; j++, y+=u)
     {
       cphi = cbilinear(phis,x,y,width,height);
       colorTransform(colorMode(cphi), &c);
@@ -145,9 +145,9 @@ void drawer_paintModel(int left, int bottom, int right, int top, int width, int 
   int i,j;
   double x,y;
   
-  for(i=0,x=left; i<TEX_NX && x<right; i++, x+=u)
+  for(i=0,x=left; i<TEX_NX && x<right-1; i++, x+=u)
   {
-    for(j=0,y=bottom; j<TEX_NY && y<top; j++, y+=u)
+    for(j=0,y=bottom; j<TEX_NY && y<top-1; j++, y+=u)
     {
       dphi = dbilinear(phis,x,y,width,height);
       double n = 1-1.0/dphi;
@@ -241,22 +241,26 @@ static void colorTransform(double phi, colorf *col)
 void drawer_outputImage(char *fileName, dcomplex *data, double *model, int width, int height)
 {
   const int bpp = 24; //1ピクセルセル24ビット
-  const int datasize = height*width*(bpp>>3);//height*((((width*bpp/8) + 3) >> 2) << 2);
-  
+  const int data_width = (width>>2)<<2;
+  const int datasize = height*data_width*(bpp>>3);
+//  const int datasize = height*((((width*bpp/8) + 3) >> 2) << 2); //横のバイト列は4の倍数でなければならないので切り上げ
+
+
   unsigned char *buf = (unsigned char*)malloc(sizeof(unsigned char)*datasize);
   memset(buf, 0, sizeof(unsigned char)*datasize);
 
   colorf c;
   int k=0;
   for(int j=0; j<height; j++)
-    for(int i=0; i<width; i++)
+    for(int i=0; i<data_width; i++)
     {
-      colorTransform( data[i*height+j] , &c);
-      double n = 1.0-1.0/model[i*height+j];
-      buf[k]   = max(0, min(255, (c.b-n)*255));
-      buf[k+1] = max(0, min(255, (c.g-n)*255));
-      buf[k+2] = max(0, min(255, (c.r-n)*255));
-      k+=(bpp>>3);
+      colorTransform( 0 , &c);
+      double n = model[i*height+j];
+      double c_n = n == 0 ? 0 : 1.0-1.0/n;
+      buf[k]   = max(0, min(255, (c.b-c_n)*255));
+      buf[k+1] = max(0, min(255, (c.g-c_n)*255));
+      buf[k+2] = max(0, min(255, (c.r-c_n)*255));
+      k+= (bpp>>3);
     }
 
   FILE *fp = fopen(fileName, "wb");
@@ -267,7 +271,7 @@ void drawer_outputImage(char *fileName, dcomplex *data, double *model, int width
     return;
   }
 
-  if( !putBmpHeader(fp, width, height, bpp) ) {
+  if( !putBmpHeader(fp, data_width, height, bpp) ) {
     printf("can not write headers");
     fclose(fp);
     free(buf);

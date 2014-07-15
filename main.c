@@ -221,8 +221,8 @@ int main( int argc, char *argv[] )
 {
   getcwd(root, 512); //カレントディレクトリを保存
   
-  models_setModel(MIE_CYLINDER);       //LAYER
-  simulator_setSolver(TE_UPML_2D);
+  models_setModel(MIE_CYLINDER);       //
+  simulator_setSolver(TM_UPML_2D);
   
   MPI_Init( 0, 0 );
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -248,7 +248,6 @@ int main( int argc, char *argv[] )
   
 #ifndef USE_OPENGL
   //only calculate mode
-
   while(1)
   {
     //シミュレーションをまわす
@@ -287,9 +286,7 @@ int main( int argc, char *argv[] )
   SubFieldInfo_S subInfo = field_getSubFieldInfo_S();
   
   int windowX = WINDOW_WIDTH*(rank%6);
-  //1.0*subInfo.OFFSET_X / subInfo.SUB_N_PX * WINDOW_WIDTH;
   int windowY = (WINDOW_HEIGHT+50)*(rank/6);
-  //800-1.0*subInfo.OFFSET_Y/subInfo.SUB_N_PY * WINDOW_HEIGHT - WINDOW_HEIGHT;
   enum COLOR_MODE colorMode = CREAL;
   glutInit(&argc, argv);
   glutInitWindowPosition(windowX,windowY);

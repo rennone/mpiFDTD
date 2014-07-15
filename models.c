@@ -32,7 +32,7 @@ static void circleModel(void)
   isFinishMethod      = circleModel_isFinish;  
   needSizeMethod      = circleModel_needSize;
   initModelMethod     = circleModel_init;
-  moveDirectoryMethod = circleModel_moveDirectory;  
+  moveDirectoryMethod = circleModel_moveDirectory;
 }
 
 static void multiLayerModel()

@@ -43,7 +43,7 @@ static double eps(double x, double y, int col, int row)
     return epsilon_s;
 
   //さらに32*32分割し媒質内と媒質外の数を求めepsilonを決定する
-  double split = 32;
+  double split = 10;
   double half_split = split/2;
   double sum=0;
   for(double i=-half_split+0.5; i<half_split; i+=1){
