@@ -163,7 +163,7 @@ void field_scatteredWave(dcomplex *p, double *eps, double gapX, double gapY)
 // gapX, gapY : Ex-z, Hx-zは格子点からずれた位置に配置され散る為,格子点からのずれを送る必要がある.
 // 分割領域では使えない->gapをさらに領域のオフセットだけずらせば使えそう
 // UPML専用
-void field_scatteredPulse(dcomplex *p, double *eps, double gapX, double gapY)
+void field_scatteredPulse(dcomplex *p, double *eps, double gapX, double gapY, double dot)
 {
   double time = field_getTime();
   double w_s  = field_getOmega();
@@ -183,7 +183,7 @@ void field_scatteredPulse(dcomplex *p, double *eps, double gapX, double gapY)
       int k = field_index(i,j);
       const double r = (i+gapX)*cos_per_c+(j+gapY)*sin_per_c-(time-t0); // (x*cos+y*sin)/C - (time-t0)
       const double gaussian_coef = exp( -pow(r/beam_width, 2 ) );
-      p[k] += gaussian_coef*(EPSILON_0_S/eps[k] - 1)*cexp(I*r*w_s);     //p[k] -= かも(岡田さんのメール参照)
+      p[k] += dot*gaussian_coef*(EPSILON_0_S/eps[k] - 1)*cexp(I*r*w_s);     //p[k] -= かも(岡田さんのメール参照)
     }
   } 
 }

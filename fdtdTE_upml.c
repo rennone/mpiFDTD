@@ -114,31 +114,10 @@ static void finish(){
   FILE *fpR = openFile(re);
   FILE *fpI = openFile(im);
   ntffTE_TimeOutput(Wx, Wy, Uz, fpR, fpI);
-  printf("saved %s %s & %s", current, re, im);
+  printf("saved %s %s & %s\n", current, re, im);
   fclose(fpR);
   fclose(fpI);
   freeMemories();
-/*
-  const int maxTime = field_getMaxTime();
-  NTFFInfo nInfo = field_getNTFFInfo();
-  dcomplex *Eth, *Eph;
-  Eth = newDComplex(360*nInfo.arraySize);
-  Eph = newDComplex(360*nInfo.arraySize);
-  ntffTE_TimeTranslate(Wx,Wy,Uz,Eth,Eph);
-
-
-  for(int ang=0; ang<360; ang++)
-  {
-    int k= ang*nInfo.arraySize;
-    for(int i=0; i < maxTime; i++)
-    {
-      fprintf(fpR,"%.20lf " , creal(Eph[k+i]));
-      fprintf(fpI,"%.20lf " , cimag(Eph[k+i]));  
-    }
-    fprintf(fpR,"\n");
-    fprintf(fpI,"\n");
-  }  
-*/
 }
 
 static void reset()
@@ -210,8 +189,21 @@ static inline void update(void)
   calcJD();
   calcE();
 
-  field_scatteredPulse(Ey, EPS_EY, 0, 0.5); //Eyは格子点より上に0.5ずれた位置に配置
-//  field_scatteredWave(Ey, EPS_EY, 0, 0.5);
+  //波数から90°回転した方向に足し合わせる.
+  WaveInfo_S wInfo = field_getWaveInfo_S();
+  double co = cos( (wInfo.Angle_deg+90) * M_PI/ 180.0);
+  double si = sin( (wInfo.Angle_deg+90) * M_PI/ 180.0);
+
+  if(co != 0.0)
+    field_scatteredPulse(Ex, EPS_EX, 0.5, 0.0, co); //Exは格子点より右に0.5ずれた位置に配置
+
+  if(si != 0.0)
+    field_scatteredPulse(Ey, EPS_EY, 0.0, 0.5, si); //Eyは格子点より上に0.5ずれた位置に配置
+
+//  if(co != 0.0)
+//  field_scatteredWave(Ex, EPS_EX, 0.5, 0.0);
+//  if(si != 0.0)
+//  field_scatteredWave(Ey, EPS_EY, 0.0, 0.5);
   
 //  fastCalcMB();
 //  fastCalcH();

@@ -16,8 +16,8 @@ typedef struct Config
   enum SOLVER SolverType;
 }Config;
 
-#define ST_PHI 0
-#define EN_PHI 0
+#define ST_PHI 60
+#define EN_PHI 60
 #define DELTA_PHI 5
 
 // 以下 OPEN_GLの関数
