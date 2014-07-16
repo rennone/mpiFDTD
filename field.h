@@ -134,7 +134,7 @@ extern FieldInfo field_getFieldInfo(void);
 //散乱波
 // gapX, gapY : Ex-z, Hx-zは格子点からずれた位置に配置され散る為,格子点からのずれを送る必要がある.
 extern void field_scatteredWave(dcomplex *p, double *eps, double gapX, double gapY);
-extern void field_scatteredPulse(dcomplex *p, double *eps, double gapX, double gapY);
+extern void field_scatteredPulse(dcomplex *p, double *eps, double gapX, double gapY, double dot); //dotは波の方向とx(y,z軸)との内積
 
 //座標->インデックス変換
 //(乗算命令があるので何度も呼び出すような処理では使わない方がいい)

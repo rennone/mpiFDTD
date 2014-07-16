@@ -2,20 +2,24 @@
 #include "circleModel.h"
 #include "field.h"
 #include "function.h"
-static double radius;
-static double epsilon;
-static double posx;
-static double posy;
+
+#define ST_RADIUS_NM 500
+#define EN_RADIUS_NM 500
+#define DELTA_RADIUS_NM 100
+
+#define N 1.6
+static int radius_nm = ST_RADIUS_NM;
+
+//フィールド領域が決まってから決まる
+static double radius_s;
+static double epsilon_s;
+static double posx_s;
+static double posy_s;
 
 static double eps(double, double, int, int);
 
-double (*circleModel_EPS(double x, double y, double r))(double, double, int , int)
-{
-  radius = r;
-  posx = x;
-  posy = y;
-  epsilon = 1.6*1.6*EPSILON_0_S;
-  
+double (*circleModel_EPS())(double, double, int , int)
+{  
   return eps;
 }
 
@@ -25,62 +29,59 @@ static double eps(double x, double y, int col, int row)
   if(x < N_PML || y < N_PML || x > N_X+N_PML || y > N_Y + N_PML)
     return EPSILON_0_S;
 
-  double dx = x-posx;
-  double dy = y-posy;
+  double dx = x-posx_s;
+  double dy = y-posy_s;
   //2乗距離
   double len = dx*dx+dy*dy;
 
   //中心との距離がr+1セル以上なら,そのセルは完全に媒質の外 
-  if(len >= (radius+1)*(radius+1))
+  if(len >= (radius_s+1)*(radius_s+1))
     return EPSILON_0_S;
 
   //中心との距離がr-1セル以下なら,そのセルは完全に媒質の外 
-  if(len <= (radius-1)*(radius-1))
-    return epsilon;
+  if(len <= (radius_s-1)*(radius_s-1))
+    return epsilon_s;
 
   //さらに32*32分割し媒質内と媒質外の数を求めepsilonを決定する
+  double split = 10;
+  double half_split = split/2;
   double sum=0;
-  for(double i=-16+0.5; i<16; i+=1){
-    for(double j=-16+0.5; j<16; j+=1){
-      if(pow(dx+col*i/32.0, 2.0) + pow(dy+row*j/32.0, 2.0) <= radius*radius)
+  for(double i=-half_split+0.5; i<half_split; i+=1){
+    for(double j=-half_split+0.5; j<half_split; j+=1){
+      if(pow(dx+col*i/split, 2.0) + pow(dy+row*j/split, 2.0) <= radius_s*radius_s)
 	sum+=1;
     }
   }
   
-  sum /= 32.0*32.0;
-  return epsilon*sum + EPSILON_0_S*(1-sum);
-}
-
-
-static void output(FILE *fp, double complex* data)
-{
-  //半径の1.2倍の位置のデータを保存
-  double observation = 1.2*radius;
-  int ang;
-  for(ang=0; ang <360; ang++)
-  {
-    double rad = ang*M_PI/180.0;
-    double x = observation*cos(rad)+N_PX/2.0;
-    double y = observation*sin(rad)+N_PY/2.0;
-    double norm = cnorm(cbilinear(data,x,y,N_PX,N_PY));
-    fprintf(fp, "%d %lf \n", 180-ang, norm);   
-  }  
-  fclose(fp);  
-  printf("output end \n");
-}
-
-void (*circleModel_output(void))(FILE *, double complex*)
-{
-  return output;
+  sum /= split*split;
+  return epsilon_s*sum + EPSILON_0_S*(1-sum);
 }
 
 bool circleModel_isFinish()
 {
-  radius += field_toCellUnit(200);
-  return radius > field_toCellUnit(2000);
+  radius_nm += DELTA_RADIUS_NM;
+  return radius_nm > EN_RADIUS_NM;
 }
 
 void circleModel_moveDirectory()
 {
-  
+  char buf[512];
+  sprintf(buf,"radius_%dnm", radius_nm);
+  makeDirectory(buf);
+  moveDirectory(buf);
+}
+
+void circleModel_init(void)
+{
+  FieldInfo_S fInfo_s = field_getFieldInfo_S();
+  radius_s  = field_toCellUnit(radius_nm);  
+  posx_s    = fInfo_s.N_PX/2;
+  posy_s    = fInfo_s.N_PY/2;
+  epsilon_s = N*N*EPSILON_0_S;
+}
+
+void circleModel_needSize(int *x_nm,int *y_nm)
+{
+  *x_nm = radius_nm*2;
+  *y_nm = radius_nm*2;
 }

@@ -101,40 +101,23 @@ double* fdtdTE_upml_getEps()
 static void init(){  
   allocateMemories();
   setCoefficient();
+  ntffTE_init();
 }
 
 //---------------------メモリの解放--------------------//
 static void finish(){
+  char current[512];
+  getcwd(current, 512); //カレントディレクトリを保存
   char re[1024], im[1024];
   sprintf(re, "%d[deg]_Eph_r.txt", (int)field_getWaveAngle());
   sprintf(im, "%d[deg]_Eph_i.txt", (int)field_getWaveAngle());
   FILE *fpR = openFile(re);
   FILE *fpI = openFile(im);
-  ntffTE_TimeOutput(Wx, Wy, Uz, re, im);
+  ntffTE_TimeOutput(Wx, Wy, Uz, fpR, fpI);
+  printf("saved %s %s & %s\n", current, re, im);
   fclose(fpR);
   fclose(fpI);
   freeMemories();
-/*
-  const int maxTime = field_getMaxTime();
-  NTFFInfo nInfo = field_getNTFFInfo();
-  dcomplex *Eth, *Eph;
-  Eth = newDComplex(360*nInfo.arraySize);
-  Eph = newDComplex(360*nInfo.arraySize);
-  ntffTE_TimeTranslate(Wx,Wy,Uz,Eth,Eph);
-
-
-  for(int ang=0; ang<360; ang++)
-  {
-    int k= ang*nInfo.arraySize;
-    for(int i=0; i < maxTime; i++)
-    {
-      fprintf(fpR,"%.20lf " , creal(Eph[k+i]));
-      fprintf(fpI,"%.20lf " , cimag(Eph[k+i]));  
-    }
-    fprintf(fpR,"\n");
-    fprintf(fpI,"\n");
-  }  
-*/
 }
 
 static void reset()
@@ -159,6 +142,11 @@ static void reset()
   memset(Dx, 0, sizeof(double complex)*N_CELL);
   memset(Dy, 0, sizeof(double complex)*N_CELL);
   memset(Bz, 0, sizeof(double complex)*N_CELL);
+
+  int size = sizeof(dcomplex)*field_getNTFFInfo().arraySize * 360;
+  memset(Wx, 0, size);
+  memset(Wy, 0, size);
+  memset(Uz, 0, size);
 }
 
 
@@ -201,8 +189,20 @@ static inline void update(void)
   calcJD();
   calcE();
 
-  field_scatteredPulse(Ey, EPS_EY, 0, 0.5); //Eyは格子点より上に0.5ずれた位置に配置
-//  field_scatteredWave(Ey, EPS_EY, 0, 0.5);
+  //波数から90°回転した方向に足し合わせる.
+  WaveInfo_S wInfo = field_getWaveInfo_S();
+  double co = cos( (wInfo.Angle_deg+90) * M_PI/ 180.0);
+  double si = sin( (wInfo.Angle_deg+90) * M_PI/ 180.0);
+
+  if(co != 0.0)
+    field_scatteredPulse(Ex, EPS_EX, 0.5, 0.0, co); //Exは格子点より右に0.5ずれた位置に配置
+  if(si != 0.0)
+    field_scatteredPulse(Ey, EPS_EY, 0.0, 0.5, si); //Eyは格子点より上に0.5ずれた位置に配置
+
+//  if(co != 0.0)
+//  field_scatteredWave(Ex, EPS_EX, 0.5, 0.0);
+//  if(si != 0.0)
+//  field_scatteredWave(Ey, EPS_EY, 0.0, 0.5);
   
 //  fastCalcMB();
 //  fastCalcH();
@@ -279,7 +279,8 @@ static void calcJD(void)
     for(int j=1; j<N_PY-1; j++){
       int k = field_index(i,j);
       double complex nowJx = Jx[k];
-      Jx[k] = C_JX[k]*Jx[k] + C_JXHZ[k]*(Hz[k] - Hz[k-1]); // Hz[k] - Hz[k]とすると,mie散乱入射角度0のときに波が真横に進む(ただのバグ)
+      //ちなみに Hz[k] - Hz[k]とすると,mie散乱入射角度0のときに波が真横に進む(理由わからんしただのバグだけどおもしろいからコメント残しておく)
+      Jx[k] = C_JX[k]*Jx[k] + C_JXHZ[k]*(Hz[k] - Hz[k-1]);        
       Dx[k] = C_DX[k]*Dx[k] + C_DXJX1[k]*Jx[k] - C_DXJX0[k]*nowJx;
     }
   }
@@ -435,6 +436,18 @@ static void freeMemories()
   if(Ey != NULL){    free(Ey); Ey = NULL;}  
   if(Hz != NULL){    free(Hz); Hz = NULL;}
 
+  delete(Dx);
+  delete(Dy);
+  delete(Bz);
+  
+  delete(Jx);
+  delete(Jy);
+  delete(Mz);
+
+  delete(Wx);
+  delete(Wy);
+  delete(Uz);
+  
   if(C_JX!= NULL){    free(C_JX);  C_JX = NULL;}
   if(C_JXHZ!= NULL){   free(C_JXHZ); C_JXHZ = NULL;}
   if(C_DX!= NULL){   free(C_DX); C_DX = NULL;}

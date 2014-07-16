@@ -3,10 +3,14 @@
 #include "function.h"
 #include "bool.h"
 #include <math.h>
-static const double R0 = 1.0e6;
+#include <stdlib.h>
 
-dcomplex *debug_U[4],*debug_W[4];
+static double R0;
 
+void ntffTE_init()
+{
+  R0 = 1.0e6 * field_toCellUnit(500);//* field_getLambda_S();  
+}
 //---------------------- ntff--------------------//
 
 void ntffTE_TimeTranslate(dcomplex *Wx, dcomplex *Wy,dcomplex *Uz, dcomplex *Eth, dcomplex *Eph)
@@ -19,6 +23,7 @@ void ntffTE_TimeTranslate(dcomplex *Wx, dcomplex *Wy,dcomplex *Uz, dcomplex *Eth
   NTFFInfo nInfo = field_getNTFFInfo();
 
   double theta = 0;
+  //NTFF TE Translate
   for(int ang=0; ang<360; ang++)
   {
     double phi = ang*M_PI/180.0;
@@ -158,12 +163,13 @@ void ntffTE_TimeOutput(dcomplex *Wx, dcomplex *Wy, dcomplex *Uz, FILE *fpRe, FIL
   ntffTE_TimeTranslate(Wx,Wy,Uz,Eth,Eph);
   for(int ang=0; ang<360; ang++)
   {
-    int k= ang*nInfo.arraySize;
+    int k = ang*nInfo.arraySize;
     for(int i=0; i < maxTime; i++)
     {
       fprintf(fpRe,"%.20lf " , creal(Eph[k+i]));
-      fprintf(fpIm,"%.20lf " , cimag(Eph[k+i]));  
+      fprintf(fpIm,"%.20lf " , cimag(Eph[k+i]));   
     }
+    
     fprintf(fpRe,"\n");
     fprintf(fpIm,"\n");
   }  

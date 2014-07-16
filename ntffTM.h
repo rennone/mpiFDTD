@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include "myComplex.h"
 
+extern void ntffTM_init();
+
 //resEzに周波数領域の遠方解を代入する.
 extern void ntffTM_Frequency( dcomplex *Hx, dcomplex *Hy, dcomplex *Ez, dcomplex resEz[360]);
 

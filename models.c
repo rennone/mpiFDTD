@@ -1,4 +1,4 @@
-#include "field.h"
+//#include "field.h"
 #include "models.h"
 #include "noModel.h"
 #include "circleModel.h"
@@ -6,61 +6,64 @@
 #include "multiLayerModel.h"
 #include "morphoScaleModel.h"
 #include "bool.h"
-//#include "shelf.h"
-//#include "nonshelf.h"
+#include "function.h"
 
+static void (*initModelMethod)();
+static void (*needSizeMethod)(int*, int*);
 static double (*epsMethod)(double, double, int, int);
 static bool (*isFinishMethod)(void);
 static void (*moveDirectoryMethod)(void);
 static char *dir;
+
 static void noModel(void)
 {
   //no material
-  moveDirectory("NoModel");
+  dir = "NoModel";
   epsMethod = noModel_EPS();
   isFinishMethod = noModel_isFinish;
-
+  printf("not implemented no Model");
+  exit(2);
 }
 
 static void circleModel(void)
 {
   dir = "MieCylinderModel";
-  moveDirectory(dir);
-  //cylinder material whitch radius = lambda, origin = center of field
-  epsMethod = circleModel_EPS(N_PX*0.5, N_PY*0.5, field_getLambda());  
-  isFinishMethod = circleModel_isFinish;
-  
+  epsMethod           = circleModel_EPS();
+  isFinishMethod      = circleModel_isFinish;  
+  needSizeMethod      = circleModel_needSize;
+  initModelMethod     = circleModel_init;
   moveDirectoryMethod = circleModel_moveDirectory;
 }
 
 static void multiLayerModel()
 {
-  moveDirectory("MultiLayerModel");
-  epsMethod = multiLayerModel_EPS();  
-  isFinishMethod = multiLayerModel_isFinish;
-
-  printf("not implemented MoveDirectoryMethod");
-  exit(2);
+  dir = "MultiLayerModel";
+  epsMethod       = multiLayerModel_EPS();
+  isFinishMethod  = multiLayerModel_isFinish;
+  needSizeMethod  = multiLayerModel_needSize;
+  initModelMethod = multiLayerModel_init;  
+  moveDirectoryMethod = multiLayerModel_moveDirectory;
 }
 
 static void morphoScaleModel()
 {
   dir = "MorphoScaleModel";
-  moveDirectory(dir);
   epsMethod = morphoScaleModel_EPS();
   isFinishMethod = morphoScaleModel_isFinish;
   moveDirectoryMethod = morphoScaleModel_moveDirectory;
+  
+  printf("not implemented morpho Model");
+  exit(2);
 }
 
 static void concentricCircleModel()
 {
   dir = "ConcentricCircleModel";
-  makeDirectory(dir);
-  moveDirectory(dir);
   epsMethod = concentricCircleModel_EPS();
-//  epsMethod           = conc_eps;//concentricCircleModel_EPS();
   isFinishMethod      = concentricCircleModel_isFinish;
   moveDirectoryMethod = concentricCircleModel_moveDirectory;
+  printf("not implemented concentricCircle Model");
+  exit(2);
 }
 
 bool models_isFinish()
@@ -71,11 +74,12 @@ bool models_isFinish()
 //モデルを変更したときに,一度rootまで戻るので,再度ネストする用
 void models_moveDirectory()
 {
+  makeDirectory(dir);
   moveDirectory(dir);
   (*moveDirectoryMethod)();
 }
 
-void setModel(enum MODEL model)
+void models_setModel(enum MODEL model)
 {
   switch(model){
   case NO_MODEL:
@@ -84,8 +88,6 @@ void setModel(enum MODEL model)
   case MIE_CYLINDER:
     circleModel();
     break;
-  case SHELF :
-  case NONSHELF:
   case LAYER:
     multiLayerModel();
     break;
@@ -96,12 +98,14 @@ void setModel(enum MODEL model)
     concentricCircleModel();
     break;
   }
-   (*moveDirectoryMethod)();
+  
+  //ディレクトリの移動
+//  models_moveDirectory();
 }
 
 double models_eps(double x, double y, enum MODE mode)
 {
-  double epsilon = EPSILON_0_S;
+  double epsilon;
   switch(mode){
   case D_X :
     epsilon = (*epsMethod)(x, y, 1, 0);
@@ -109,6 +113,19 @@ double models_eps(double x, double y, enum MODE mode)
     epsilon = (*epsMethod)(x, y, 0, 1);
   case D_XY :
     epsilon = (*epsMethod)(x, y, 1, 1);
+  default:
+    epsilon = (*epsMethod)(x, y, 1, 1);
   }
+  
   return epsilon;
+}
+
+void models_needSize(int *x_nm,int *y_nm)
+{
+  (*needSizeMethod)(x_nm, y_nm);
+}
+
+void models_initModel()
+{
+  (*initModelMethod)();
 }

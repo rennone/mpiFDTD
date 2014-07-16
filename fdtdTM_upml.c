@@ -56,7 +56,7 @@ static void update(void)
   calcE();
   
 //  field_scatteredWave(Ez, EPS_EZ, 0, 0); //Ezは格子点上に配置されているので,ずれは(0,0)
-  field_scatteredPulse(Ez, EPS_EZ, 0, 0); //Ezは格子点上に配置されているので,ずれは(0,0)
+  field_scatteredPulse(Ez, EPS_EZ, 0, 0, 1.0); //Ezは格子点上に配置されているので,ずれは(0,0)
   
   calcMB();  
   calcH();
@@ -67,12 +67,16 @@ static void update(void)
 static void init()
 {
   allocateMemories();
-  setCoefficient(); 
+  setCoefficient();
+
+  ntffTM_init();
 }
 
 //Finish
 static void finish()
 {
+  char current[512];
+  getcwd(current, 512); //カレントディレクトリを保存
   char re[1024], im[1024];
   sprintf(re, "%d[deg]_Eth_r.txt", (int)field_getWaveAngle());
   sprintf(im, "%d[deg]_Eth_i.txt", (int)field_getWaveAngle());
@@ -80,7 +84,7 @@ static void finish()
   FILE *fpIm = openFile(im);
 
   ntffTM_TimeOutput(Ux,Uy,Wz,fpRe, fpIm);
-  printf("saved %s & %s \n", re, im);
+  printf("saved %s/ %s & %s \n",current, re, im);
   
   fclose(fpRe);
   fclose(fpIm);
@@ -113,6 +117,11 @@ static void reset()
   memset(Bx, 0, sizeof(double complex)*N_CELL);
   memset(By, 0, sizeof(double complex)*N_CELL);
   memset(Dz, 0, sizeof(double complex)*N_CELL);
+
+  int size = sizeof(dcomplex)*field_getNTFFInfo().arraySize * 360;
+  memset(Ux, 0, size);
+  memset(Uy, 0, size);
+  memset(Wz, 0, size);
 }
 
 //:public
@@ -290,9 +299,9 @@ static void allocateMemories()
   By = (double complex*)malloc(sizeof(double complex)*N_CELL);
   
   int step = field_getNTFFInfo().arraySize;
-  Ux = (double complex*)malloc(sizeof(double complex)*360*step);
-  Uy = (double complex*)malloc(sizeof(double complex)*360*step);
-  Wz = (double complex*)malloc(sizeof(double complex)*360*step);
+  Ux = newDComplex(360*step);//(double complex*)malloc(sizeof(double complex)*360*step);
+  Uy = newDComplex(360*step);//(double complex*)malloc(sizeof(double complex)*360*step);
+  Wz = newDComplex(360*step);//(double complex*)malloc(sizeof(double complex)*360*step);
   
   C_JZ = (double *)malloc(sizeof(double)*N_CELL);
   C_MX = (double *)malloc(sizeof(double)*N_CELL);
@@ -337,10 +346,18 @@ static void freeMemories()
   if(Ez != NULL){   free(Ez); Ez = NULL;  }  
   if(Hx != NULL){   free(Hx); Hx = NULL;  }
   if(Hy != NULL){   free(Hy); Hy = NULL;  }
+
+  if(Dz != NULL){   free(Dz); Dz = NULL;  }  
+  if(Hx != NULL){   free(Hx); Hx = NULL;  }
+  if(Hy != NULL){   free(Hy); Hy = NULL;  }
   
-  if(Ux != NULL){   free(Ux); Ux = NULL;  }  
-  if(Uy != NULL){   free(Uy); Uy = NULL;  }
-  if(Wz != NULL){   free(Wz); Wz = NULL;  }
+  delete(Bx);
+  delete(By);
+  delete(Jz);
+
+  delete(Ux);
+  delete(Uy);
+  delete(Wz);
   
   if(C_JZ != NULL){ free(C_JZ); C_JZ = NULL;  }
   if(C_JZHXHY != NULL){ free(C_JZHXHY); C_JZHXHY = NULL;  }
