@@ -196,7 +196,6 @@ static inline void update(void)
 
   if(co != 0.0)
     field_scatteredPulse(Ex, EPS_EX, 0.5, 0.0, co); //Exは格子点より右に0.5ずれた位置に配置
-
   if(si != 0.0)
     field_scatteredPulse(Ey, EPS_EY, 0.0, 0.5, si); //Eyは格子点より上に0.5ずれた位置に配置
 

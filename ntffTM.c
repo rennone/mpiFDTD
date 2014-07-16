@@ -256,7 +256,7 @@ void ntffTM_TimeCalc(dcomplex *Hx, dcomplex *Hy, dcomplex *Ez, dcomplex *Ux, dco
   for(int ang=0; ang<360; ang++, index_ang+=nInfo.arraySize )
   {
     double rad = ang*ToRad;
-    double r1x_per_c = cos(rad)/C_0_S, r1y_per_c = sin(rad)/C_0_S;    
+    double r1x_per_c = cos(rad)/C_0_S, r1y_per_c = sin(rad)/C_0_S;
 
     //ang°の位置にシフトしたポジション, こうすれば Ux_ang[i]でその角度のi番目にアクセスできる.
     dcomplex *Ux_ang = &Ux[index_ang];

@@ -12,23 +12,23 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 #define DELTA_WIDTH_NM 10
 
 //ラメラの厚さ
-#define ST_THICK_NM_0 30
-#define EN_THICK_NM_0 160
-#define DELTA_THICK_NM_0 10
+#define ST_THICK_NM_0 90
+#define EN_THICK_NM_0 150
+#define DELTA_THICK_NM_0 30
 
-#define ST_THICK_NM_1 30
-#define EN_THICK_NM_1 160
-#define DELTA_THICK_NM_1 10
+#define ST_THICK_NM_1 90
+#define EN_THICK_NM_1 150
+#define DELTA_THICK_NM_1 30
 
 //ラメラの枚数
 #define LAYER_NUM 11
 
 //互い違い
-#define ASYMMETRY true
+#define ASYMMETRY false
 
 //中心に以下の幅で軸となる枝を入れる => 軸の屈折率はN_1になる
-#define ST_BRANCH_NM 50
-#define EN_BRANCH_NM 50
+#define ST_BRANCH_NM 0
+#define EN_BRANCH_NM 0
 #define DELTA_BRANCH_NM 10
 
 //屈折率
@@ -38,12 +38,12 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 //#define N_1 8.4179
 
 //先端における横幅の割合
-#define ST_EDGE_RATE 0.5
+#define ST_EDGE_RATE 1.0
 #define EN_EDGE_RATE 1.0
 #define DELTA_EDGE_RATE 0.1
 
 //ラメラの先端を丸める曲率 (1で四角形のまま, 0.0で最もカーブする)
-#define CURVE 0.8
+#define CURVE 1.0
 
 static int width_nm[2]     = {ST_WIDTH_NM, ST_WIDTH_NM};
 static int thickness_nm[2] = {ST_THICK_NM_0, ST_THICK_NM_1};
@@ -63,7 +63,8 @@ static double c0, c1; //2次関数の比例定数
 static double calc_width(double sx, double sy, double wid, double hei, double modY, int k)
 {
   double p = 1 - sy/hei;
-  double new_wid = wid*(p + (1-p)*edge_width_rate);
+//  double new_wid = wid*(p + (1-p)*edge_width_rate);
+  double new_wid = wid-branch_width_s*2 + (p + (1-p)*edge_width_rate)*branch_width_s;
 
   //ラメラの下を基準とした位置を求める
   double dh = k==0 ? modY : modY - thickness_s[0];
@@ -205,7 +206,11 @@ void multiLayerModel_moveDirectory()
   sprintf(buf,"n_%.2lf_%.2lf", N_0, N_1);
   makeDirectory(buf);
   moveDirectory(buf);
-  
+
+  sprintf(buf,"curve_%.2lf", CURVE);
+  makeDirectory(buf);
+  moveDirectory(buf);
+
   sprintf(buf, "thick%d_%d_layer%d_edge%.1lf_branch%d",
           thickness_nm[0], thickness_nm[1], layerNum, edge_width_rate, branch_width_nm);
   makeDirectory(buf);
@@ -222,6 +227,7 @@ void multiLayerModel_init()
   ep_s[1] = N_1*N_1*EPSILON_0_S;
 
   branch_width_s = field_toCellUnit(branch_width_nm);
+  
   c0 = 4*width_s[0]*(CURVE-1)/thickness_s[0]/thickness_s[0];
   c1 = 4*width_s[1]*(CURVE-1)/thickness_s[1]/thickness_s[1];
 }
