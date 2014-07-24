@@ -16,7 +16,6 @@ extern void drawer_paintTest(void);
 extern void drawer_init(enum COLOR_MODE);
 extern void drawer_finish(void);
 extern void drawer_draw(void);
-
 #endif //USE_OPENGL
 
 extern void drawer_outputImage(char *fileName, dcomplex* data, double *model, int width, int height);

@@ -329,6 +329,7 @@ static void drawSubField()
 
 static void display()
 {
+  glClear(GL_COLOR_BUFFER_BIT);
   glEnableClientState( GL_VERTEX_ARRAY );
   glEnableClientState( GL_TEXTURE_COORD_ARRAY );
 
