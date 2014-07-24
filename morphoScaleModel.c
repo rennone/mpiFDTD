@@ -5,22 +5,99 @@
 #include <math.h>
 #include <stdlib.h>
 #include <mpi.h>
+//モルフォ蝶の鱗粉モデル.
 
-double width_s[2];     //幅
-double widthOnTopRate; //頂上に置ける幅の縮小率(基本0~1)
-double thickness_s[2]; //厚さ
-double n[2];
-double ep_s[2];        //誘電率 = n*n*ep0_s
-int layerNum;          //枚数
-bool asymmetry;      //左右比対称
+//横幅
+#define ST_WIDTH_NM 300
+#define EN_WIDTH_NM 300
+#define DELTA_WIDTH_NM 10
 
-//物質の方の厚さの最大の厚さ, Δ
-double maxThickness1, deltaThichness1;
+//ラメラの厚さ
+#define ST_THICK_NM_0 90
+#define EN_THICK_NM_0 150
+#define DELTA_THICK_NM_0 30
+
+//空気の部分の厚さ
+#define ST_THICK_NM_1 90
+#define EN_THICK_NM_1 150
+#define DELTA_THICK_NM_1 30
+
+//ラメラの枚数
+#define LAYER_NUM 11
+
+//互い違い
+#define ASYMMETRY false
+
+//中心に以下の幅で軸となる枝を入れる
+#define ST_BRANCH_NM 0
+#define EN_BRANCH_NM 0
+#define DELTA_BRANCH_NM 10
+
+//屈折率
+#define N_0 1.56
+
+//#define N_0 8.4179 //serikon
+
+//先端における横幅の割合
+#define ST_EDGE_RATE 1.0
+#define EN_EDGE_RATE 1.0
+#define DELTA_EDGE_RATE 0.1
+
+//ラメラの先端を丸める曲率 (1で四角形のまま, 0.0で最もカーブする)
+#define CURVE 1.0
+
+//エッジの角度をランダムに傾ける
+#define RANDOM_EDGE_ANGLE true
+static double edge_randomeness[LAYER_NUM];
+
+static int width_nm     = ST_WIDTH_NM;
+static int thickness_nm[2] = {ST_THICK_NM_0, ST_THICK_NM_1};
+static int layerNum = LAYER_NUM;     //枚数
+static int branch_width_nm = ST_BRANCH_NM; //枝の幅
+
+static double branch_width_s; //枝の幅
+static double width_s;        //幅
+static double thickness_s[2]; //厚さ
+
+static double ep_s;        //誘電率 = n*n*ep0
+
+static double edge_width_rate = ST_EDGE_RATE;
+
+static double c0; //2次関数の比例定数
+
+// 傾きがa, 切片がb1とb2 (b1<b2) の２つの平行な直線に, (x,y)が含まれるか判定
+static bool in2Line(double a, double b1, double b2, double x, double y)
+{
+  double y1 = a*x + b1;
+  double y2 = a*x + b2;
+
+  return ( y1 < y && y < y2 );
+}
+
+/*
+static double calc_width(double sx, double sy, double wid, double hei, double modY, int k)
+{
+  double p = 1 - sy/hei;
+//  double new_wid = wid*(p + (1-p)*edge_width_rate);
+  double new_wid = wid-branch_width_s*2 + (p + (1-p)*edge_width_rate)*branch_width_s;
+
+  //ラメラの下を基準とした位置を求める
+  double dh = k==0 ? modY : modY - thickness_s[0];
+  double c  = k==0 ? c0 : c1;
+
+//互い違いの場合はdhを再計算
+  if(ASYMMETRY && sx < 0){
+    dh = (k==1 ? modY : modY - thickness_s[1]);
+  }
+
+  //2次関数で横幅を計算
+  return c*pow((dh-thickness_s[k]/2),2) + new_wid;
+  }*/
 
 static double eps(double x, double y, int col, int row)
 {
   FieldInfo_S fInfo_s = field_getFieldInfo_S();
-  double width = max(width_s[0], width_s[1]);
+  double width = width_s;
   double thick = thickness_s[0] + thickness_s[1];
   double height = thick*layerNum;  
 
@@ -31,47 +108,151 @@ static double eps(double x, double y, int col, int row)
   double _y = y-oy;
 
   //上下左右に飛び出ていないか確認(細分化したセルがあるため, 0.5の余白をとっている)
-  if( fabs(_x) > (width/2+0.5) ||  _y < -0.5 || _y > height+0.5 )  
+  double max_width = 0.5*(width*sqrt(2.0)/2.0 + thickness_s[0]); //45°の時に最も横幅が大きくなるのでそれを基準にする
+    if( fabs(_x) > (max_width + 0.5) )
     return EPSILON_0_S;
 
-  double s[2]={0,0}; //n1,n2それぞれの分割セルの数が入る
+  int num = -1;
+  double a1, b1, b2;  
+  for( int i=0; i<layerNum; i++){
+    //エッジを回転させたときの, 二つの直線を求める.
+    double edge_oy = thick*i + 0.5*thickness_s[0]; //エッジの中心位置
+    double bm_b = edge_oy - 0.5*thickness_s[0]/cos(edge_randomeness[i]); //切片
+    double tp_b = edge_oy + 0.5*thickness_s[0]/cos(edge_randomeness[i]);
+    double a = _x < 0 ? -tan(edge_randomeness[i]) : tan(edge_randomeness[i]);
 
-  for(double i=-16+0.5; i<16; i+=1){
-    for(double j=-16+0.5; j<16; j+=1){
+    // 1セルの正方形が重なるかを返す(4点のどれかが内側にあれば, 重なっていると判断. 2直線の幅は1セルよりも大きくするのでokなはず)
+    if( in2Line(a, bm_b, tp_b, _x-0.5, _y-0.5) || in2Line(a, bm_b, tp_b, _x-0.5, _y+0.5) ||
+        in2Line(a, bm_b, tp_b, _x+0.5, _y-0.5) || in2Line(a, bm_b, tp_b, _x+0.5, _y+0.5))
+    {
+      num = i;
+      a1 = a;
+      b1 = bm_b;
+      b2 = tp_b;
+      break;
+    }
+  }
+  
+  double s=0; //n1の分割セルの数が入る  
+  double split = 10;
+  double half_split = split/2;
+  for(double i=-half_split+0.5; i<half_split; i+=1){
+    for(double j=-half_split+0.5; j<half_split; j+=1){
       double sx = _x + col*i/32.0; //細分化したセルの位置
       double sy = _y + row*j/32.0;
 
-      //上下に飛び出ていないか確認
-      if(sy < 0 || sy > height)
-        continue;
-      
-      //thickで割ったあまり(double型なのでこんなやり方をしている)
-      double modY = sy - floor(sy/thick)*thick;
-      
-      //境界上のときは両方の平均になる(普通は無い).
-      if(modY == thickness_s[0]) {
-        s[0] += 0.5*(fabs(sx) < width_s[0]/2);
-        s[1] += 0.5*(fabs(sx) < width_s[1]/2);
+      double p = 1 - sy/height;
+      //枝の部分にあるか
+      if(abs(sx) < branch_width_s*(p + (1-p)*edge_width_rate)){
+        s += 1;
         continue;
       }
       
-      int k = (modY > thickness_s[0]); //どっちの屈折率にいるか調べる
+      //どのエッジとも重ならなければ, 枝とだけ判定すればいい
+      if(num <0)
+        continue;
 
-      if (sx < 0 && asymmetry)
-        k = 1-k;		//左右で反転, 互い違いでなかったら反転しない
-
-      double p = 1-sy /height; //現在の高さを0~1で; 1=>頂上
-      double _wid = width_s[k]*(p + (1-p)*widthOnTopRate);
-      if(abs(sx) < _wid/2)
-        s[k] +=1;
-    }    
+      //中心のxと符号が逆になる場合は, 傾きも逆になる.
+      double a = sx*_x < 0 ? -a1 : a1;
+      
+      //TODO　エッジの幅を考慮してない
+      if( in2Line(a, b1, b2, sx, sy) ){
+        double sqrWidth = sx*sx*(1+a*a);
+        double offset = (b2 - (sy-a*sx))*sin(edge_randomeness[num]);
+        if( sqrWidth < pow(width/2 + offset, 2))
+          s+=1;
+      }
+    }
   }
-
-  s[0] /= 32.0*32.0;
-  s[1] /= 32.0*32.0;
-  return EPSILON_0_S*(1-s[0]-s[1]) + ep_s[0]*s[0] + ep_s[1]*s[1];
+  s /= split*split;
+  return EPSILON_0_S*(1-s) + ep_s*s;
 }
 
+double ( *morphoScaleModel_EPS(void))(double, double, int, int)
+{
+  return eps;
+}
+
+//正しいディレクトリまで移動.
+void morphoScaleModel_moveDirectory()
+{
+  if(ASYMMETRY){
+    makeDirectory("asymmetry");
+    moveDirectory("asymmetry");
+  } else {
+    makeDirectory("symmetry");
+    moveDirectory("symmetry");
+  }  
+  char buf[512];
+  // make folder by index of reflaction 
+  sprintf(buf,"n_%.2lf", N_0);
+  makeDirectory(buf);
+  moveDirectory(buf);
+
+  sprintf(buf,"curve_%.2lf", CURVE);
+  makeDirectory(buf);
+  moveDirectory(buf);
+
+  sprintf(buf, "thick%d_%d_layer%d_edge%.1lf_branch%d",
+          thickness_nm[0], thickness_nm[1], layerNum, edge_width_rate, branch_width_nm);
+  makeDirectory(buf);
+  moveDirectory(buf);
+}
+
+void morphoScaleModel_init()
+{
+  width_s     = field_toCellUnit(width_nm);
+  thickness_s[0] = field_toCellUnit(thickness_nm[0]);
+  thickness_s[1] = field_toCellUnit(thickness_nm[1]);
+  ep_s = N_0*N_0*EPSILON_0_S;
+
+  branch_width_s = field_toCellUnit(branch_width_nm);
+  
+  c0 = 4*width_s*(CURVE-1)/thickness_s[0]/thickness_s[0];
+
+  for(int i=0; i<layerNum; i++)
+    edge_randomeness[i] = 45.0*M_PI/180.0;
+}
+
+//構造を一つ進める
+static bool nextStructure()
+{
+  thickness_nm[0] += DELTA_THICK_NM_0;
+  thickness_nm[1] += DELTA_THICK_NM_1;
+
+  if(thickness_nm[0] > EN_THICK_NM_0)
+  {
+    thickness_nm[0] = ST_THICK_NM_0;
+    thickness_nm[1] = ST_THICK_NM_1;
+
+    edge_width_rate += DELTA_EDGE_RATE;
+    if(edge_width_rate > EN_EDGE_RATE)
+    {
+      edge_width_rate = ST_EDGE_RATE;
+
+      branch_width_nm += DELTA_BRANCH_NM;
+      if(branch_width_nm > EN_BRANCH_NM)
+      	{
+	  printf("there are no models which hasn't been simulated yet\n");     
+	  return true;
+	}
+    }
+  }
+  return false;  
+}
+
+bool morphoScaleModel_isFinish(void)
+{
+  return nextStructure();
+}
+
+void morphoScaleModel_needSize(int *x, int *y)
+{
+  *x = width_nm + branch_width_nm;
+  *y = (thickness_nm[0]+thickness_nm[1])*layerNum;
+}
+
+/*
 static void readConfig()
 {
   FILE *fp = NULL;
@@ -126,7 +307,8 @@ static void readConfig()
   printf("LayerNum=%d, rate=%.3lf\n",layerNum, widthOnTopRate);
   printf("==============================\n");
 }
-
+*/
+/*
 double ( *morphoScaleModel_EPS(void))(double, double, int, int)
 {  
   int rank, numProc;
@@ -155,47 +337,7 @@ double ( *morphoScaleModel_EPS(void))(double, double, int, int)
     MPI_Recv(&layerNum, 1, MPI_INT, 0, 4, MPI_COMM_WORLD, &status);
     MPI_Recv(&asymmetry, 1, MPI_INT, 0, 5, MPI_COMM_WORLD, &status);
     MPI_Recv(&n, 2, MPI_DOUBLE, 0, 6, MPI_COMM_WORLD, &status);
-  }
-  
+  }  
   return eps;
 }
-
-//正しいディレクトリまで移動.
-void morphoScaleModel_moveDirectory()
-{
-  char str[1024];
-
-  if(asymmetry){
-    sprintf(str, "w%d_%d_d%d_%d",
-            (int)field_toPhisycalUnit(width_s[0]), (int)field_toPhisycalUnit(width_s[1]),
-            (int)field_toPhisycalUnit(thickness_s[0]), (int)field_toPhisycalUnit(thickness_s[1])
-      );    
-  }
-  else{
-    sprintf(str, "w%d_%d_d%d_%d_symm",
-            (int)field_toPhisycalUnit(width_s[0]), (int)field_toPhisycalUnit(width_s[1]),
-            (int)field_toPhisycalUnit(thickness_s[0]), (int)field_toPhisycalUnit(thickness_s[1])
-      );
-  }
-  
-  makeDirectory(str);
-  moveDirectory(str);
-  
-  char str2[1024];
-  sprintf(str2, "n%.2lf-%.2lf_m%d_r%.2lf", n[0],n[1],layerNum, widthOnTopRate);
-  makeDirectory(str2);
-  moveDirectory(str2);  
-}
-
-bool morphoScaleModel_isFinish()
-{
-  //幅を10nm増やす
-//  width_s[0] += field_toCellUnit(500);
-//  width_s[1] += field_toCellUnit(500);
-  thickness_s[0] += field_toCellUnit(10);
-  thickness_s[1] += field_toCellUnit(10);
-  
-  FieldInfo_S fInfo_s = field_getFieldInfo_S();
-//  return width_s[0] > fInfo_s.N_X*2/3;          //全体の横幅の半分になるまでする.
-  return thickness_s[0] > field_toCellUnit(100);          //全体の横幅の半分になるまでする.
-}
+*/

@@ -221,7 +221,7 @@ int main( int argc, char *argv[] )
 {
   getcwd(root, 512); //カレントディレクトリを保存
   
-  models_setModel(LAYER);       //
+  models_setModel(MORPHO_SCALE);       //LAYER
   simulator_setSolver(TM_UPML_2D);
   
   MPI_Init( 0, 0 );

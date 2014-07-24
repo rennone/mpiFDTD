@@ -45,6 +45,11 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 //ラメラの先端を丸める曲率 (1で四角形のまま, 0.0で最もカーブする)
 #define CURVE 1.0
 
+//エッジの角度をランダムに傾ける
+#define RANDOM_EDGE_ANGLE true
+static double edge_randomeness[LAYER_NUM];
+
+
 static int width_nm[2]     = {ST_WIDTH_NM, ST_WIDTH_NM};
 static int thickness_nm[2] = {ST_THICK_NM_0, ST_THICK_NM_1};
 static int layerNum = LAYER_NUM;     //枚数
@@ -100,7 +105,7 @@ static double eps(double x, double y, int col, int row)
     return EPSILON_0_S;
 
   double s[2]={0,0}; //n1,n2それぞれの分割セルの数が入る
-  double split = 32;
+  double split = 10;
   double half_split = split/2;
   for(double i=-half_split+0.5; i<half_split; i+=1){
     for(double j=-half_split+0.5; j<half_split; j+=1){
@@ -129,7 +134,6 @@ static double eps(double x, double y, int col, int row)
         continue;
       }
 
-
       //どっちの屈折率にいるか調べる
       int k;
       if (sx < 0 && ASYMMETRY) {
@@ -139,6 +143,7 @@ static double eps(double x, double y, int col, int row)
       }
       
       double wid = calc_width(sx, sy, width_s[k], height, modY, k);
+      
       if(abs(sx) < wid/2) //width_s[k]
         s[k] +=1;
     }    
@@ -188,7 +193,7 @@ bool multiLayerModel_isFinish(void)
 
 void multiLayerModel_needSize(int *x_nm, int *y_nm)
 {
-  (*x_nm) = max( width_nm[0], width_nm[1]);
+  (*x_nm) = max( width_nm[0], width_nm[1]) + branch_width_nm;
   (*y_nm) = (thickness_nm[0]+thickness_nm[1])*LAYER_NUM;
 }
 

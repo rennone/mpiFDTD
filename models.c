@@ -50,10 +50,12 @@ static void morphoScaleModel()
   dir = "MorphoScaleModel";
   epsMethod = morphoScaleModel_EPS();
   isFinishMethod = morphoScaleModel_isFinish;
+  needSizeMethod = morphoScaleModel_needSize;
+  initModelMethod = morphoScaleModel_init;  
   moveDirectoryMethod = morphoScaleModel_moveDirectory;
-  
+/*  
   printf("not implemented morpho Model");
-  exit(2);
+  exit(2);*/
 }
 
 static void concentricCircleModel()
