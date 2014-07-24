@@ -127,7 +127,7 @@ static void reset()
   sprintf(im, "%d[deg]_Eph_i.txt", (int)field_getWaveAngle());
   FILE *fpR = openFile(re);
   FILE *fpI = openFile(im);
-  ntffTE_TimeOutput(Wx, Wy, Uz, re, im);
+  ntffTE_TimeOutput(Wx, Wy, Uz, fpR, fpI);
   fclose(fpR);
   fclose(fpI);
 

@@ -12,23 +12,26 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 #define DELTA_WIDTH_NM 10
 
 //ラメラの厚さ
-#define ST_THICK_NM_0 90
-#define EN_THICK_NM_0 150
-#define DELTA_THICK_NM_0 30
+#define ST_THICK_NM_0 60
+#define EN_THICK_NM_0 160
+#define DELTA_THICK_NM_0 10
 
-#define ST_THICK_NM_1 90
-#define EN_THICK_NM_1 150
-#define DELTA_THICK_NM_1 30
+#define ST_THICK_NM_1 60
+#define EN_THICK_NM_1 160
+#define DELTA_THICK_NM_1 10
 
 //ラメラの枚数
-#define LAYER_NUM 11
+#define ST_LAYER_NUM 8
+#define EN_LAYER_NUM 14
+#define DELTA_LAYER_NUM 1
+//#define LAYER_NUM 4
 
 //互い違い
-#define ASYMMETRY false
+#define ASYMMETRY true
 
 //中心に以下の幅で軸となる枝を入れる => 軸の屈折率はN_1になる
-#define ST_BRANCH_NM 0
-#define EN_BRANCH_NM 0
+#define ST_BRANCH_NM 50
+#define EN_BRANCH_NM 50
 #define DELTA_BRANCH_NM 10
 
 //屈折率
@@ -38,21 +41,16 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 //#define N_1 8.4179
 
 //先端における横幅の割合
-#define ST_EDGE_RATE 1.0
+#define ST_EDGE_RATE 0.0
 #define EN_EDGE_RATE 1.0
-#define DELTA_EDGE_RATE 0.1
+#define DELTA_EDGE_RATE 0.5
 
 //ラメラの先端を丸める曲率 (1で四角形のまま, 0.0で最もカーブする)
 #define CURVE 1.0
 
-//エッジの角度をランダムに傾ける
-#define RANDOM_EDGE_ANGLE true
-static double edge_randomeness[LAYER_NUM];
-
-
 static int width_nm[2]     = {ST_WIDTH_NM, ST_WIDTH_NM};
 static int thickness_nm[2] = {ST_THICK_NM_0, ST_THICK_NM_1};
-static int layerNum = LAYER_NUM;     //枚数
+static int layerNum = ST_LAYER_NUM;     //枚数
 static int branch_width_nm = ST_BRANCH_NM; //枝の幅
 
 static double branch_width_s; //枝の幅
@@ -68,8 +66,8 @@ static double c0, c1; //2次関数の比例定数
 static double calc_width(double sx, double sy, double wid, double hei, double modY, int k)
 {
   double p = 1 - sy/hei;
-//  double new_wid = wid*(p + (1-p)*edge_width_rate);
-  double new_wid = wid-branch_width_s*2 + (p + (1-p)*edge_width_rate)*branch_width_s;
+  double new_wid = (wid+branch_width_s)*(p + (1-p)*edge_width_rate);
+  //  double new_wid = wid-branch_width_s*2 + (p + (1-p)*edge_width_rate)*branch_width_s;
 
   //ラメラの下を基準とした位置を求める
   double dh = k==0 ? modY : modY - thickness_s[0];
@@ -118,7 +116,7 @@ static double eps(double x, double y, int col, int row)
 
       double p = 1 - sy/height;
       //枝の部分
-      if(abs(sx) < branch_width_s*(p + (1-p)*edge_width_rate))
+      if(fabs(sx) < branch_width_s*(p + (1-p)*edge_width_rate))
       {
         s[1] += 1;
         continue;
@@ -144,7 +142,7 @@ static double eps(double x, double y, int col, int row)
       
       double wid = calc_width(sx, sy, width_s[k], height, modY, k);
       
-      if(abs(sx) < wid/2) //width_s[k]
+      if(fabs(sx) < wid/2) //width_s[k]
         s[k] +=1;
     }    
   }
@@ -178,8 +176,13 @@ static bool nextStructure()
       branch_width_nm += DELTA_BRANCH_NM;
       if(branch_width_nm > EN_BRANCH_NM)
       	{
-	  printf("there are no models which hasn't been simulated yet\n");     
-	  return true;
+	  branch_width_nm = ST_BRANCH_NM;
+	  layerNum += DELTA_LAYER_NUM;
+	  if( layerNum > EN_LAYER_NUM)
+	    {
+	      printf("there are no models which hasn't been simulated yet\n");
+	      return true;
+	    }
 	}
     }
   }
@@ -194,7 +197,7 @@ bool multiLayerModel_isFinish(void)
 void multiLayerModel_needSize(int *x_nm, int *y_nm)
 {
   (*x_nm) = max( width_nm[0], width_nm[1]) + branch_width_nm;
-  (*y_nm) = (thickness_nm[0]+thickness_nm[1])*LAYER_NUM;
+  (*y_nm) = (thickness_nm[0]+thickness_nm[1])*layerNum;
 }
 
 void multiLayerModel_moveDirectory()

@@ -16,7 +16,7 @@ typedef struct Config
   enum SOLVER SolverType;
 }Config;
 
-#define ST_PHI -90
+#define ST_PHI -180
 #define EN_PHI 0
 #define DELTA_PHI 5
 
