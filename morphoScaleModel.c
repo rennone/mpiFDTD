@@ -7,6 +7,9 @@
 #include <mpi.h>
 //モルフォ蝶の鱗粉モデル.
 
+#define LEFT  false
+#define RIGHT true
+
 //横幅
 #define ST_WIDTH_NM 300
 #define EN_WIDTH_NM 300
@@ -23,14 +26,16 @@
 #define DELTA_THICK_NM_1 30
 
 //ラメラの枚数
-#define LAYER_NUM 11
+#define ST_LAYER_NUM 11
+#define EN_LAYER_NUM 11
+#define DELTA_LAYER_NUM 1
 
 //互い違い
-#define ASYMMETRY false
+#define ASYMMETRY true
 
 //中心に以下の幅で軸となる枝を入れる
-#define ST_BRANCH_NM 0
-#define EN_BRANCH_NM 0
+#define ST_BRANCH_NM 50
+#define EN_BRANCH_NM 50
 #define DELTA_BRANCH_NM 10
 
 //屈折率
@@ -39,7 +44,7 @@
 //#define N_0 8.4179 //serikon
 
 //先端における横幅の割合
-#define ST_EDGE_RATE 1.0
+#define ST_EDGE_RATE 0.5
 #define EN_EDGE_RATE 1.0
 #define DELTA_EDGE_RATE 0.1
 
@@ -48,16 +53,18 @@
 
 //エッジの角度をランダムに傾ける
 #define RANDOM_EDGE_ANGLE true
-static double edge_randomeness[LAYER_NUM];
+static double edge_randomeness[2][EN_LAYER_NUM];
 
 static int width_nm     = ST_WIDTH_NM;
 static int thickness_nm[2] = {ST_THICK_NM_0, ST_THICK_NM_1};
-static int layerNum = LAYER_NUM;     //枚数
+static int layerNum = ST_LAYER_NUM;     //枚数
 static int branch_width_nm = ST_BRANCH_NM; //枝の幅
 
 static double branch_width_s; //枝の幅
 static double width_s;        //幅
 static double thickness_s[2]; //厚さ
+static double height_s; //全体の高さ.
+static double ox_s, oy_s; //原点
 
 static double ep_s;        //誘電率 = n*n*ep0
 
@@ -65,25 +72,26 @@ static double edge_width_rate = ST_EDGE_RATE;
 
 static double c0; //2次関数の比例定数
 
-// 傾きがa, 切片がb1とb2 (b1<b2) の２つの平行な直線に, (x,y)が含まれるか判定
-static bool in2Line(double a, double b1, double b2, double x, double y)
+//1ラメラの式
+typedef struct Lamela
 {
-  double y1 = a*x + b1;
-  double y2 = a*x + b2;
+  double a, b1, b2; //傾き, 下の切片, 上の切片
+  int id; //ラメラのid
+} Lamela;
 
-  return ( y1 < y && y < y2 );
+static bool inLamela( Lamela *lamera, double x, double y)
+{
+  return ( lamera->a*x + lamera->b1 <= y && y <= lamera->a*x + lamera->b2 );
 }
 
 /*
 static double calc_width(double sx, double sy, double wid, double hei, double modY, int k)
 {
   double p = 1 - sy/hei;
-//  double new_wid = wid*(p + (1-p)*edge_width_rate);
   double new_wid = wid-branch_width_s*2 + (p + (1-p)*edge_width_rate)*branch_width_s;
 
   //ラメラの下を基準とした位置を求める
   double dh = k==0 ? modY : modY - thickness_s[0];
-  double c  = k==0 ? c0 : c1;
 
 //互い違いの場合はdhを再計算
   if(ASYMMETRY && sx < 0){
@@ -94,72 +102,87 @@ static double calc_width(double sx, double sy, double wid, double hei, double mo
   return c*pow((dh-thickness_s[k]/2),2) + new_wid;
   }*/
 
-static double eps(double x, double y, int col, int row)
+//
+static double calcLamela(double lft, double rht, double btm, double top, Lamela *lam)
 {
-  FieldInfo_S fInfo_s = field_getFieldInfo_S();
-  double width = width_s;
-  double thick = thickness_s[0] + thickness_s[1];
-  double height = thick*layerNum;  
+  lam->id = -1;
+  bool signX = lft<0 ? LEFT : RIGHT;
+  bool reverse = (signX==LEFT) && ASYMMETRY ? true : false;
+  double thick = thickness_s[0]+thickness_s[1];
+  double half_thick = reverse ? 0.5*thickness_s[1] : 0.5*thickness_s[0];
+  double offset_y = reverse ? thickness_s[0] + 0.5*thickness_s[1] : 0.5*thickness_s[0];
+  for(int i=0; i<layerNum; i++)
+  {
+    double oy = thick*i + offset_y ; //エッジの中心位置;
 
-  //領域の中心から, 下にheight/2ずれた位置がレイヤの下部
-  int oy = fInfo_s.N_PY/2 - height/2;
-  int ox = fInfo_s.N_PX/2;  
-  double _x = x-ox;	//ox,oyを座標の原点に
-  double _y = y-oy;
-
-  //上下左右に飛び出ていないか確認(細分化したセルがあるため, 0.5の余白をとっている)
-  double max_width = 0.5*(width*sqrt(2.0)/2.0 + thickness_s[0]); //45°の時に最も横幅が大きくなるのでそれを基準にする
-    if( fabs(_x) > (max_width + 0.5) )
-    return EPSILON_0_S;
-
-  int num = -1;
-  double a1, b1, b2;  
-  for( int i=0; i<layerNum; i++){
-    //エッジを回転させたときの, 二つの直線を求める.
-    double edge_oy = thick*i + 0.5*thickness_s[0]; //エッジの中心位置
-    double bm_b = edge_oy - 0.5*thickness_s[0]/cos(edge_randomeness[i]); //切片
-    double tp_b = edge_oy + 0.5*thickness_s[0]/cos(edge_randomeness[i]);
-    double a = _x < 0 ? -tan(edge_randomeness[i]) : tan(edge_randomeness[i]);
+    lam->a = tan(edge_randomeness[signX][i]); //傾き
+    lam->b1 = oy - half_thick/cos(edge_randomeness[signX][i]); //切片
+    lam->b2 = oy + half_thick/cos(edge_randomeness[signX][i]);
 
     // 1セルの正方形が重なるかを返す(4点のどれかが内側にあれば, 重なっていると判断. 2直線の幅は1セルよりも大きくするのでokなはず)
-    if( in2Line(a, bm_b, tp_b, _x-0.5, _y-0.5) || in2Line(a, bm_b, tp_b, _x-0.5, _y+0.5) ||
-        in2Line(a, bm_b, tp_b, _x+0.5, _y-0.5) || in2Line(a, bm_b, tp_b, _x+0.5, _y+0.5))
+    if( inLamela(lam, lft, btm) || inLamela(lam, rht, btm) ||
+        inLamela(lam, lft, top) || inLamela(lam, rht, top))
     {
-      num = i;
-      a1 = a;
-      b1 = bm_b;
-      b2 = tp_b;
+      lam->id = i;
       break;
     }
   }
-  
+}
+
+static double eps(double x, double y, int col, int row)
+{
+  double thick = thickness_s[0] + thickness_s[1];
+  double _x = x-ox_s;	//ox,oyを座標の原点に
+  double _y = y-oy_s;
+
+  //ラメラの中心で回転するので,本来の横幅よりも長くなる可能性がある.
+  //上下左右に飛び出ていないか確認(細分化したセルがあるため, 0.5の余白をとっている)
+  if( fabs(_x) > 0.5*sqrt(width_s*width_s + thickness_s[0]*thickness_s[0])+0.5 )
+    return EPSILON_0_S;
+
+  Lamela lams[2];
+
+  if( fabs(_x) > 0)
+  {
+    calcLamela(_x-0.5, _x+0.5, _y-0.5, _y+0.5, _x<0 ? &lams[LEFT] : &lams[RIGHT]);
+  } else
+  {
+    calcLamela(_x-0.5,      0, _y-0.5, _y+0.5, &lams[LEFT]);
+    calcLamela( 0    , _x+0.5, _y-0.5, _y+0.5, &lams[RIGHT]);
+  }
+
   double s=0; //n1の分割セルの数が入る  
   double split = 10;
   double half_split = split/2;
   for(double i=-half_split+0.5; i<half_split; i+=1){
     for(double j=-half_split+0.5; j<half_split; j+=1){
-      double sx = _x + col*i/32.0; //細分化したセルの位置
-      double sy = _y + row*j/32.0;
-
-      double p = 1 - sy/height;
+      double sx = _x + col*i/split; //細分化したセルの位置
+      double sy = _y + row*j/split;
+      double p = 1 - sy/height_s;
+      double width_p = (p + (1-p)*edge_width_rate);
       //枝の部分にあるか
-      if(abs(sx) < branch_width_s*(p + (1-p)*edge_width_rate)){
+      if(fabs(sx) < branch_width_s*width_p && sy>=0 && sy <= height_s){
         s += 1;
         continue;
       }
       
+      bool signX = sx < 0 ? LEFT : RIGHT;
+      Lamela *lam = &lams[signX];
+      
       //どのエッジとも重ならなければ, 枝とだけ判定すればいい
-      if(num <0)
+      if( lam->id < 0)
         continue;
 
-      //中心のxと符号が逆になる場合は, 傾きも逆になる.
-      double a = sx*_x < 0 ? -a1 : a1;
+      //ラメラのエッジの変化は, 切片に写像して考える.      
+      p = 1 - (sy-lam->a*sx)/height_s;
+      width_p = (p + (1-p)*edge_width_rate);
       
-      //TODO　エッジの幅を考慮してない
-      if( in2Line(a, b1, b2, sx, sy) ){
-        double sqrWidth = sx*sx*(1+a*a);
-        double offset = (b2 - (sy-a*sx))*sin(edge_randomeness[num]);
-        if( sqrWidth < pow(width/2 + offset, 2))
+      if( inLamela(lam, sx, sy) )
+      {
+        double sqrWidth = pow(sx,2)*(1+pow(lam->a,2) );
+        double rad = edge_randomeness[signX][lam->id];        
+        double offset = (signX == LEFT ? -1 : 1) *( 0.5*(lam->b2+lam->b1) - (sy-lam->a*sx) ) * sin( rad );
+        if( sqrWidth < pow( width_p*(width_s/2 + offset), 2))
           s+=1;
       }
     }
@@ -195,6 +218,7 @@ void morphoScaleModel_moveDirectory()
 
   sprintf(buf, "thick%d_%d_layer%d_edge%.1lf_branch%d",
           thickness_nm[0], thickness_nm[1], layerNum, edge_width_rate, branch_width_nm);
+
   makeDirectory(buf);
   moveDirectory(buf);
 }
@@ -204,14 +228,24 @@ void morphoScaleModel_init()
   width_s     = field_toCellUnit(width_nm);
   thickness_s[0] = field_toCellUnit(thickness_nm[0]);
   thickness_s[1] = field_toCellUnit(thickness_nm[1]);
-  ep_s = N_0*N_0*EPSILON_0_S;
-
   branch_width_s = field_toCellUnit(branch_width_nm);
+  
+  height_s = (thickness_s[0] + thickness_s[1])*layerNum;  
+  ep_s = N_0*N_0*EPSILON_0_S;
   
   c0 = 4*width_s*(CURVE-1)/thickness_s[0]/thickness_s[0];
 
+  //領域の中心から, 下にheight/2ずれた位置がレイヤの下部
+  FieldInfo_S fInfo_s = field_getFieldInfo_S();
+  oy_s = fInfo_s.N_PY/2 - height_s/2;
+  ox_s = fInfo_s.N_PX/2;
+
+  double TO_RAD = M_PI/180.0;
   for(int i=0; i<layerNum; i++)
-    edge_randomeness[i] = 45.0*M_PI/180.0;
+  {
+    edge_randomeness[RIGHT][i] = (rand()%20-10)*TO_RAD;
+    edge_randomeness[LEFT][i]  = (rand()%20-10)*TO_RAD;
+  }
 }
 
 //構造を一つ進める
