@@ -23,9 +23,6 @@ void ntffTM_init()
   NTFFInfo nInfo = field_getNTFFInfo();
   
   R0 = 1.0e6 * field_toCellUnit(500);//* field_getLambda_S();
-
-  double cx = nInfo.cx;
-  double cy = nInfo.cy;
   
   int tp = nInfo.top;    int bm = nInfo.bottom;  //上下
   int rt = nInfo.right;  int lt = nInfo.left;	 //左右
@@ -64,6 +61,7 @@ void ntffTM_finish()
 {
   
 }
+
 //周波数領域のNTFF
 void ntffTM_Frequency( dcomplex *Hx, dcomplex *Hy, dcomplex *Ez, dcomplex resultEz[360])
 {

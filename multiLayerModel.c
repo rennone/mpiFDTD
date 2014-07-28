@@ -46,7 +46,7 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 #define DELTA_EDGE_RATE 0.5
 
 //ラメラの先端を丸める曲率 (0で四角形のまま, 1.0で最もカーブする)
-#define CURVE 0.5
+#define CURVE 0.8
 
 static int width_nm[2]     = {ST_WIDTH_NM, ST_WIDTH_NM};
 static int thickness_nm[2] = {ST_THICK_NM_0, ST_THICK_NM_1};

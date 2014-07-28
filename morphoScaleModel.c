@@ -46,10 +46,10 @@
 //先端における横幅の割合
 #define ST_EDGE_RATE 0.0
 #define EN_EDGE_RATE 1.0
-#define DELTA_EDGE_RATE 0.1
+#define DELTA_EDGE_RATE 0.5
 
 //ラメラの先端を丸める曲率 (0で四角形のまま, 1.0で最もカーブする)
-#define CURVE 0.2
+#define CURVE 0.0
 
 //エッジの角度をランダムに傾ける
 #define RANDOMNESS 20
@@ -191,7 +191,6 @@ static double eps(double x, double y, int col, int row)
   s /= split*split;
   return EPSILON_0_S*(1-s) + ep_s*s;
 }
-
 
 //空気の層がエッジよりも厚みが少ないとき, 2つのラメラが重なる可能性があるのでチェック
 static bool cross2Lamela(double wid, double thick1, double thick2, double rad)

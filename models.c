@@ -5,6 +5,7 @@
 #include "concentricCircleModel.h"
 #include "multiLayerModel.h"
 #include "morphoScaleModel.h"
+#include "zigzagModel.h"
 #include "bool.h"
 #include "function.h"
 
@@ -53,9 +54,17 @@ static void morphoScaleModel()
   needSizeMethod = morphoScaleModel_needSize;
   initModelMethod = morphoScaleModel_init;  
   moveDirectoryMethod = morphoScaleModel_moveDirectory;
-/*  
-  printf("not implemented morpho Model");
-  exit(2);*/
+}
+
+static void zigzagModel()
+{
+  dir = "ZigZagModel";
+  epsMethod = zigzagModel_EPS();
+  isFinishMethod = zigzagModel_isFinish;
+  needSizeMethod = zigzagModel_needSize;
+  initModelMethod = zigzagModel_init;  
+  moveDirectoryMethod = zigzagModel_moveDirectory;
+
 }
 
 static void concentricCircleModel()
@@ -99,10 +108,10 @@ void models_setModel(enum MODEL model)
   case CONCENTRIC_CIRCLE:
     concentricCircleModel();
     break;
-  }
-  
-  //ディレクトリの移動
-//  models_moveDirectory();
+  case ZIGZAG:
+    zigzagModel();
+    break;
+  }  
 }
 
 double models_eps(double x, double y, enum MODE mode)
