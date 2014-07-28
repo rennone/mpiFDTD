@@ -45,8 +45,8 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 #define EN_EDGE_RATE 1.0
 #define DELTA_EDGE_RATE 0.5
 
-//ラメラの先端を丸める曲率 (1で四角形のまま, 0.0で最もカーブする)
-#define CURVE 1.0
+//ラメラの先端を丸める曲率 (0で四角形のまま, 1.0で最もカーブする)
+#define CURVE 0.5
 
 static int width_nm[2]     = {ST_WIDTH_NM, ST_WIDTH_NM};
 static int thickness_nm[2] = {ST_THICK_NM_0, ST_THICK_NM_1};
@@ -236,6 +236,6 @@ void multiLayerModel_init()
 
   branch_width_s = field_toCellUnit(branch_width_nm);
   
-  c0 = 4*width_s[0]*(CURVE-1)/thickness_s[0]/thickness_s[0];
-  c1 = 4*width_s[1]*(CURVE-1)/thickness_s[1]/thickness_s[1];
+  c0 = -4*width_s[0]*CURVE/thickness_s[0]/thickness_s[0];
+  c1 = -4*width_s[1]*CURVE/thickness_s[1]/thickness_s[1];
 }
