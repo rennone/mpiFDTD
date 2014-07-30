@@ -11,7 +11,7 @@
 //ラメラの厚さ
 #define ST_THICK_NM 30
 #define EN_THICK_NM 150
-#define DELTA_THICK_NM 30
+#define DELTA_THICK_NM 20
 
 //ラメラの枚数
 #define ST_LAYER_NUM 11
@@ -23,7 +23,7 @@
 
 #define ST_DEGREE 10
 #define EN_DEGREE 80
-#define DELTA_DEGREE 10
+#define DELTA_DEGREE 5
 
 static int width_nm     = ST_WIDTH_NM;
 static int thickness_nm = ST_THICK_NM;
@@ -79,8 +79,28 @@ static double eps(double _x, double _y, int col, int row)
 
 static bool nextStructure()
 {
-  UN_DONE("zigzag nextStructure");
-  return true;
+  degree += DELTA_DEGREE;
+  if(degree > EN_DEGREE)
+  {
+    degree = ST_DEGREE;
+    thickness_nm += DELTA_THICK_NM;
+    if(thickness_nm > EN_THICK_NM)
+    {
+      thickness_nm = ST_THICK_NM;    
+      width_nm += DELTA_WIDTH_NM;
+      if(width_nm > EN_WIDTH_NM)
+      {
+        width_nm = ST_WIDTH_NM;
+        layerNum += DELTA_LAYER_NUM;
+        if(layerNum > EN_LAYER_NUM)
+        {
+          printf("there are no models which hasn't been simulated yet\n");
+          return true;
+        }
+      }
+    }
+  } 
+  return false;
 }
 
 double ( *zigzagModel_EPS())(double, double, int, int)
@@ -95,8 +115,23 @@ bool zigzagModel_isFinish()
 
 void zigzagModel_moveDirectory()
 {
-  makeDirectory("tmp");
-  moveDirectory("tmp");
+  char buf[512];
+
+  //屈折率
+  sprintf(buf,"n_%.2lf", N_0);
+  makeDirectory(buf);
+  moveDirectory(buf);
+
+  //幅,厚さ, 層数
+  sprintf(buf,"width%d_thick%d_layer%d", width_nm, thickness_nm, layerNum);
+  makeDirectory(buf);
+  moveDirectory(buf);
+  
+  //角度
+  sprintf(buf,"degree_%d", degree);
+  makeDirectory(buf);
+  moveDirectory(buf);
+
 }
 
 void zigzagModel_needSize(int *x, int*y)
