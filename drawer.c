@@ -238,6 +238,18 @@ static void colorTransform(double phi, colorf *col)
   col->g = min(1.0, max(0.0, -3*ab_phi+2));
 }
 
+static void modelColorTransform(double n, colorf *col)
+{
+  double phi = n - 1.0;
+  double range = 2.0; //波の振幅  
+  double ab_phi = phi < 0 ? -phi : phi;
+  double a = ab_phi < range ? (ab_phi <  range/3.0 ? 3.0/range*ab_phi : (-3.0/4.0/range*ab_phi+1.25) ) : 0.5;
+  
+  col->r = phi > 0 ? a:0;
+  col->b = phi < 0 ? a:0;
+  col->g = min(1.0, max(0.0, -3*ab_phi+2));
+}
+
 void drawer_outputImage(char *fileName, dcomplex *data, double *model, int width, int height)
 {
   const int bpp = 24; //1ピクセルセル24ビット
@@ -254,12 +266,10 @@ void drawer_outputImage(char *fileName, dcomplex *data, double *model, int width
   for(int j=0; j<height; j++)
     for(int i=0; i<data_width; i++)
     {
-      colorTransform( 0 , &c);
-      double n = model[i*height+j];
-      double c_n = n == 0 ? 0 : 1.0-1.0/n;
-      buf[k]   = max(0, min(255, (c.b-c_n)*255));
-      buf[k+1] = max(0, min(255, (c.g-c_n)*255));
-      buf[k+2] = max(0, min(255, (c.r-c_n)*255));
+      modelColorTransform( model[i*height+j] , &c);
+      buf[k]   = max(0, min(255, c.b*255));
+      buf[k+1] = max(0, min(255, c.g*255));
+      buf[k+2] = max(0, min(255, c.r*255));
       k+= (bpp>>3);
     }
 

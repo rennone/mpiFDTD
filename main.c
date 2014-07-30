@@ -16,7 +16,7 @@ typedef struct Config
   enum SOLVER SolverType;
 }Config;
 
-#define ST_PHI -90
+#define ST_PHI -180
 #define EN_PHI 0
 #define DELTA_PHI 5
 
@@ -221,7 +221,7 @@ int main( int argc, char *argv[] )
 {
   getcwd(root, 512); //カレントディレクトリを保存
   
-  models_setModel(LAYER);       //
+  models_setModel(TRACE_IMAGE);       //MORPHO_SCALE, LAYER, ZIGZAG
   simulator_setSolver(TM_UPML_2D);
   
   MPI_Init( 0, 0 );
@@ -329,6 +329,7 @@ static void drawSubField()
 
 static void display()
 {
+  glClear(GL_COLOR_BUFFER_BIT);
   glEnableClientState( GL_VERTEX_ARRAY );
   glEnableClientState( GL_TEXTURE_COORD_ARRAY );
 
