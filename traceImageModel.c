@@ -99,7 +99,8 @@ static void readImage()
 
 static bool nextStructure()
 {
-  UN_DONE("traceImage nextStracutre");
+  //別の構造は無い
+  return true;
 }
 
 double ( *traceImageModel_EPS(void))(double, double, int, int)
@@ -115,9 +116,6 @@ bool traceImageModel_isFinish()
 
 void traceImageModel_moveDirectory()
 {
-  makeDirectory("tmp");
-  moveDirectory("tmp");
-  //UN_DONE("traceImage moveDirectory");
 }
 
 void traceImageModel_needSize(int *x, int *y)
