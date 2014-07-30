@@ -221,7 +221,7 @@ int main( int argc, char *argv[] )
 {
   getcwd(root, 512); //カレントディレクトリを保存
   
-  models_setModel(ZIGZAG);       //MORPHO_SCALE, LAYER
+  models_setModel(TRACE_IMAGE);       //MORPHO_SCALE, LAYER, ZIGZAG
   simulator_setSolver(TM_UPML_2D);
   
   MPI_Init( 0, 0 );

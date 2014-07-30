@@ -6,6 +6,7 @@
 #include "multiLayerModel.h"
 #include "morphoScaleModel.h"
 #include "zigzagModel.h"
+#include "traceImageModel.h"
 #include "bool.h"
 #include "function.h"
 
@@ -67,6 +68,16 @@ static void zigzagModel()
 
 }
 
+static void traceImageModel()
+{
+  dir = "TraceImageModel";
+  epsMethod = traceImageModel_EPS();
+  isFinishMethod = traceImageModel_isFinish;
+  needSizeMethod = traceImageModel_needSize;
+  initModelMethod = traceImageModel_init;  
+  moveDirectoryMethod = traceImageModel_moveDirectory;
+}
+
 static void concentricCircleModel()
 {
   dir = "ConcentricCircleModel";
@@ -110,6 +121,9 @@ void models_setModel(enum MODEL model)
     break;
   case ZIGZAG:
     zigzagModel();
+    break;
+  case TRACE_IMAGE:
+    traceImageModel();
     break;
   }  
 }

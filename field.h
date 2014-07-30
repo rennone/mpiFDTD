@@ -153,15 +153,16 @@ extern void field_outputAllDataDouble(const char *fileName,double* data); //
   for(int k=fInfo_s.N_PY+1, last = fInfo_s.N_CELL-fInfo_s.N_PY; k<last; k+=2) \
     for(int endRow = k+fInfo_s.N_PY-2; k<endRow; k++)
 
+/*
 //--------------------for debug--------------------//
 static inline void field_debugPrint(double complex *A)
 {
   for(int i=1; i<N_PX; i++){
     for(int j=1; j<N_PY; j++){
-      double complex a = A[ind(i,j)];
+      double complex a = A[index(i,j)];
       if(creal(a) > 1.0)
 	printf("(%d, %d) : %lf \n", i, j, creal(a));
     }
   }
-}
+  }*/
 #endif
