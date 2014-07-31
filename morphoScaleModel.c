@@ -251,7 +251,10 @@ void morphoScaleModel_moveDirectory()
 
   sprintf(buf, "thick%d_%d_layer%d_edge%.1lf_branch%d",
           thickness_nm[0], thickness_nm[1], layerNum, edge_width_rate, branch_width_nm);
+  makeDirectory(buf);
+  moveDirectory(buf);
 
+  sprintf(buf, "randome%d", RANDOM_SEED );
   makeDirectory(buf);
   moveDirectory(buf);
 }
