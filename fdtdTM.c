@@ -25,7 +25,6 @@ static void reset(void);
 static void init(void);
 static inline void calcE(void);
 static inline void calcH(void);
-static void ntffFrequency(void);
 
 //---------------public method---------------//
 //---------------getter------------------//
@@ -238,7 +237,6 @@ static void init(){
 }
 
 static void finish(){
-  ntffFrequency();
   
   if(Hx != NULL){    free(Hx); Hx = NULL;}
   if(Hy != NULL){    free(Hy); Hy = NULL;}
@@ -317,146 +315,4 @@ static inline void calcH()
   for(i=1; i<N_PX-1; i++)
     for(j=1; j<N_PY-1; j++)
       Hy[ind(i,j)] = CHY(i,j)*HY(i,j) + CHYLX(i,j)*( EZX(i+1,j)-EZX(i,j) + EZY(i+1,j)-EZY(i,j) );  
-}
-
-static inline void ntffFrequency()
-{
-  double cx = N_PX/2;
-  double cy = N_PY/2;
-
-  double k_s = field_getK();
-
-  double r0 = 1.0e6;
-  double complex coef = csqrt( I*k_s/(8*M_PI*r0) ) * cexp(I*k_s*r0);
-  
-  NTFFInfo nInfo = field_getNTFFInfo();  
-  int tp = nInfo.top;     //上面
-  int bm = nInfo.bottom; //下面
-  int rt = nInfo.right;  //右
-  int lt = nInfo.left;	 //左
-
-  const int max_angle = 360;
-  double complex ntffEz[max_angle];
-  /*
-  double complex debugNz[4][max_angle];
-  double complex debugLx[2][max_angle];
-  double complex debugLy[2][max_angle];
-  */
-  int ang;
-  for(ang=0; ang<max_angle; ang++)
-  {
-    double rad = ang*M_PI/180.0;
-
-    double rx  = cos(rad), ry = sin(rad);
-    double r2x, r2y;
-
-    double complex Nz = 0;
-    double complex Lx = 0;
-    double complex Ly = 0;
-    double complex C_EZ, C_HX, C_HY;
-    int i,j;	
-    // (left,bottom) -> (right,bottom)
-    // 法線ベクトルはn=(0, -1)
-    for ( i=lt; i<rt; i++ )
-    {
-      r2x  =  i-cx;
-      r2y  = bm-cy;
-      C_EZ = EZ(i,bm);
-      C_HX = 0.5 * ( HX(i,bm) + HX(i,bm-1) );
-      
-      double innerProd = rx*r2x + ry*r2y;  //内積
-      Nz  += C_HX * cexp( I * k_s * innerProd );  // J = n × H = (0   ,0,C_HX)
-      Lx  += C_EZ * cexp( I * k_s * innerProd );  // M = E × n = (C_EZ,0,   0)
-    }
-    /*
-    debugNz[0][ang] = Nz;
-    debugLx[0][ang] = Lx;
-    */
-
-    // (right,bottom) -> (right,top) n=(1,0)
-    for ( j=bm; j<tp; j++ )
-    {
-      r2x  = rt-cx;
-      r2y  =  j-cy;
-      C_EZ = EZ(rt,j);
-      C_HY = 0.5 * ( HY(rt,j) + HY(rt-1,j) );
-
-      double innerProd = rx*r2x + ry*r2y;  //内積
-      Nz  += C_HY * cexp( I * k_s * innerProd );  // J = n × H = (0,   0, C_HY)
-      Ly  += C_EZ * cexp( I * k_s * innerProd );  // M = E × n = (0,C_EZ,    0)
-    }
-    /*
-    debugNz[1][ang] = Nz - debugNz[0][ang];
-    debugLy[0][ang] = Ly;
-    */
-
-    // (right,top) -> (left,top)  n=(0,1)
-    for ( i=lt; i<rt; i++ )
-    {
-      r2x  =  i-cx;
-      r2y  = tp-cy;
-      C_EZ = EZ(i,tp);
-      C_HX = 0.5 * ( HX(i,tp) + HX(i,tp-1) );
-
-      double innerProd = rx*r2x  + ry*r2y;  //内積
-      Nz   -= C_HX * cexp( I * k_s * innerProd );  // J = n × H = (0,    0, -C_HX)
-      Lx   -= C_EZ * cexp( I * k_s * innerProd );  // M = E × n = (-C_EZ,0,     0)
-    }
-    /*
-    debugNz[2][ang] = Nz - debugNz[0][ang] - debugNz[1][ang];
-    debugLx[1][ang] = Lx - debugLx[0][ang];
-    */
-    // (left,top) -> (left,bottom)
-    for ( j=bm; j<tp; j++ )
-    {
-      r2x =   lt-cx; r2y = j-cy;
-      C_EZ  = EZ(lt,j);
-      C_HY  = 0.5 * ( HY(lt,j) + HY(lt-1,j));
-
-      double innerProd = rx*r2x  + ry*r2y;  //内積      
-      Nz   -= C_HY * cexp( I * k_s * innerProd );  // J = n × H = (0,     0, -C_HY)		
-      Ly   -= C_EZ * cexp( I * k_s * innerProd );  // M = E × n = (0, -C_EZ,     0)
-    }
-    /*
-    debugNz[3][ang] = Nz - debugNz[0][ang] - debugNz[1][ang] - debugNz[2][ang];
-    debugLy[1][ang] = Ly - debugLy[0][ang];
-    */
-    double complex Lphi = -Lx*sin(rad) + Ly*cos(rad); //極座標変換
-    ntffEz[ang] = coef * ( Z_0_S*Nz + Lphi );
-  }
-
-  FILE *fpR = fopen("TMntffRe.txt", "w");
-  FILE *fpI = fopen("TMntffIm.txt", "w");
-  for(ang = 0; ang<max_angle; ang++)
-  {
-    fprintf(fpR, "%.18lf\n", creal(ntffEz[ang]));
-    fprintf(fpI, "%.18lf\n", cimag(ntffEz[ang]));
-  }
-/*
-  FILE *debugNzFp[4];
-  debugNzFp[0] = fopen("debugNz0.txt", "w");
-  debugNzFp[1] = fopen("debugNz1.txt", "w");
-  debugNzFp[2] = fopen("debugNz2.txt", "w");
-  debugNzFp[3] = fopen("debugNz3.txt", "w");
-
-  FILE *debugLxFp[2];
-  debugLxFp[0] = fopen("debugLx0.txt", "w");
-  debugLxFp[1] = fopen("debugLx1.txt", "w");
-  
-  FILE *debugLyFp[2];
-  debugLyFp[0] = fopen("debugLy0.txt", "w");
-  debugLyFp[1] = fopen("debugLy1.txt", "w");
-  
-  for(ang=0; ang<max_angle; ang++)
-  {
-    for(int j=0; j<4; j++)
-      fprintf(debugNzFp[j], "%lf %lf\n", creal(debugNz[j][ang]), cimag(debugNz[j][ang]) );
-
-    for(int j=0; j<2; j++)
-    {
-      fprintf(debugLxFp[j], "%lf %lf\n", creal(debugLx[j][ang]), cimag(debugLx[j][ang]) );
-      fprintf(debugLyFp[j], "%lf %lf\n", creal(debugLy[j][ang]), cimag(debugLy[j][ang]) );
-    }
-  }
-*/
 }
