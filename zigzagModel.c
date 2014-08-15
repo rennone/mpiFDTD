@@ -9,21 +9,21 @@
 #define DELTA_WIDTH_NM 10
 
 //ラメラの厚さ
-#define ST_THICK_NM 30
+#define ST_THICK_NM 80
 #define EN_THICK_NM 150
-#define DELTA_THICK_NM 20
+#define DELTA_THICK_NM 10
 
 //ラメラの枚数
-#define ST_LAYER_NUM 11
+#define ST_LAYER_NUM 5
 #define EN_LAYER_NUM 11
-#define DELTA_LAYER_NUM 1
+#define DELTA_LAYER_NUM 2
 
 //屈折率
 #define N_0 1.56
 
 #define ST_DEGREE 10
 #define EN_DEGREE 80
-#define DELTA_DEGREE 5
+#define DELTA_DEGREE 10
 
 static int width_nm     = ST_WIDTH_NM;
 static int thickness_nm = ST_THICK_NM;

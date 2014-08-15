@@ -21,8 +21,8 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 #define DELTA_THICK_NM_1 10
 
 //ラメラの枚数
-#define ST_LAYER_NUM 8
-#define EN_LAYER_NUM 14
+#define ST_LAYER_NUM 4
+#define EN_LAYER_NUM 8
 #define DELTA_LAYER_NUM 1
 //#define LAYER_NUM 4
 
@@ -30,7 +30,7 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 #define ASYMMETRY true
 
 //中心に以下の幅で軸となる枝を入れる => 軸の屈折率はN_1になる
-#define ST_BRANCH_NM 50
+#define ST_BRANCH_NM 0
 #define EN_BRANCH_NM 50
 #define DELTA_BRANCH_NM 10
 
@@ -46,7 +46,7 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 #define DELTA_EDGE_RATE 0.5
 
 //ラメラの先端を丸める曲率 (0で四角形のまま, 1.0で最もカーブする)
-#define CURVE 0.8
+#define CURVE 0.0
 
 static int width_nm[2]     = {ST_WIDTH_NM, ST_WIDTH_NM};
 static int thickness_nm[2] = {ST_THICK_NM_0, ST_THICK_NM_1};
@@ -172,7 +172,6 @@ static bool nextStructure()
     if(edge_width_rate > EN_EDGE_RATE)
     {
       edge_width_rate = ST_EDGE_RATE;
-
       branch_width_nm += DELTA_BRANCH_NM;
       if(branch_width_nm > EN_BRANCH_NM)
       	{

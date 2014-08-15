@@ -16,25 +16,25 @@
 #define DELTA_WIDTH_NM 10
 
 //ラメラの厚さ
-#define ST_THICK_NM_0 90
-#define EN_THICK_NM_0 150
+#define ST_THICK_NM_0 80
+#define EN_THICK_NM_0 170
 #define DELTA_THICK_NM_0 30
 
 //空気の部分の厚さ
-#define ST_THICK_NM_1 90
-#define EN_THICK_NM_1 150
+#define ST_THICK_NM_1 80
+#define EN_THICK_NM_1 170
 #define DELTA_THICK_NM_1 30
 
 //ラメラの枚数
-#define ST_LAYER_NUM 11
-#define EN_LAYER_NUM 11
-#define DELTA_LAYER_NUM 1
+#define ST_LAYER_NUM 4
+#define EN_LAYER_NUM 12
+#define DELTA_LAYER_NUM 2
 
 //互い違い
 #define ASYMMETRY true
 
 //中心に以下の幅で軸となる枝を入れる
-#define ST_BRANCH_NM 50
+#define ST_BRANCH_NM 0
 #define EN_BRANCH_NM 50
 #define DELTA_BRANCH_NM 10
 
@@ -49,7 +49,7 @@
 #define DELTA_EDGE_RATE 0.5
 
 //ラメラの先端を丸める曲率 (0で四角形のまま, 1.0で最もカーブする)
-#define CURVE 0.0
+#define CURVE 0.2
 
 //エッジの角度をランダムに傾ける
 #define RANDOMNESS 20
@@ -254,7 +254,7 @@ void morphoScaleModel_moveDirectory()
   makeDirectory(buf);
   moveDirectory(buf);
 
-  sprintf(buf, "randome%d", RANDOM_SEED );
+  sprintf(buf, "randome%d_%d", RANDOMNESS, RANDOM_SEED );
   makeDirectory(buf);
   moveDirectory(buf);
 }
@@ -278,8 +278,8 @@ void morphoScaleModel_init()
   double TO_RAD = M_PI/180.0;
   for(int i=0; i<layerNum; i++)
   {
-    edge_randomeness[RIGHT][i] = (rand()%(RANDOMNESS+1)-RANDOMNESS/2.0)*TO_RAD;
-    edge_randomeness[LEFT][i]  = (rand()%(RANDOMNESS+1)-RANDOMNESS/2.0)*TO_RAD;
+    edge_randomeness[RIGHT][i] = (rand()%(RANDOMNESS+1)-RANDOMNESS/2)*TO_RAD;
+    edge_randomeness[LEFT][i]  = (rand()%(RANDOMNESS+1)-RANDOMNESS/2)*TO_RAD;
   }
 }
 

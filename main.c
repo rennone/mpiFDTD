@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <mpi.h>
 #include <complex.h>
+#include <unistd.h>
 #include "simulator.h"
 #include "models.h"
 #include "field.h"
@@ -165,10 +166,10 @@ static void calcFieldSize(FieldInfo *fInfo)
 
 static void initParameter()
 {
-  config.field_info.h_u_nm    = 10;
+  config.field_info.h_u_nm    = 5;
   config.field_info.pml       = 10;
   config.field_info.lambda_nm = 500;
-  config.field_info.stepNum   = 10;//1500;
+  config.field_info.stepNum   = 1500;
   config.field_info.angle_deg = ST_PHI;
   config.startAngle = ST_PHI;
   config.endAngle   = EN_PHI;
@@ -221,8 +222,8 @@ int main( int argc, char *argv[] )
 {
   getcwd(root, 512); //カレントディレクトリを保存
   
-  models_setModel(ZIGZAG);       //MORPHO_SCALE, LAYER, TRACE_IMAGE
-  simulator_setSolver(TM_UPML_2D);
+  models_setModel( LAYER);       //,, ,TRACE_IMAGE, ZIGZAG,MORPHO_SCALE
+  simulator_setSolver(TE_UPML_2D);
   
   MPI_Init( 0, 0 );
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);

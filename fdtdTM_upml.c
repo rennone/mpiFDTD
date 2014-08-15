@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <unistd.h>
 #include "fdtdTM_upml.h"
 #include "field.h"
 #include "models.h"

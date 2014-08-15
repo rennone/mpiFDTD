@@ -24,7 +24,7 @@ extern void models_setModel(enum MODEL model);
 
 //(x,y)における誘電率を取得
 extern double models_eps(double x, double y, enum MODE mode);
-extern bool mpdels_isFinish(void);
+extern bool models_isFinish(void);
 extern void models_moveDirectory(void); //所定のディレクトリまで移動する為の関数
 extern void models_needSize(int *x_nm,int *y_nm);
 extern void models_initModel();

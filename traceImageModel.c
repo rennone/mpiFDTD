@@ -5,6 +5,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#define ST_SCALE_WIDTH_NM 400
+#define EN_SCALE_WIDTH_NM 1000
+#define DELTA_SCALE_WIDTH_NM 100
+static int scale_width_nm = ST_SCALE_WIDTH_NM;
+static int scale_width_px;
 static double nmPerPixel, pixelPerCell;
 static int width_px, height_px;
 static double width_s, height_s;
@@ -42,9 +47,7 @@ static double eps(double _x, double _y, int col, int row)
   double y = -_y + top_s;
   
   if( x<-0.5 || x>=width_s+0.5 || y<-0.5 || y>height_s+0.5)
-    return EPSILON_0_S;
-
-  
+    return EPSILON_0_S;  
   
   double s=0; //n1の分割セルの数が入る  
   double split = 10;
@@ -82,7 +85,9 @@ static void readImage()
   }
 
   //横幅と縦幅, 1ピクセルの大きさを取得
-  fscanf(fp,"%d %d %lf",&width_px, &height_px, &nmPerPixel);
+  // nmPerPixel depend on morpho scale width( in this case it's is asumed 300nm)
+  fscanf(fp,"%d %d %d",&width_px, &height_px, &scale_width_px);
+  nmPerPixel = 1.0 * scale_width_nm / scale_width_px;
   epsilonMap = newDouble(width_px*height_px);
   for(int y=0; y<height_px; y++){
     for(int x=0; x<width_px; x++){
@@ -99,8 +104,13 @@ static void readImage()
 
 static bool nextStructure()
 {
+  scale_width_nm += DELTA_SCALE_WIDTH_NM;
+  if(scale_width_nm > EN_SCALE_WIDTH_NM)
+    return true;
+
+  nmPerPixel = scale_width_nm / scale_width_px;
   //別の構造は無い
-  return true;
+  return false;
 }
 
 double ( *traceImageModel_EPS(void))(double, double, int, int)
@@ -116,6 +126,11 @@ bool traceImageModel_isFinish()
 
 void traceImageModel_moveDirectory()
 {
+  char buf[512];
+  //屈折率
+  sprintf(buf,"scale_width%d", scale_width_nm);
+  makeDirectory(buf);
+  moveDirectory(buf); 
 }
 
 void traceImageModel_needSize(int *x, int *y)
