@@ -26,7 +26,7 @@
 #define DELTA_THICK_NM_1 30
 
 //ラメラの枚数
-#define ST_LAYER_NUM 4
+#define ST_LAYER_NUM 8
 #define EN_LAYER_NUM 12
 #define DELTA_LAYER_NUM 2
 
@@ -44,7 +44,7 @@
 //#define N_0 8.4179 //serikon
 
 //先端における横幅の割合
-#define ST_EDGE_RATE 0.0
+#define ST_EDGE_RATE 1.0
 #define EN_EDGE_RATE 1.0
 #define DELTA_EDGE_RATE 0.5
 
@@ -52,8 +52,17 @@
 #define CURVE 0.2
 
 //エッジの角度をランダムに傾ける
-#define RANDOMNESS 20
+#define RANDOMNESS 30
 #define RANDOM_SEED 0 //各プロセスで同じ角度になるようにseedを固定する
+
+//1ラメラの式
+typedef struct Lamela
+{
+  double a, b1, b2; //傾き, 下の切片, 上の切片
+  int id; //ラメラのid
+} Lamela;
+
+static Lamela lamelas[2][EN_LAYER_NUM];
 static double edge_randomeness[2][EN_LAYER_NUM];
 
 static int width_nm     = ST_WIDTH_NM;
@@ -72,62 +81,52 @@ static double ep_s;        //誘電率 = n*n*ep0
 static double edge_width_rate = ST_EDGE_RATE;
 
 
-//1ラメラの式
-typedef struct Lamela
-{
-  double a, b1, b2; //傾き, 下の切片, 上の切片
-  int id; //ラメラのid
-} Lamela;
-
 static bool inLamela( Lamela *lamera, double x, double y)
 {
   return ( lamera->a*x + lamera->b1 <= y && y <= lamera->a*x + lamera->b2 );
 }
 
-static double calcWidth(double sx, double sy, Lamela *lam)
+//(sx, sy) : リッジの底辺の中心を原点としたときの座標
+static double getWidth(double sx, double sy, Lamela *lam)
 {
-  //x座標により, width_rateが変わるのを防ぐため.
-  //ラメラのエッジの変化は, (sx,sy)を切片に写像して考える.
+  double b = (sy-sx*lam->a); //sx, syを通るラメラの切片
   bool signX = sx < 0 ? LEFT : RIGHT;
-  double rad = edge_randomeness[signX][lam->id];        
-  double offset = (signX == LEFT ? -1 : 1) *( 0.5*(lam->b2+lam->b1) - (sy-lam->a*sx) ) * sin( rad );
-
-  double p = 1 - (sy-lam->a*sx)/height_s;
+  double rad = edge_randomeness[signX][lam->id];
+  double offset = (signX == LEFT ? -1 : 1) *( 0.5*(lam->b2+lam->b1) - b ) * sin( rad );
+  
+  double p = 1 - b/height_s;
   double width_p = (p + (1-p)*edge_width_rate);
-  double b = (sy-sx*lam->a);
-  double x  =  (b-lam->b1)/(lam->b2-lam->b1) - 0.5;
+  double y  =  (b-lam->b1)/(lam->b2-lam->b1) - 0.5;
 
   double half_width = width_s/2.0;
-  // 両端(x=+-0.5)の時に, width_s/2.0*CURVE 長さが減るように係数を設定
+  // 両端(y=+-0.5)の時に, width_s/2.0*CURVE 長さが減るように係数を設定
   double c0 = 4.0*half_width*CURVE;
   
   //丸まったところ以外だけ長さが短くなるようにする.
   // p*(丸みをのぞいた横幅) + 丸みまった部分 + 傾きによるオフセット
-  return width_p*( half_width*(1-CURVE) ) + c0*(0.25 - x*x) + offset;
+  return width_p*( half_width*(1-CURVE) ) + c0*(0.25 - y*y) + offset;
 }
 
+//lrbtで表される長方形がどのラメラに含まれるか調べる.
 static void calcLamela(double lft, double rht, double btm, double top, Lamela *lam)
 {
   lam->id = -1;
   bool signX = lft<0 ? LEFT : RIGHT;
   bool reverse = (signX==LEFT) && ASYMMETRY ? true : false;
   double thick = thickness_s[0]+thickness_s[1];
-  double half_thick = 0.5*thickness_s[0];//reverse ? 0.5*thickness_s[1] : 0.5*thickness_s[0];
+  double half_thick = 0.5*thickness_s[0];
   double offset_y = reverse ? thickness_s[1] + half_thick : half_thick;
   for(int i=0; i<layerNum; i++)
   {
-    double oy = thick*i + offset_y ; //エッジの中心位置;
-
-    lam->a = tan(edge_randomeness[signX][i]); //傾き
-    lam->b1 = oy - half_thick/cos(edge_randomeness[signX][i]); //切片
-    lam->b2 = oy + half_thick/cos(edge_randomeness[signX][i]);
-
+    lam->a  = lamelas[signX][i].a;
+    lam->b1 = lamelas[signX][i].b1;
+    lam->b2 = lamelas[signX][i].b2;
     // 1セルの正方形が重なるかを返す(4点のどれかが内側にあれば, 重なっていると判断. 2直線の幅は1セルよりも大きくするのでokなはず)
     if( inLamela(lam, lft, btm) || inLamela(lam, rht, btm) ||
         inLamela(lam, lft, top) || inLamela(lam, rht, top))
     {
       lam->id = i;
-      break;
+      return;
     }
   }
 }
@@ -144,7 +143,7 @@ static double eps(double x, double y, int col, int row)
 
   Lamela lams[2];
 
-  if( fabs(_x) > 0)
+  if( fabs(_x) > 0.5)
   {
     calcLamela(_x-0.5, _x+0.5, _y-0.5, _y+0.5, _x<0 ? &lams[LEFT] : &lams[RIGHT]);
   } else
@@ -163,7 +162,7 @@ static double eps(double x, double y, int col, int row)
       
       //枝の部分にあるか判定
       if(sy>=0 && sy <= height_s){
-        //ブランチはラメラとは無関係なのでpはそのまま計算.
+        //枝はラメラとは無関係なのでpはそのまま計算.
         double p = 1 - sy/height_s;
         double width_p = (p + (1-p)*edge_width_rate);
         if(fabs(sx) < branch_width_s/2.0*width_p){
@@ -173,32 +172,51 @@ static double eps(double x, double y, int col, int row)
       }
       
       bool signX = sx < 0 ? LEFT : RIGHT;
+//
       Lamela *lam = &lams[signX];
       
       //どのエッジとも重ならなければ, 枝とだけ判定すればいい
       if( lam->id < 0)
-        continue;
-      
+        continue;   
+
+      lam = &(lamelas[signX][lam->id]);
+
+      //調べたラメラと重なるかチェック
       if( inLamela(lam, sx, sy) )
       {
         double sqrWidth = pow(sx,2)*(1+pow(lam->a,2) );
-        double newWidth = calcWidth(sx, sy, lam);
+        double newWidth = getWidth(sx, sy, lam);
         if( sqrWidth < pow( newWidth, 2))
+        {
           s+=1;
+          continue;
+        }
       }
+
+      //範囲外の場合は上下のラメラとも比べる.
+      for(int k=-1; k<2; k+=2)
+      {
+        int id = lam->id + k;
+        if(id < 0 || id>=layerNum)
+          continue;
+        
+        Lamela *_lam = &lamelas[signX][id];
+        if( inLamela( _lam, sx, sy) )
+        {
+          double sqrWidth = pow(sx,2)*(1+pow(_lam->a,2) );
+          double newWidth = getWidth(sx, sy, _lam);
+          if( sqrWidth < pow( newWidth, 2))
+          {
+            s+=1;
+            break;
+          }
+        }
+      }
+      
     }
-  }
+  }  
   s /= split*split;
   return EPSILON_0_S*(1-s) + ep_s*s;
-}
-
-//空気の層がエッジよりも厚みが少ないとき, 2つのラメラが重なる可能性があるのでチェック
-static bool cross2Lamela(double wid, double thick1, double thick2, double rad)
-{
-  double length = sin(rad/2.0)*wid + (cos(rad/2.0)-1.0)*thick1;
-  //上のラメラが-RANDOMNESS/2 , 下のラメラが+RANDOMNESS/2の時に
-  //飛び出た分が空気の層の厚みを超えなければok
-  return length > thick2;
 }
 
 //構造を一つ進める
@@ -276,49 +294,40 @@ void morphoScaleModel_init()
 
   srand(RANDOM_SEED);
   double TO_RAD = M_PI/180.0;
+
   for(int i=0; i<layerNum; i++)
   {
     edge_randomeness[RIGHT][i] = (rand()%(RANDOMNESS+1)-RANDOMNESS/2)*TO_RAD;
     edge_randomeness[LEFT][i]  = (rand()%(RANDOMNESS+1)-RANDOMNESS/2)*TO_RAD;
   }
+
+  double thick = thickness_s[0]+thickness_s[1];
+  double half_thick = 0.5*thickness_s[0];
+  double offset_y_left  = ASYMMETRY ? thickness_s[1] + half_thick : half_thick;
+  double offset_y_right = half_thick;
+  for(int i=0; i<layerNum; i++)
+  {
+    lamelas[LEFT][i].a  = tan(edge_randomeness[LEFT][i]); //傾き
+    lamelas[LEFT][i].b1 = thick*i + offset_y_left - half_thick/cos(edge_randomeness[LEFT][i]);    //切片
+    lamelas[LEFT][i].b2 = thick*i + offset_y_left + half_thick/cos(edge_randomeness[LEFT][i]);
+    lamelas[LEFT][i].id = i;
+    
+    lamelas[RIGHT][i].a  = tan(edge_randomeness[RIGHT][i]); //傾き
+    lamelas[RIGHT][i].b1 = thick*i + offset_y_right - half_thick/cos(edge_randomeness[RIGHT][i]); //切片
+    lamelas[RIGHT][i].b2 = thick*i + offset_y_right + half_thick/cos(edge_randomeness[RIGHT][i]);
+    lamelas[RIGHT][i].id = i;
+  }
+
 }
 
 double ( *morphoScaleModel_EPS(void))(double, double, int, int)
-{
-  
-  /*
-  if(cross2Lamela())
-  {
-    printf("skip this case because perhaps two lamela will be cross \n");
-    bool res = nextStructure();
-    while ( !res && cross2Lamela() )
-    {
-      printf("skip this case because perhaps two lamela will be cross \n");
-      res = nextStructure();
-    }
-    if(res)
-    {
-      printf("can not try this simulation because all parameter has possible that two lamela will be cross \n");
-      exit(0);
-    }
-    }*/
-  if(cross2Lamela(EN_WIDTH_NM, ST_THICK_NM_0, ST_THICK_NM_1, RANDOMNESS*M_PI/180.0))
-  {
-    printf("can not try this simulation because there are possible that two lamela will be cross \n");
-    exit(0);
-  }
+{ 
   return eps;
 }
 
 bool morphoScaleModel_isFinish(void)
 {
   bool res = nextStructure();
-  /*
-  while ( !res && cross2Lamela() )
-  {
-    printf("skip this case because perhaps two lamela will be cross \n");
-    res = nextStructure();
-    }*/
   return res;
 }
 
