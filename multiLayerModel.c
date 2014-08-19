@@ -29,6 +29,11 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 //互い違い
 #define ASYMMETRY true
 
+//異方性を入れるかのフラグ
+#define UNIAXIAL true
+#define N_0_X 1.0
+#define N_1_X 1.1
+
 //中心に以下の幅で軸となる枝を入れる => 軸の屈折率はN_1になる
 #define ST_BRANCH_NM 0
 #define EN_BRANCH_NM 50
@@ -37,6 +42,7 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 //屈折率
 #define N_0 1.0
 #define N_1 1.56
+
 //serikon
 //#define N_1 8.4179
 
@@ -58,6 +64,7 @@ static double width_s[2];     //幅
 static double thickness_s[2]; //厚さ
 
 static double ep_s[2];        //誘電率 = n*n*ep0
+static double ep_x_s[2];      //異方性用のx方向の誘電率
 
 static double edge_width_rate = ST_EDGE_RATE;
 
@@ -149,7 +156,14 @@ static double eps(double x, double y, int col, int row)
 
   s[0] /= split*split;
   s[1] /= split*split;
-  return EPSILON_0_S*(1-s[0]-s[1]) + ep_s[0]*s[0] + ep_s[1]*s[1];
+  if(UNIAXIAL && col == 0 && row == 1)
+  {
+    return EPSILON_0_S*(1-s[0]-s[1]) + ep_x_s[0]*s[0] + ep_x_s[1]*s[1];
+  }
+  else
+  {
+    return EPSILON_0_S*(1-s[0]-s[1]) + ep_s[0]*s[0] + ep_s[1]*s[1];
+  }
 }
 
 double ( *multiLayerModel_EPS(void))(double, double, int, int)
@@ -209,11 +223,20 @@ void multiLayerModel_moveDirectory()
     moveDirectory("symmetry");
   }  
   char buf[512];
-  // make folder by index of reflaction 
-  sprintf(buf,"n_%.2lf_%.2lf", N_0, N_1);
-  makeDirectory(buf);
-  moveDirectory(buf);
+  // make folder by index of reflaction
 
+  if(UNIAXIAL){
+    sprintf(buf,"uniaxial_n0y%.2lf_n0x%.2lf_n1x%.2lf_n1x%.2lf", N_0, N_0_X, N_1, N_1_X);
+    makeDirectory(buf);
+    moveDirectory(buf);
+  }
+  else
+  {
+    sprintf(buf,"n_%.2lf_%.2lf", N_0, N_1);
+    makeDirectory(buf);
+    moveDirectory(buf);
+  }
+  
   sprintf(buf,"curve_%.2lf", CURVE);
   makeDirectory(buf);
   moveDirectory(buf);
@@ -232,7 +255,9 @@ void multiLayerModel_init()
   thickness_s[1] = field_toCellUnit(thickness_nm[1]);
   ep_s[0] = N_0*N_0*EPSILON_0_S;
   ep_s[1] = N_1*N_1*EPSILON_0_S;
-
+  ep_x_s[0] = N_0_X*N_0_X*EPSILON_0_S;
+  ep_x_s[1] = N_1_X*N_1_X*EPSILON_0_S;
+  
   branch_width_s = field_toCellUnit(branch_width_nm);
   
   c0 = -4*width_s[0]*CURVE/thickness_s[0]/thickness_s[0];

@@ -13,7 +13,8 @@ enum MODEL
   TRACE_IMAGE
 };
 
-enum MODE{
+enum MODE
+{
   D_X, //x方向に線積分
   D_Y, //y方向に線積分
   D_XY //面積分 

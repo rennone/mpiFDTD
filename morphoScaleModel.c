@@ -10,6 +10,10 @@
 #define LEFT  false
 #define RIGHT true
 
+//異方性を入れるかのフラグ
+#define UNIAXIAL true
+#define N_0_X 1.1
+
 //横幅
 #define ST_WIDTH_NM 300
 #define EN_WIDTH_NM 300
@@ -77,6 +81,7 @@ static double height_s; //全体の高さ.
 static double ox_s, oy_s; //原点
 
 static double ep_s;        //誘電率 = n*n*ep0
+static double ep_x_s;      //異方性(x方向用)の誘電率
 
 static double edge_width_rate = ST_EDGE_RATE;
 
@@ -112,10 +117,6 @@ static void calcLamela(double lft, double rht, double btm, double top, Lamela *l
 {
   lam->id = -1;
   bool signX = lft<0 ? LEFT : RIGHT;
-  bool reverse = (signX==LEFT) && ASYMMETRY ? true : false;
-  double thick = thickness_s[0]+thickness_s[1];
-  double half_thick = 0.5*thickness_s[0];
-  double offset_y = reverse ? thickness_s[1] + half_thick : half_thick;
   for(int i=0; i<layerNum; i++)
   {
     lam->a  = lamelas[signX][i].a;
@@ -130,7 +131,7 @@ static void calcLamela(double lft, double rht, double btm, double top, Lamela *l
     }
   }
 }
-    
+
 static double eps(double x, double y, int col, int row)
 {
   double _x = x-ox_s;	//ox,oyを座標の原点に
@@ -216,7 +217,18 @@ static double eps(double x, double y, int col, int row)
     }
   }  
   s /= split*split;
-  return EPSILON_0_S*(1-s) + ep_s*s;
+
+  // 異方性ありで EXのεを求めている場合
+  // TODO col, row で決め撃ちしてるけど HZでもこれを満たしている.
+  // (ただし, HのEPSはupmlでは使わないので無視していいからこのようにハードコーディングしてる)  
+  if( UNIAXIAL && col == 0 && row == 1)
+  {
+    return EPSILON_0_S*(1-s) + ep_x_s*s;
+  }
+  else
+  {
+    return EPSILON_0_S*(1-s) + ep_s*s;
+  }
 }
 
 //構造を一つ進める
@@ -249,7 +261,7 @@ static bool nextStructure()
 
 //正しいディレクトリまで移動.
 void morphoScaleModel_moveDirectory()
-{
+{      
   if(ASYMMETRY){
     makeDirectory("asymmetry");
     moveDirectory("asymmetry");
@@ -258,11 +270,19 @@ void morphoScaleModel_moveDirectory()
     moveDirectory("symmetry");
   }  
   char buf[512];
-  // make folder by index of reflaction 
-  sprintf(buf,"n_%.2lf", N_0);
-  makeDirectory(buf);
-  moveDirectory(buf);
+  // make folder by index of reflaction
 
+  if(UNIAXIAL){
+    sprintf(buf,"uniaxial_ny%.2lf_nx%.2lf", N_0, N_0_X);
+    makeDirectory(buf);
+    moveDirectory(buf);
+  }
+  else
+  {
+    sprintf(buf,"n_%.2lf", N_0);
+    makeDirectory(buf);
+    moveDirectory(buf);
+  }
   sprintf(buf,"curve_%.2lf", CURVE);
   makeDirectory(buf);
   moveDirectory(buf);
@@ -285,7 +305,8 @@ void morphoScaleModel_init()
   branch_width_s = field_toCellUnit(branch_width_nm);
   
   height_s = (thickness_s[0] + thickness_s[1])*layerNum;  
-  ep_s = N_0*N_0*EPSILON_0_S;
+  ep_s   = N_0*N_0*EPSILON_0_S;
+  ep_x_s = N_0_X*N_0_X*EPSILON_0_S;
 
   //領域の中心から, 下にheight/2ずれた位置がレイヤの下部
   FieldInfo_S fInfo_s = field_getFieldInfo_S();

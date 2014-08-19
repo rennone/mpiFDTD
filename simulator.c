@@ -43,8 +43,6 @@ static void setTM()
   printf("TM mode \n");
 
   solverDir = "TM";
-//  makeDirectory("TM");
-//  moveDirectory("TM");
 }
 
 static void setTE()
@@ -62,8 +60,6 @@ static void setTE()
   getDrawData = getDataY;
   printf("TE mode \n");
   solverDir = "TE";
-//  makeDirectory("TE");
-//  moveDirectory("TE");
 }
 
 static void setTMupml()
@@ -82,8 +78,6 @@ static void setTMupml()
   printf("TM UPML mode \n");
 
   solverDir = "TM_UPML";
-//  makeDirectory("TM_UPML");
-//  moveDirectory("TM_UPML");
 }
 
 static void setTEupml()
@@ -102,8 +96,6 @@ static void setTEupml()
   printf("TE UPML mode \n");
 
   solverDir = "TE_UPML";
-//  makeDirectory("TE_UPML");
-//  moveDirectory("TE_UPML");
 }
 
 static void setMPITMupml(){
@@ -122,8 +114,6 @@ static void setMPITMupml(){
   printf("MPI TM UPML mode \n");
 
   solverDir = "MPI_TM_UPML";
-//  makeDirectory("MPI_TM_UPML");
-//  moveDirectory("MPI_TM_UPML");
 }
 
 static void setMPITEupml(){
@@ -143,8 +133,6 @@ static void setMPITEupml(){
   printf("MPI TE UPML mode \n");
 
   solverDir = "MPI_TE_UPML";
-//  makeDirectory("MPI_TE_UPML");
-//  moveDirectory("MPI_TE_UPML");
 }
 
 static void setSolver(enum SOLVER solver)

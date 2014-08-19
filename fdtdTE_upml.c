@@ -150,7 +150,7 @@ static void reset()
   memset(Uz, 0, size);
 }
 
-
+/*
 //Standard Scattered Wave
 static void scatteredWave(double complex *p, double *eps){
   double time = field_getTime();
@@ -171,9 +171,7 @@ static void scatteredWave(double complex *p, double *eps){
       double ikx = i*ks_cos + j*ks_sin; //k_s*(i*cos + j*sin)
       
       //p[ind(i,j)] += ray_coef*(EPSILON_0_S/eps[ind(i,j)] - 1)*( cos(ikx-w_s*time) + I*sin(ikx-w_s*time) );
-
-      
-            int k = field_index(i,j);
+      int k = field_index(i,j);
       //ガウシアンパルス
       const double r = (i*_cos+j*_sin)/C_0_S-(time-t0);
       const double gaussian_coef = exp( -pow(r/beam_width, 2 ) );
@@ -181,7 +179,7 @@ static void scatteredWave(double complex *p, double *eps){
       
     }
   }
-}
+  }*/
 
 static inline void update(void)
 {
@@ -298,7 +296,6 @@ static void calcJD(void)
 
 static void calcE(void)
 {
-  FieldInfo_S fInfo_s = field_getFieldInfo_S();
   int i,j;
   for(i=1; i<N_PX-1; i++)
     for(j=1; j<N_PY-1; j++)
@@ -328,8 +325,7 @@ static void calcMB(void)
 }
 
 static void calcH(void)
-{
-  FieldInfo_S fInfo_s = field_getFieldInfo_S();
+{ 
    for(int i=1; i<N_PX-1; i++)     
     for(int j=1; j<N_PY-1; j++)
     {
