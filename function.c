@@ -1,4 +1,5 @@
 #include "function.h"
+#include <math.h>
 
 void delete(void *ptr)
 {
@@ -43,11 +44,14 @@ bool makeDirectory(const char* name)
            S_IROTH | S_IXOTH | S_IXOTH ) == 0)
   {
     printf("make directory %s\n",name);
+    return true;
   } else {
     //作れなかったときは、多分すでに存在するとき.
     printf("directory %s is already exist\n", name);
+    return false;
   }
 }
+
 void moveDirectory(const char* name)
 {
   if(chdir(name)==0)
