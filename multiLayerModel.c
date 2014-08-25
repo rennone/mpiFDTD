@@ -12,22 +12,21 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 #define DELTA_WIDTH_NM 10
 
 //ラメラの厚さ
-#define ST_THICK_NM_0 60
+#define ST_THICK_NM_0 90
 #define EN_THICK_NM_0 160
 #define DELTA_THICK_NM_0 10
 
-#define ST_THICK_NM_1 60
+#define ST_THICK_NM_1 90
 #define EN_THICK_NM_1 160
 #define DELTA_THICK_NM_1 10
 
 //ラメラの枚数
 #define ST_LAYER_NUM 4
-#define EN_LAYER_NUM 8
+#define EN_LAYER_NUM 6
 #define DELTA_LAYER_NUM 1
-//#define LAYER_NUM 4
 
 //互い違い
-#define ASYMMETRY true
+#define ASYMMETRY false
 
 //異方性を入れるかのフラグ
 #define UNIAXIAL true
@@ -37,7 +36,7 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 //中心に以下の幅で軸となる枝を入れる => 軸の屈折率はN_1になる
 #define ST_BRANCH_NM 0
 #define EN_BRANCH_NM 50
-#define DELTA_BRANCH_NM 10
+#define DELTA_BRANCH_NM 50
 
 //屈折率
 #define N_0 1.0

@@ -1,17 +1,20 @@
+#include "drawer.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <string.h>
+#include <math.h>
+#include "function.h"
 static int putBmpHeader(FILE *s, int x, int y, int c);
 static int fputc4LowHigh(unsigned long d, FILE *s);
 static int fputc2LowHigh(unsigned short d, FILE *s);
 
+typedef struct {
+ float r,g,b;
+}colorf;
 
 #ifdef USE_OPENGL
 
-#include "drawer.h"
-#include "function.h"
-#include <string.h>
-#include <math.h>
 #include <GL/glew.h>
 
 
@@ -23,11 +26,6 @@ static int fputc2LowHigh(unsigned short d, FILE *s);
 #ifndef MAC_OS
 #include <GL/glut.h>
 #endif
-
-
-typedef struct {
- GLfloat r,g,b;
-}colorf;
 
 static const int vertexNum = 4; //頂点数
 #define TEX_NX 256

@@ -59,5 +59,10 @@ void moveDirectory(const char* name)
   }
 }
 
+void makeAndMoveDirectory(const char* name)
+{
+  makeDirectory(name);
+  moveDirectory(name);
+}
 #endif
 

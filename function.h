@@ -12,7 +12,7 @@ extern double dbilinear(double *p, double x, double y, int width, int height);
 extern FILE* openFile(const char* file_name);
 extern bool makeDirectory(const char*);
 extern void moveDirectory(const char*);
-
+extern void makeAndMoveDirectory(const char*);
 //まだ実装していない部分をexitさせたいときに使う.
 #define UN_DONE(msg) printf("not implement "); printf(msg); printf(" yet\n"); exit(2)
 

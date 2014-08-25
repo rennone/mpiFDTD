@@ -11,7 +11,7 @@
 #define RIGHT true
 
 //異方性を入れるかのフラグ
-#define UNIAXIAL true
+#define UNIAXIAL false
 #define N_0_X 1.1
 
 //横幅
@@ -20,18 +20,18 @@
 #define DELTA_WIDTH_NM 10
 
 //ラメラの厚さ
-#define ST_THICK_NM_0 80
-#define EN_THICK_NM_0 170
+#define ST_THICK_NM_0 120
+#define EN_THICK_NM_0 180
 #define DELTA_THICK_NM_0 30
 
 //空気の部分の厚さ
 #define ST_THICK_NM_1 80
 #define EN_THICK_NM_1 170
-#define DELTA_THICK_NM_1 30
+#define DELTA_THICK_NM_1 0
 
 //ラメラの枚数
-#define ST_LAYER_NUM 8
-#define EN_LAYER_NUM 12
+#define ST_LAYER_NUM 4
+#define EN_LAYER_NUM 4
 #define DELTA_LAYER_NUM 2
 
 //互い違い
@@ -40,7 +40,7 @@
 //中心に以下の幅で軸となる枝を入れる
 #define ST_BRANCH_NM 0
 #define EN_BRANCH_NM 50
-#define DELTA_BRANCH_NM 10
+#define DELTA_BRANCH_NM 50
 
 //屈折率
 #define N_0 1.56
@@ -56,7 +56,7 @@
 #define CURVE 0.2
 
 //エッジの角度をランダムに傾ける
-#define RANDOMNESS 30
+#define RANDOMNESS 0
 #define RANDOM_SEED 0 //各プロセスで同じ角度になるようにseedを固定する
 
 //1ラメラの式
@@ -286,13 +286,26 @@ void morphoScaleModel_moveDirectory()
   sprintf(buf,"curve_%.2lf", CURVE);
   makeDirectory(buf);
   moveDirectory(buf);
+  
+  sprintf(buf, "thick%d_%d",thickness_nm[0], thickness_nm[1]);
+  makeAndMoveDirectory(buf);
 
+  sprintf(buf,"layer%d",layerNum);
+  makeAndMoveDirectory(buf);
+
+  sprintf(buf, "edge%.1lf", edge_width_rate);
+  makeAndMoveDirectory(buf);
+
+  sprintf(buf, "branch%d", branch_width_nm);
+  makeAndMoveDirectory(buf);
+
+  /*
   sprintf(buf, "thick%d_%d_layer%d_edge%.1lf_branch%d",
           thickness_nm[0], thickness_nm[1], layerNum, edge_width_rate, branch_width_nm);
   makeDirectory(buf);
   moveDirectory(buf);
-
-  sprintf(buf, "randome%d_%d", RANDOMNESS, RANDOM_SEED );
+  */
+  sprintf(buf, "random%d_%d", RANDOMNESS, RANDOM_SEED );
   makeDirectory(buf);
   moveDirectory(buf);
 }
