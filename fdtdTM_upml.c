@@ -246,8 +246,8 @@ static void setCoefficient(void){
   for(int i=0; i<fInfo_s.N_PX; i++){
     for(int j=0; j<fInfo_s.N_PY; j++){
       int k = field_index(i,j);
-      EPS_EZ[k] = models_eps(i,j, D_XY);     //todo D_X, D_Yにしなくていいのか?
-      EPS_HX[k] = models_eps(i,j+0.5, D_XY);
+      EPS_EZ[k] = models_eps(i,j, D_XY);     
+      EPS_HX[k] = models_eps(i,j+0.5, D_XY);//todo D_X, D_Yにしなくていいのか?
       EPS_HY[k] = models_eps(i+0.5,j, D_XY);
       
       sig_ez_x = sig_max*field_sigmaX(i,j);

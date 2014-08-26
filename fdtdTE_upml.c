@@ -92,7 +92,7 @@ double complex* fdtdTE_upml_getHz(void)
 
 double* fdtdTE_upml_getEps()
 {
-  return EPS_EY;
+  return EPS_EX;
 }
 
 //---------------------------------------------------//
@@ -395,7 +395,12 @@ static void setCoefficient()
       EPS_EX[k] = models_eps(i+0.5,j, D_Y);
       EPS_EY[k] = models_eps(i,j+0.5, D_X);
       EPS_HZ[k] = 0.5*(models_eps(i+0.5,j+0.5, D_X) + models_eps(i+0.5,j+0.5, D_Y));
-
+      /*
+      if( i >= N_PX/2-1 && i <= N_PX/2+1 && EPS_EX[k] > 1)
+	{
+	  printf("%lf ", EPS_EX[k]);
+	}
+      */
       sig_ex_x = sig_max*field_sigmaX(i+0.5,j);
       sig_ex_y = sig_max*field_sigmaY(i+0.5,j);
       sig_ey_x = sig_max*field_sigmaX(i,j+0.5);

@@ -20,26 +20,26 @@
 #define DELTA_WIDTH_NM 10
 
 //ラメラの厚さ
-#define ST_THICK_NM_0 120
-#define EN_THICK_NM_0 180
-#define DELTA_THICK_NM_0 30
+#define ST_THICK_NM_0 90
+#define EN_THICK_NM_0 120
+#define DELTA_THICK_NM_0 10
 
 //空気の部分の厚さ
-#define ST_THICK_NM_1 80
-#define EN_THICK_NM_1 170
-#define DELTA_THICK_NM_1 0
+#define ST_THICK_NM_1 40
+#define EN_THICK_NM_1 80
+#define DELTA_THICK_NM_1 10
 
 //ラメラの枚数
 #define ST_LAYER_NUM 4
-#define EN_LAYER_NUM 4
-#define DELTA_LAYER_NUM 2
+#define EN_LAYER_NUM 10
+#define DELTA_LAYER_NUM 6
 
 //互い違い
 #define ASYMMETRY true
 
 //中心に以下の幅で軸となる枝を入れる
 #define ST_BRANCH_NM 0
-#define EN_BRANCH_NM 50
+#define EN_BRANCH_NM 0
 #define DELTA_BRANCH_NM 50
 
 //屈折率
@@ -48,7 +48,7 @@
 //#define N_0 8.4179 //serikon
 
 //先端における横幅の割合
-#define ST_EDGE_RATE 1.0
+#define ST_EDGE_RATE 0.0
 #define EN_EDGE_RATE 1.0
 #define DELTA_EDGE_RATE 0.5
 
@@ -235,24 +235,23 @@ static double eps(double x, double y, int col, int row)
 static bool nextStructure()
 {
   thickness_nm[0] += DELTA_THICK_NM_0;
-  thickness_nm[1] += DELTA_THICK_NM_1;
-
-  if(thickness_nm[0] > EN_THICK_NM_0)
-  {
+  if(thickness_nm[0] > EN_THICK_NM_0){
     thickness_nm[0] = ST_THICK_NM_0;
-    thickness_nm[1] = ST_THICK_NM_1;
-
-    edge_width_rate += DELTA_EDGE_RATE;
-    if(edge_width_rate > EN_EDGE_RATE)
-    {
-      edge_width_rate = ST_EDGE_RATE;
-
-      branch_width_nm += DELTA_BRANCH_NM;
-      if(branch_width_nm > EN_BRANCH_NM)
-      	{
-	  printf("there are no models which hasn't been simulated yet\n");     
+    thickness_nm[1] += DELTA_THICK_NM_1;
+    
+    if(thickness_nm[1] > EN_THICK_NM_1){
+      thickness_nm[1] = ST_THICK_NM_1;
+      edge_width_rate += DELTA_EDGE_RATE;
+      
+      if(edge_width_rate > EN_EDGE_RATE){
+	edge_width_rate = ST_EDGE_RATE;
+	branch_width_nm += DELTA_BRANCH_NM;
+	
+	if(branch_width_nm > EN_BRANCH_NM){
+	  printf("there are no models which hasn't been simulated yet\n");
 	  return true;
 	}
+      }
     }
   }
   return false;  

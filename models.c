@@ -134,10 +134,13 @@ double models_eps(double x, double y, enum MODE mode)
   switch(mode){
   case D_X :
     epsilon = (*epsMethod)(x, y, 1, 0);
+    break;
   case D_Y :
     epsilon = (*epsMethod)(x, y, 0, 1);
+    break;
   case D_XY :
     epsilon = (*epsMethod)(x, y, 1, 1);
+    break;
   default:
     epsilon = (*epsMethod)(x, y, 1, 1);
   }

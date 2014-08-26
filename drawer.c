@@ -238,14 +238,10 @@ static void colorTransform(double phi, colorf *col)
 
 static void modelColorTransform(double n, colorf *col)
 {
-  double phi = n - 1.0;
-  double range = 2.0; //波の振幅  
-  double ab_phi = phi < 0 ? -phi : phi;
-  double a = ab_phi < range ? (ab_phi <  range/3.0 ? 3.0/range*ab_phi : (-3.0/4.0/range*ab_phi+1.25) ) : 0.5;
-  
-  col->r = phi > 0 ? a:0;
-  col->b = phi < 0 ? a:0;
-  col->g = min(1.0, max(0.0, -3*ab_phi+2));
+  colorTransform(0, col);
+  col->r -= (1-1.0/n/n);
+  col->g -= (1-1.0/n/n);
+  col->b -= (1-1.0/n/n);  
 }
 
 void drawer_outputImage(char *fileName, dcomplex *data, double *model, int width, int height)
