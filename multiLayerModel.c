@@ -21,17 +21,17 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 #define DELTA_THICK_NM_1 10
 
 //ラメラの枚数
-#define ST_LAYER_NUM 4
-#define EN_LAYER_NUM 4
+#define ST_LAYER_NUM 7
+#define EN_LAYER_NUM 8
 #define DELTA_LAYER_NUM 1
 
 //互い違い
 #define ASYMMETRY false
 
 //異方性を入れるかのフラグ
-#define UNIAXIAL true
+#define UNIAXIAL false
 #define N_0_X 1.0
-#define N_1_X 8.4179
+#define N_1_X 1.1
 
 //中心に以下の幅で軸となる枝を入れる => 軸の屈折率はN_1になる
 #define ST_BRANCH_NM 0
@@ -200,7 +200,40 @@ static bool nextStructure()
   }
   return false;  
 }
+/*
+//構造を一つ進める
+static bool nextStructure()
+{
+  thickness_nm[0] += DELTA_THICK_NM_0;
 
+  if(thickness_nm[0] > EN_THICK_NM_0)
+  {
+    thickness_nm[1] += DELTA_THICK_NM_1;
+    thickness_nm[0] = ST_THICK_NM_0;
+    
+    if(thickness_nm[1] > EN_THICK_NM_1){ 
+      thickness_nm[1] = ST_THICK_NM_1;
+      edge_width_rate += DELTA_EDGE_RATE;
+      
+      if(edge_width_rate > EN_EDGE_RATE) {
+	edge_width_rate = ST_EDGE_RATE;
+	branch_width_nm += DELTA_BRANCH_NM;
+	
+	if(branch_width_nm > EN_BRANCH_NM) {
+	  branch_width_nm = ST_BRANCH_NM;
+	  layerNum += DELTA_LAYER_NUM;
+	  
+	  if( layerNum > EN_LAYER_NUM) {
+	    printf("there are no models which hasn't been simulated yet\n");
+	    return true;
+	  }
+	}
+      }
+    }
+  }
+  return false;  
+}
+*/
 bool multiLayerModel_isFinish(void)
 {
   return nextStructure();
@@ -240,6 +273,9 @@ void multiLayerModel_moveDirectory()
   makeDirectory(buf);
   moveDirectory(buf);
 
+  sprintf(buf, "width%d_%d", width_nm[0], width_nm[0]);
+  makeAndMoveDirectory(buf);
+  
   sprintf(buf, "thick%d_%d_layer%d_edge%.1lf_branch%d",
           thickness_nm[0], thickness_nm[1], layerNum, edge_width_rate, branch_width_nm);
   makeDirectory(buf);

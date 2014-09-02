@@ -17,8 +17,8 @@ void ntffTE_TimeTranslate(dcomplex *Wx, dcomplex *Wy,dcomplex *Uz, dcomplex *Eth
 {
   const double w_s = field_getOmega();
   // 1/4πRcをここでかけている(宇野先生の本では無限遠方点のためRを省略している)
-  // たぶん,Rをつける意味はないと思う.
-  const double complex coef = 1.0/(4*M_PI*C_0_S*R0)*csqrt( 2*M_PI*C_0_S/(I*w_s) );
+  // たぶん,Rをつける意味はないと思う. => kesita
+  const double complex coef = 1.0/(4*M_PI*C_0_S)*csqrt( 2*M_PI*C_0_S/(I*w_s) );
   const int maxTime = field_getMaxTime();
   NTFFInfo nInfo = field_getNTFFInfo();
 

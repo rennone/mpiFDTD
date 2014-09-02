@@ -21,18 +21,18 @@
 
 //ラメラの厚さ
 #define ST_THICK_NM_0 90
-#define EN_THICK_NM_0 120
+#define EN_THICK_NM_0 170
 #define DELTA_THICK_NM_0 10
 
 //空気の部分の厚さ
-#define ST_THICK_NM_1 40
-#define EN_THICK_NM_1 80
+#define ST_THICK_NM_1 90
+#define EN_THICK_NM_1 170
 #define DELTA_THICK_NM_1 10
 
 //ラメラの枚数
 #define ST_LAYER_NUM 4
-#define EN_LAYER_NUM 10
-#define DELTA_LAYER_NUM 6
+#define EN_LAYER_NUM 4
+#define DELTA_LAYER_NUM 1
 
 //互い違い
 #define ASYMMETRY true
@@ -231,14 +231,34 @@ static double eps(double x, double y, int col, int row)
   }
 }
 
+static bool nextStructure(){
+   thickness_nm[0] += DELTA_THICK_NM_0;
+   thickness_nm[1] += DELTA_THICK_NM_1;    
+   if(thickness_nm[1] > EN_THICK_NM_1){
+     thickness_nm[0] = ST_THICK_NM_0;
+     thickness_nm[1] = ST_THICK_NM_1;
+     edge_width_rate += DELTA_EDGE_RATE;
+      
+     if(edge_width_rate > EN_EDGE_RATE){
+       edge_width_rate = ST_EDGE_RATE;
+       branch_width_nm += DELTA_BRANCH_NM;
+	
+       if(branch_width_nm > EN_BRANCH_NM){
+	 printf("there are no models which hasn't been simulated yet\n");
+	 return true;
+       }
+     }
+   }  
+  return false;  
+}
+/*
 //構造を一つ進める
 static bool nextStructure()
 {
   thickness_nm[0] += DELTA_THICK_NM_0;
   if(thickness_nm[0] > EN_THICK_NM_0){
     thickness_nm[0] = ST_THICK_NM_0;
-    thickness_nm[1] += DELTA_THICK_NM_1;
-    
+    thickness_nm[1] += DELTA_THICK_NM_1;    
     if(thickness_nm[1] > EN_THICK_NM_1){
       thickness_nm[1] = ST_THICK_NM_1;
       edge_width_rate += DELTA_EDGE_RATE;
@@ -256,7 +276,7 @@ static bool nextStructure()
   }
   return false;  
 }
-
+*/
 
 //正しいディレクトリまで移動.
 void morphoScaleModel_moveDirectory()
@@ -285,6 +305,9 @@ void morphoScaleModel_moveDirectory()
   sprintf(buf,"curve_%.2lf", CURVE);
   makeDirectory(buf);
   moveDirectory(buf);
+  
+  sprintf(buf, "width%d", width_nm);
+  makeAndMoveDirectory(buf);
   
   sprintf(buf, "thick%d_%d",thickness_nm[0], thickness_nm[1]);
   makeAndMoveDirectory(buf);

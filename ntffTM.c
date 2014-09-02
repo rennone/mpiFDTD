@@ -155,8 +155,8 @@ void ntffTM_Frequency( dcomplex *Hx, dcomplex *Hy, dcomplex *Ez, dcomplex result
 void ntffTM_TimeTranslate(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, dcomplex *Eth, dcomplex *Eph)
 {
   const double w_s = field_getOmega();
-  //1.0/(4*M_PI*C_0_S*R0)*
-  const double complex coef = 1.0/(4*M_PI*C_0_S*R0)*csqrt( 2*M_PI*C_0_S/(I*w_s) );
+  // don't divide by R0 -> textbook by uno
+  const double complex coef = 1.0/(4*M_PI*C_0_S)*csqrt( 2*M_PI*C_0_S/(I*w_s) );
   const int maxTime = field_getMaxTime();
   NTFFInfo nInfo = field_getNTFFInfo();  
   double theta = 0;
@@ -231,7 +231,6 @@ void ntffTM_TimeCalc(dcomplex *Hx, dcomplex *Hy, dcomplex *Ez, dcomplex *Ux, dco
 {
   FieldInfo_S fInfo_s      = field_getFieldInfo_S();  
 //  const double coef = 1.0/(4*M_PI*C_0_S*R0);
-
   double timeE = field_getTime() - 1;   //t - Δt
   double timeH = field_getTime() - 0.5; //t - Δt/2
   
