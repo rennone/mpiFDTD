@@ -21,12 +21,15 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 #define DELTA_THICK_NM_1 10
 
 //ラメラの枚数
-#define ST_LAYER_NUM 7
+#define ST_LAYER_NUM 4
 #define EN_LAYER_NUM 8
 #define DELTA_LAYER_NUM 1
 
 //互い違い
 #define ASYMMETRY false
+
+// => 0 ~ thickness_nm[0] まで変化する.( 0 だと互い違いにはならない. thicknessで完全な互い違い )
+#define DELTA_LEFT_GAP_Y 10
 
 //異方性を入れるかのフラグ
 #define UNIAXIAL false
@@ -54,26 +57,33 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 #define CURVE 0.0
 
 static int width_nm[2]     = {ST_WIDTH_NM, ST_WIDTH_NM};
-static int thickness_nm[2] = {ST_THICK_NM_0, ST_THICK_NM_1};
-static int layerNum = ST_LAYER_NUM;     //枚数
-static int branch_width_nm = ST_BRANCH_NM; //枝の幅
-
-static double branch_width_s; //枝の幅
 static double width_s[2];     //幅
+
+static int thickness_nm[2] = {ST_THICK_NM_0, ST_THICK_NM_1};
 static double thickness_s[2]; //厚さ
 
+static int branch_width_nm = ST_BRANCH_NM; //枝の幅
+static double branch_width_s; //枝の幅
+
+static int layerNum = ST_LAYER_NUM;     //枚数
+
+//N_0 N_1から計算
 static double ep_s[2];        //誘電率 = n*n*ep0
 static double ep_x_s[2];      //異方性用のx方向の誘電率
 
 static double edge_width_rate = ST_EDGE_RATE;
 
+//DELTA_LEFT_GAP_Y
+static int left_gap_y_nm = 0;
+static double left_gap_y_s;
+
+//CURVE から計算
 static double c0, c1; //2次関数の比例定数
 
 static double calc_width(double sx, double sy, double wid, double hei, double modY, int k)
 {
   double p = 1 - sy/hei;
   double new_wid = (wid+branch_width_s)*(p + (1-p)*edge_width_rate);
-  //  double new_wid = wid-branch_width_s*2 + (p + (1-p)*edge_width_rate)*branch_width_s;
 
   //ラメラの下を基準とした位置を求める
   double dh = k==0 ? modY : modY - thickness_s[0];
@@ -96,7 +106,7 @@ static double eps(double x, double y, int col, int row)
 
   double width = max(width_s[0], width_s[1]);
   double thick = thickness_s[0] + thickness_s[1];
-  double height = thick*layerNum;
+  double height = thick*layerNum + left_gap_y_s; //オフセットがあれば行う
 
   //領域の中心から, 下にheight/2ずれた位置がレイヤの下部
   int oy = fInfo_s.N_PY/2 - height/2;
@@ -116,6 +126,10 @@ static double eps(double x, double y, int col, int row)
       double sx = _x + col*i/split; //細分化したセルの位置
       double sy = _y + row*j/split;
 
+      //左側はleft_gapだけずらす.
+      if(sx < 0)
+        sy -= left_gap_y_s;
+      
       //上下に飛び出ていないか確認
       if(sy < 0 || sy > height)
         continue;
@@ -148,7 +162,7 @@ static double eps(double x, double y, int col, int row)
       
       double wid = calc_width(sx, sy, width_s[k], height, modY, k);
       
-      if(fabs(sx) < wid/2) //width_s[k]
+      if(fabs(sx) < wid/2)
         s[k] +=1;
     }    
   }
@@ -173,29 +187,34 @@ double ( *multiLayerModel_EPS(void))(double, double, int, int)
 //構造を一つ進める
 static bool nextStructure()
 {
-  thickness_nm[0] += DELTA_THICK_NM_0;
-  thickness_nm[1] += DELTA_THICK_NM_1;
-
-  if(thickness_nm[0] > EN_THICK_NM_0)
+  left_gap_y_nm += DELTA_LEFT_GAP_Y;
+  if( left_gap_y_nm >= thickness_nm[0])
   {
-    thickness_nm[0] = ST_THICK_NM_0;
-    thickness_nm[1] = ST_THICK_NM_1;
+    left_gap_y_nm = 0;
+    thickness_nm[0] += DELTA_THICK_NM_0;
+    thickness_nm[1] += DELTA_THICK_NM_1;
 
-    edge_width_rate += DELTA_EDGE_RATE;
-    if(edge_width_rate > EN_EDGE_RATE)
+    if(thickness_nm[0] > EN_THICK_NM_0)
     {
-      edge_width_rate = ST_EDGE_RATE;
-      branch_width_nm += DELTA_BRANCH_NM;
-      if(branch_width_nm > EN_BRANCH_NM)
+      thickness_nm[0] = ST_THICK_NM_0;
+      thickness_nm[1] = ST_THICK_NM_1;
+
+      edge_width_rate += DELTA_EDGE_RATE;
+      if(edge_width_rate > EN_EDGE_RATE)
+      {
+        edge_width_rate = ST_EDGE_RATE;
+        branch_width_nm += DELTA_BRANCH_NM;
+        if(branch_width_nm > EN_BRANCH_NM)
       	{
 	  branch_width_nm = ST_BRANCH_NM;
 	  layerNum += DELTA_LAYER_NUM;
 	  if( layerNum > EN_LAYER_NUM)
-	    {
-	      printf("there are no models which hasn't been simulated yet\n");
-	      return true;
-	    }
+          {
+            printf("there are no models which hasn't been simulated yet\n");
+            return true;
+          }
 	}
+      }
     }
   }
   return false;  
@@ -242,7 +261,9 @@ bool multiLayerModel_isFinish(void)
 void multiLayerModel_needSize(int *x_nm, int *y_nm)
 {
   (*x_nm) = max( width_nm[0], width_nm[1]) + branch_width_nm;
-  (*y_nm) = (thickness_nm[0]+thickness_nm[1])*layerNum;
+
+  //最後の項はgapの分(これは固定にしないと,gapによりフィールドの領域が変わるので図が変に見える).
+  (*y_nm) = (thickness_nm[0]+thickness_nm[1])*layerNum + thickness_nm[0];
 }
 
 void multiLayerModel_moveDirectory()
@@ -270,16 +291,25 @@ void multiLayerModel_moveDirectory()
   }
   
   sprintf(buf,"curve_%.2lf", CURVE);
-  makeDirectory(buf);
-  moveDirectory(buf);
+  makeAndMoveDirectory(buf);
 
   sprintf(buf, "width%d_%d", width_nm[0], width_nm[0]);
   makeAndMoveDirectory(buf);
+
+  sprintf(buf, "thick%d_%d", thickness_nm[0], thickness_nm[1]);
+  makeAndMoveDirectory(buf);
   
-  sprintf(buf, "thick%d_%d_layer%d_edge%.1lf_branch%d",
-          thickness_nm[0], thickness_nm[1], layerNum, edge_width_rate, branch_width_nm);
-  makeDirectory(buf);
-  moveDirectory(buf);
+  sprintf(buf, "gap%d", left_gap_y_nm);
+  makeAndMoveDirectory(buf);
+
+  sprintf(buf, "layer%d", layerNum);
+  makeAndMoveDirectory(buf);
+
+  sprintf(buf, "edge%.1lf", edge_width_rate);
+  makeAndMoveDirectory(buf);
+
+  sprintf(buf, "branch%d", branch_width_nm);
+  makeAndMoveDirectory(buf);
 }
 
 void multiLayerModel_init()
@@ -288,6 +318,8 @@ void multiLayerModel_init()
   width_s[1]     = field_toCellUnit(width_nm[1]);
   thickness_s[0] = field_toCellUnit(thickness_nm[0]);
   thickness_s[1] = field_toCellUnit(thickness_nm[1]);
+  left_gap_y_s   = field_toCellUnit(left_gap_y_nm);
+  
   ep_s[0] = N_0*N_0*EPSILON_0_S;
   ep_s[1] = N_1*N_1*EPSILON_0_S;
   ep_x_s[0] = N_0_X*N_0_X*EPSILON_0_S;

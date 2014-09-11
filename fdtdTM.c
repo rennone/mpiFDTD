@@ -26,48 +26,64 @@ static void init(void);
 static inline void calcE(void);
 static inline void calcH(void);
 
+//新しい設計で用いる用
+
+static dcomplex* getHx(){  return Hx;}
+static dcomplex* getHy(){  return Hy;}
+static dcomplex* getEz(){  return Ez;}
+static double* getEpsX(){  return EPS_HX;}
+static double* getEpsY(){  return EPS_HY;}
+static double* getEpsZ(){  return EPS_EZ;}
+
+Solver* fdtdTM_getSolver(void)
+{
+  static Solver solver;
+  solver.update = update;
+  solver.finish = finish;
+  solver.init   = init;
+  solver.reset  = reset;
+  solver.getDataX = getHx;
+  solver.getDataY = getHy;
+  solver.getDataZ = getEz;
+  solver.getEpsX  = getEpsX;
+  solver.getEpsY  = getEpsY;
+  solver.getEpsZ  = getEpsZ;
+  return &solver;
+}
+
 //---------------public method---------------//
 //---------------getter------------------//
 void (* fdtdTM_getUpdate(void))(void)
 {
   return update;
 }
-
 void (* fdtdTM_getFinish(void))(void)
 {
   return finish;
 }
-
 void (* fdtdTM_getReset(void))(void)
 {
   return reset;
 }
-
 void (* fdtdTM_getInit(void))(void)
 {
   return init;
 }
-
 double complex* fdtdTM_getHx(void){
   return Hx;
 }
-
 double complex* fdtdTM_getHy(void){
   return Hy;
 }
-
 double complex* fdtdTM_getEzx(void){
   return Ezx;
 }
-
 double complex* fdtdTM_getEzy(void){
   return Ezy;
 }
-
 double complex* fdtdTM_getEz(void){
   return Ez;
 }
-
 double* fdtdTM_getEps()
 {
   return EPS_EZ;

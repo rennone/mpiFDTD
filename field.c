@@ -70,7 +70,6 @@ int field_index(int i, int j){
 
 int ind(const int i, const int j){  return i*N_PY + j;}//1次元配列に変換
 
-
 double field_toCellUnit(const double phisycalUnit){
   return phisycalUnit/fieldInfo.h_u_nm; //セル単位に変換 
 }
@@ -96,6 +95,8 @@ void field_init(FieldInfo field_info)
   fieldInfo_s.N_X   = fieldInfo_s.N_PX - 2*fieldInfo_s.N_PML;
   fieldInfo_s.N_Y   = fieldInfo_s.N_PY - 2*fieldInfo_s.N_PML;
   fieldInfo_s.N_CELL= fieldInfo_s.N_PY*fieldInfo_s.N_PX;
+  fieldInfo_s.DX    = fieldInfo_s.N_PY;
+  fieldInfo_s.DY    = 1;
   
   //入射波パラメータの計算
   waveInfo_s.Lambda_s = field_toCellUnit(fieldInfo.lambda_nm);

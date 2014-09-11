@@ -19,7 +19,7 @@ typedef struct Config
 }Config;
 
 #define ST_PHI -180
-#define EN_PHI -90
+#define EN_PHI -180
 #define DELTA_PHI 5
 
 // 以下 OPEN_GLの関数
@@ -91,7 +91,7 @@ static void initParameter()
   config.field_info.h_u_nm    = 5;
   config.field_info.pml       = 10;
   config.field_info.lambda_nm = 500;
-  config.field_info.stepNum   = 1500;
+  config.field_info.stepNum   = 30;
   config.field_info.angle_deg = ST_PHI;
   config.startAngle = ST_PHI;
   config.endAngle   = EN_PHI;
@@ -125,6 +125,11 @@ bool nextSimulation(int progress, bool *changeModel)
       if(models_isFinish()) {
         return true;
       }
+
+#ifdef USE_OPENGL
+      drawer_clear(); //画像をクリア
+#endif
+      
     }
   }
   return false;
@@ -143,8 +148,8 @@ static void screenshot()
 int main( int argc, char *argv[] )
 {
   getcwd(root, 512); //カレントディレクトリを保存
-  
-  models_setModel(MORPHO_SCALE);       //,TRACE_IMAGE, ZIGZAG,
+ 
+  models_setModel(MORPHO_SCALE);       // ,TRACE_IMAGE, ZIGZAG,LAYER
   simulator_setSolver(TM_UPML_2D);
   
   MPI_Init( 0, 0 );

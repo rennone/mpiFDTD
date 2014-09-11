@@ -37,6 +37,9 @@
 //互い違い
 #define ASYMMETRY true
 
+// => 0 ~ thickness_nm[0] まで変化する.( 0 だと互い違いにはならない. thicknessで完全な互い違い )
+#define DELTA_LEFT_GAP_Y 10
+
 //中心に以下の幅で軸となる枝を入れる
 #define ST_BRANCH_NM 0
 #define EN_BRANCH_NM 0
@@ -85,6 +88,9 @@ static double ep_x_s;      //異方性(x方向用)の誘電率
 
 static double edge_width_rate = ST_EDGE_RATE;
 
+//DELTA_LEFT_GAP_Y
+static int left_gap_y_nm = 0;
+static double left_gap_y_s;
 
 static bool inLamela( Lamela *lamera, double x, double y)
 {
@@ -146,10 +152,16 @@ static double eps(double x, double y, int col, int row)
 
   if( fabs(_x) > 0.5)
   {
-    calcLamela(_x-0.5, _x+0.5, _y-0.5, _y+0.5, _x<0 ? &lams[LEFT] : &lams[RIGHT]);
+    if(_x < 0)
+    {
+      calcLamela(_x-0.5, _x+0.5, _y-left_gap_y_s-0.5, _y-left_gap_y_s+0.5, _x<0 ? &lams[LEFT] : &lams[RIGHT]);
+    } else
+    {
+      calcLamela(_x-0.5, _x+0.5, _y-0.5, _y+0.5, _x<0 ? &lams[LEFT] : &lams[RIGHT]);
+    }
   } else
   {
-    calcLamela(_x-0.5,      0, _y-0.5, _y+0.5, &lams[LEFT]);
+    calcLamela(_x-0.5,      0, _y-left_gap_y_s-0.5, _y-left_gap_y_s+0.5, &lams[LEFT]);
     calcLamela( 0    , _x+0.5, _y-0.5, _y+0.5, &lams[RIGHT]);
   }
 
@@ -160,6 +172,9 @@ static double eps(double x, double y, int col, int row)
     for(double j=-half_split+0.5; j<half_split; j+=1){
       double sx = _x + col*i/split; //細分化したセルの位置
       double sy = _y + row*j/split;
+
+      if(sx < 0)
+        sy-=left_gap_y_s;
       
       //枝の部分にあるか判定
       if(sy>=0 && sy <= height_s){
@@ -231,46 +246,28 @@ static double eps(double x, double y, int col, int row)
   }
 }
 
-static bool nextStructure(){
-   thickness_nm[0] += DELTA_THICK_NM_0;
-   thickness_nm[1] += DELTA_THICK_NM_1;    
-   if(thickness_nm[1] > EN_THICK_NM_1){
-     thickness_nm[0] = ST_THICK_NM_0;
-     thickness_nm[1] = ST_THICK_NM_1;
-     edge_width_rate += DELTA_EDGE_RATE;
-      
-     if(edge_width_rate > EN_EDGE_RATE){
-       edge_width_rate = ST_EDGE_RATE;
-       branch_width_nm += DELTA_BRANCH_NM;
-	
-       if(branch_width_nm > EN_BRANCH_NM){
-	 printf("there are no models which hasn't been simulated yet\n");
-	 return true;
-       }
-     }
-   }  
-  return false;  
-}
 /*
-//構造を一つ進める
 static bool nextStructure()
 {
-  thickness_nm[0] += DELTA_THICK_NM_0;
-  if(thickness_nm[0] > EN_THICK_NM_0){
-    thickness_nm[0] = ST_THICK_NM_0;
+  left_gap_y_nm += DELTA_LEFT_GAP_Y;
+  if( left_gap_y_nm >= thickness_nm[0] + thickness_nm[1] )
+  {
+    left_gap_y_nm = 0;
+    thickness_nm[0] += DELTA_THICK_NM_0;
     thickness_nm[1] += DELTA_THICK_NM_1;    
     if(thickness_nm[1] > EN_THICK_NM_1){
+      thickness_nm[0] = ST_THICK_NM_0;
       thickness_nm[1] = ST_THICK_NM_1;
       edge_width_rate += DELTA_EDGE_RATE;
       
       if(edge_width_rate > EN_EDGE_RATE){
-	edge_width_rate = ST_EDGE_RATE;
-	branch_width_nm += DELTA_BRANCH_NM;
+        edge_width_rate = ST_EDGE_RATE;
+        branch_width_nm += DELTA_BRANCH_NM;
 	
-	if(branch_width_nm > EN_BRANCH_NM){
-	  printf("there are no models which hasn't been simulated yet\n");
-	  return true;
-	}
+        if(branch_width_nm > EN_BRANCH_NM){
+          printf("there are no models which hasn't been simulated yet\n");
+          return true;
+        }
       }
     }
   }
@@ -278,9 +275,45 @@ static bool nextStructure()
 }
 */
 
+//構造を一つ進める
+static bool nextStructure()
+{
+  left_gap_y_nm += DELTA_LEFT_GAP_Y;
+  if( left_gap_y_nm >= thickness_nm[0] + thickness_nm[1] )
+  {
+    left_gap_y_nm = 0;
+    thickness_nm[0] += DELTA_THICK_NM_0;    
+    if(thickness_nm[0] > EN_THICK_NM_0)
+    {
+      thickness_nm[0] = ST_THICK_NM_0;
+      thickness_nm[1] += DELTA_THICK_NM_1;
+      if(thickness_nm[1] > EN_THICK_NM_1)
+      {
+        thickness_nm[1] = ST_THICK_NM_1;
+        edge_width_rate += DELTA_EDGE_RATE;
+        if(edge_width_rate > EN_EDGE_RATE)
+        {
+          edge_width_rate = ST_EDGE_RATE;
+
+          branch_width_nm += DELTA_BRANCH_NM;
+          if(branch_width_nm > EN_BRANCH_NM)
+          {
+            printf("there are no models which hasn't been simulated yet\n");     
+            return true;
+          }
+        }
+      }
+    }
+  }
+  return false;  
+}
+
+
 //正しいディレクトリまで移動.
 void morphoScaleModel_moveDirectory()
-{      
+{
+//  UN_DONE("not implement leftGap in MorphoScale");
+
   if(ASYMMETRY){
     makeDirectory("asymmetry");
     moveDirectory("asymmetry");
@@ -312,6 +345,9 @@ void morphoScaleModel_moveDirectory()
   sprintf(buf, "thick%d_%d",thickness_nm[0], thickness_nm[1]);
   makeAndMoveDirectory(buf);
 
+  sprintf(buf, "gap%d", left_gap_y_nm);
+  makeAndMoveDirectory(buf);
+  
   sprintf(buf,"layer%d",layerNum);
   makeAndMoveDirectory(buf);
 
@@ -321,12 +357,6 @@ void morphoScaleModel_moveDirectory()
   sprintf(buf, "branch%d", branch_width_nm);
   makeAndMoveDirectory(buf);
 
-  /*
-  sprintf(buf, "thick%d_%d_layer%d_edge%.1lf_branch%d",
-          thickness_nm[0], thickness_nm[1], layerNum, edge_width_rate, branch_width_nm);
-  makeDirectory(buf);
-  moveDirectory(buf);
-  */
   sprintf(buf, "random%d_%d", RANDOMNESS, RANDOM_SEED );
   makeDirectory(buf);
   moveDirectory(buf);
@@ -338,8 +368,9 @@ void morphoScaleModel_init()
   thickness_s[0] = field_toCellUnit(thickness_nm[0]);
   thickness_s[1] = field_toCellUnit(thickness_nm[1]);
   branch_width_s = field_toCellUnit(branch_width_nm);
+  left_gap_y_s   = field_toCellUnit(left_gap_y_nm);
   
-  height_s = (thickness_s[0] + thickness_s[1])*layerNum;  
+  height_s = (thickness_s[0] + thickness_s[1])*layerNum + (thickness_s[0] + thickness_s[1]);   //最後はgapの分
   ep_s   = N_0*N_0*EPSILON_0_S;
   ep_x_s = N_0_X*N_0_X*EPSILON_0_S;
 
@@ -390,7 +421,7 @@ bool morphoScaleModel_isFinish(void)
 void morphoScaleModel_needSize(int *x, int *y)
 {
   *x = width_nm + branch_width_nm;
-  *y = (thickness_nm[0]+thickness_nm[1])*layerNum;
+  *y = (thickness_nm[0]+thickness_nm[1])*(layerNum+1);
 }
 
 /*

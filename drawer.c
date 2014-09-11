@@ -28,8 +28,8 @@ typedef struct {
 #endif
 
 static const int vertexNum = 4; //頂点数
-#define TEX_NX 256
-#define TEX_NY 256
+#define TEX_NX 256  //テクスチャの横幅
+#define TEX_NY 256  //縦幅
 static colorf texColor[TEX_NX][TEX_NY];
 static GLuint ver_buf, tex_buf;
 static GLuint texId;
@@ -61,8 +61,8 @@ void (*drawer_getDraw(void))(void)
 {
   return drawer_draw;
 }
-//--------------------------------------//
 
+//--------------------------------------//
 void drawer_init(enum COLOR_MODE cm)
 {
   if(cm == CREAL)
@@ -112,7 +112,13 @@ void drawer_draw()
   glDrawArrays( GL_POLYGON, 0, vertexNum);  
 }
 
-//todo 可変長引数を利用して, 複数のデータの平均で色を出すようにするべき?
+void drawer_clear()
+{  
+  //初期化
+  memset(texColor, 0 , sizeof(texColor));
+}
+
+//電磁場の値(phi)からテクスチャの色を変える
 void drawer_paintImage(int left, int bottom, int right, int top, int width, int height, double complex *phis)
 {
   colorf c;
@@ -133,7 +139,7 @@ void drawer_paintImage(int left, int bottom, int right, int top, int width, int 
   }
 }
 
-
+//モデルの誘電率(phi)からテクスチャの色を変える(暗くする)
 void drawer_paintModel(int left, int bottom, int right, int top, int width, int height, double *phis)
 {
   double dphi;
