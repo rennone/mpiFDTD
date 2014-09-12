@@ -25,10 +25,11 @@ ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに
 #define EN_LAYER_NUM 8
 #define DELTA_LAYER_NUM 1
 
-//互い違い
+//互い違い => 左右で n_0 n_1を入れ替え
 #define ASYMMETRY false
 
-// => 0 ~ thickness_nm[0] まで変化する.( 0 だと互い違いにはならない. thicknessで完全な互い違い )
+//左右でずらす => 0 ~ thickness_nm まで変化する.
+#define USE_GAP false
 #define DELTA_LEFT_GAP_Y 10
 
 //異方性を入れるかのフラグ
@@ -188,7 +189,7 @@ double ( *multiLayerModel_EPS(void))(double, double, int, int)
 static bool nextStructure()
 {
   left_gap_y_nm += DELTA_LEFT_GAP_Y;
-  if( left_gap_y_nm >= thickness_nm[0])
+  if( left_gap_y_nm >= thickness_nm[0] || !USE_GAP)
   {
     left_gap_y_nm = 0;
     thickness_nm[0] += DELTA_THICK_NM_0;

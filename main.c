@@ -149,7 +149,7 @@ int main( int argc, char *argv[] )
 {
   getcwd(root, 512); //カレントディレクトリを保存
  
-  models_setModel(MORPHO_SCALE);       // ,TRACE_IMAGE, ZIGZAG,LAYER
+  models_setModel(LAYER);       // MORPHO_SCALE,TRACE_IMAGE, ZIGZAG,
   simulator_setSolver(TM_UPML_2D);
   
   MPI_Init( 0, 0 );

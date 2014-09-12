@@ -34,10 +34,11 @@
 #define EN_LAYER_NUM 4
 #define DELTA_LAYER_NUM 1
 
-//互い違い
+//互い違い => 左右で n_0 n_1を入れ替え
 #define ASYMMETRY true
 
-// => 0 ~ thickness_nm[0] まで変化する.( 0 だと互い違いにはならない. thicknessで完全な互い違い )
+//左右でずらす => 0 ~ thickness_nm[0] まで変化する.( 0だとずれは無い. thicknessで完全な互い違い )
+#define USE_GAP false
 #define DELTA_LEFT_GAP_Y 10
 
 //中心に以下の幅で軸となる枝を入れる
@@ -279,7 +280,8 @@ static bool nextStructure()
 static bool nextStructure()
 {
   left_gap_y_nm += DELTA_LEFT_GAP_Y;
-  if( left_gap_y_nm >= thickness_nm[0] + thickness_nm[1] )
+  //gapを使わない場合は無条件に入る
+  if( left_gap_y_nm >= thickness_nm[0] + thickness_nm[1] || !USE_GAP)
   {
     left_gap_y_nm = 0;
     thickness_nm[0] += DELTA_THICK_NM_0;    
