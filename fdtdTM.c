@@ -35,22 +35,6 @@ static double* getEpsX(){  return EPS_HX;}
 static double* getEpsY(){  return EPS_HY;}
 static double* getEpsZ(){  return EPS_EZ;}
 
-Solver* fdtdTM_getSolver(void)
-{
-  static Solver solver;
-  solver.update = update;
-  solver.finish = finish;
-  solver.init   = init;
-  solver.reset  = reset;
-  solver.getDataX = getHx;
-  solver.getDataY = getHy;
-  solver.getDataZ = getEz;
-  solver.getEpsX  = getEpsX;
-  solver.getEpsY  = getEpsY;
-  solver.getEpsZ  = getEpsZ;
-  return &solver;
-}
-
 //---------------public method---------------//
 //---------------getter------------------//
 void (* fdtdTM_getUpdate(void))(void)
