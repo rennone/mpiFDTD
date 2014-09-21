@@ -90,7 +90,12 @@ static double ep_x_s;      //異方性(x方向用)の誘電率
 static double edge_width_rate = ST_EDGE_RATE;
 
 //DELTA_LEFT_GAP_Y
+#if USE_GAP
+static int left_gap_y_nm = DELTA_LEFT_GAP_Y;
+#else
 static int left_gap_y_nm = 0;
+#endif
+
 static double left_gap_y_s;
 
 static bool inLamela( Lamela *lamera, double x, double y)
@@ -283,7 +288,7 @@ static bool nextStructure()
   //gapを使わない場合は無条件に入る
   if( left_gap_y_nm >= thickness_nm[0] + thickness_nm[1] || !USE_GAP)
   {
-    left_gap_y_nm = 0;
+    left_gap_y_nm = USE_GAP ? DELTA_LEFT_GAP_Y : 0;
     thickness_nm[0] += DELTA_THICK_NM_0;    
     if(thickness_nm[0] > EN_THICK_NM_0)
     {
@@ -423,7 +428,8 @@ bool morphoScaleModel_isFinish(void)
 void morphoScaleModel_needSize(int *x, int *y)
 {
   *x = width_nm + branch_width_nm;
-  *y = (thickness_nm[0]+thickness_nm[1])*(layerNum+1);
+   //最後の項はgapの分(これは固定にしないと,gapによりフィールドの領域が変わるので図が変に見える).
+  *y = (thickness_nm[0]+thickness_nm[1])*layerNum + (USE_GAP ? thickness_nm[0]+thickness_nm[1] : 0 );
 }
 
 /*

@@ -3,32 +3,30 @@
 #include "function.h"
 #include <math.h>
 
-/*
-ASYMMETRYがtrueの場合, ラメラ1,2が同じ幅じゃないと, 奇麗にに互い違いにならない(左右で幅が異なってしまうから).
- */
 //横幅
 #define ST_WIDTH_NM 300
 #define EN_WIDTH_NM 300
 #define DELTA_WIDTH_NM 10
 
 //ラメラの厚さx
-#define ST_THICK_NM_0 90
-#define EN_THICK_NM_0 150
-#define DELTA_THICK_NM_0 10
+#define ST_THICK_NM_0 80
+#define EN_THICK_NM_0 160
+#define DELTA_THICK_NM_0 30
 
-#define ST_THICK_NM_1 90
-#define EN_THICK_NM_1 150
+#define ST_THICK_NM_1 (ST_THICK_NM_0 + 10)
+#define EN_THICK_NM_1 (ST_THICK_NM_0 + 50)
 #define DELTA_THICK_NM_1 10
 
 //ラメラの枚数
 #define ST_LAYER_NUM 4
-#define EN_LAYER_NUM 8
-#define DELTA_LAYER_NUM 1
+#define EN_LAYER_NUM 4
+#define DELTA_LAYER_NUM 2
 
 //互い違い => 左右で n_0 n_1を入れ替え
 #define ASYMMETRY false
 
-//左右でずらす => 0 ~ thickness_nm まで変化する.
+//USE_GAP flag 
+//左右でずらす => DELTA_LEFT_GAP_Y ~ thickness_nm まで変化する.
 #define USE_GAP false
 #define DELTA_LEFT_GAP_Y 10
 
@@ -75,7 +73,12 @@ static double ep_x_s[2];      //異方性用のx方向の誘電率
 static double edge_width_rate = ST_EDGE_RATE;
 
 //DELTA_LEFT_GAP_Y
+#if USE_GAP
+static int left_gap_y_nm = DELTA_LEFT_GAP_Y;
+#else
 static int left_gap_y_nm = 0;
+#endif
+
 static double left_gap_y_s;
 
 //CURVE から計算
@@ -119,6 +122,7 @@ static double eps(double x, double y, int col, int row)
   if( fabs(_x) > (width/2+0.5) ||  _y < -0.5 || _y > height+0.5 )  
     return EPSILON_0_S;
 
+  height = thick*layerNum; //元にもどす.
   double s[2]={0,0}; //n1,n2それぞれの分割セルの数が入る
   double split = 10;
   double half_split = split/2;
@@ -128,7 +132,7 @@ static double eps(double x, double y, int col, int row)
       double sy = _y + row*j/split;
 
       //左側はleft_gapだけずらす.
-      if(sx < 0)
+      if(sx < 0 && USE_GAP)
         sy -= left_gap_y_s;
       
       //上下に飛び出ていないか確認
@@ -185,13 +189,14 @@ double ( *multiLayerModel_EPS(void))(double, double, int, int)
   return eps;
 }
 
+/*
 //構造を一つ進める
 static bool nextStructure()
 {
   left_gap_y_nm += DELTA_LEFT_GAP_Y;
-  if( left_gap_y_nm >= thickness_nm[0] || !USE_GAP)
+  if( left_gap_y_nm >= (thickness_nm[0]+thickness_nm[1]) || !USE_GAP)
   {
-    left_gap_y_nm = 0;
+    left_gap_y_nm = USE_GAP ? DELTA_LEFT_GAP_Y : 0;
     thickness_nm[0] += DELTA_THICK_NM_0;
     thickness_nm[1] += DELTA_THICK_NM_1;
 
@@ -220,32 +225,36 @@ static bool nextStructure()
   }
   return false;  
 }
-/*
+*/
+
 //構造を一つ進める
 static bool nextStructure()
 {
-  thickness_nm[0] += DELTA_THICK_NM_0;
+  left_gap_y_nm += DELTA_LEFT_GAP_Y;
+  if( left_gap_y_nm >= (thickness_nm[0]+thickness_nm[1]) || !USE_GAP){
+  left_gap_y_nm = USE_GAP ? DELTA_LEFT_GAP_Y : 0;
+    thickness_nm[0] += DELTA_THICK_NM_0;
 
-  if(thickness_nm[0] > EN_THICK_NM_0)
-  {
-    thickness_nm[1] += DELTA_THICK_NM_1;
-    thickness_nm[0] = ST_THICK_NM_0;
+    if(thickness_nm[0] > EN_THICK_NM_0){
+      thickness_nm[1] += DELTA_THICK_NM_1;
+      thickness_nm[0] = ST_THICK_NM_0;
     
-    if(thickness_nm[1] > EN_THICK_NM_1){ 
-      thickness_nm[1] = ST_THICK_NM_1;
-      edge_width_rate += DELTA_EDGE_RATE;
+      if(thickness_nm[1] > EN_THICK_NM_1){ 
+	thickness_nm[1] = ST_THICK_NM_1;
+	edge_width_rate += DELTA_EDGE_RATE;
       
-      if(edge_width_rate > EN_EDGE_RATE) {
-	edge_width_rate = ST_EDGE_RATE;
-	branch_width_nm += DELTA_BRANCH_NM;
+	if(edge_width_rate > EN_EDGE_RATE) {
+	  edge_width_rate = ST_EDGE_RATE;
+	  branch_width_nm += DELTA_BRANCH_NM;
 	
-	if(branch_width_nm > EN_BRANCH_NM) {
-	  branch_width_nm = ST_BRANCH_NM;
-	  layerNum += DELTA_LAYER_NUM;
+	  if(branch_width_nm > EN_BRANCH_NM) {
+	    branch_width_nm = ST_BRANCH_NM;
+	    layerNum += DELTA_LAYER_NUM;
 	  
-	  if( layerNum > EN_LAYER_NUM) {
-	    printf("there are no models which hasn't been simulated yet\n");
-	    return true;
+	    if( layerNum > EN_LAYER_NUM) {
+	      printf("there are no models which hasn't been simulated yet\n");
+	      return true;
+	    }
 	  }
 	}
       }
@@ -253,7 +262,8 @@ static bool nextStructure()
   }
   return false;  
 }
-*/
+
+
 bool multiLayerModel_isFinish(void)
 {
   return nextStructure();
@@ -264,7 +274,7 @@ void multiLayerModel_needSize(int *x_nm, int *y_nm)
   (*x_nm) = max( width_nm[0], width_nm[1]) + branch_width_nm;
 
   //最後の項はgapの分(これは固定にしないと,gapによりフィールドの領域が変わるので図が変に見える).
-  (*y_nm) = (thickness_nm[0]+thickness_nm[1])*layerNum + thickness_nm[0];
+  (*y_nm) = (thickness_nm[0]+thickness_nm[1])*layerNum + (USE_GAP ? thickness_nm[0]+thickness_nm[0] : 0) ;
 }
 
 void multiLayerModel_moveDirectory()

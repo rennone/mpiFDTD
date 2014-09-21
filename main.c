@@ -19,7 +19,7 @@ typedef struct Config
 }Config;
 
 #define ST_PHI -180
-#define EN_PHI -180
+#define EN_PHI -90
 #define DELTA_PHI 5
 
 // 以下 OPEN_GLの関数
@@ -91,7 +91,7 @@ static void initParameter()
   config.field_info.h_u_nm    = 5;
   config.field_info.pml       = 10;
   config.field_info.lambda_nm = 500;
-  config.field_info.stepNum   = 30;
+  config.field_info.stepNum   = 1500;
   config.field_info.angle_deg = ST_PHI;
   config.startAngle = ST_PHI;
   config.endAngle   = EN_PHI;
