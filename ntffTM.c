@@ -2,6 +2,8 @@
 #include "field.h"
 #include "function.h"
 #include "bool.h"
+#include "cfft.h"
+
 #include <math.h>
 /*
   bottom(k) = k-1
@@ -22,7 +24,7 @@ void ntffTM_init()
 {
   NTFFInfo nInfo = field_getNTFFInfo();
   
-  R0 = 1.0e6 * field_toCellUnit(500);//* field_getLambda_S();
+  R0 = 1.0e6 * field_toCellUnit(500);
   
   int tp = nInfo.top;    int bm = nInfo.bottom;  //上下
   int rt = nInfo.right;  int lt = nInfo.left;	 //左右
@@ -167,7 +169,7 @@ void ntffTM_TimeTranslate(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, dcomplex *Et
     double phi = ang*ToRad;
     double sx = cos(theta)*cos(phi);
     double sy = cos(theta)*sin(phi);
-    double sz = -cos(theta); //宇野先生の本では -sin(theta)になってる
+    double sz = -cos(theta); //宇野先生の本では -sin(theta)になってる(式としては本の方が正しいけどこのプログラムではこうしないと動かない)
     double px = -sin(phi);
     double py = cos(phi);
     
@@ -181,7 +183,7 @@ void ntffTM_TimeTranslate(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, dcomplex *Et
       double complex ETH = coef*(-Z_0_S*WTH-UPH);
       double complex EPH = coef*(-Z_0_S*WPH+UTH);
       
-      Eth[k+i] = ETH; //TODO : 物理単位に変換
+      Eth[k+i] = ETH; //TODO : 物理単位に変換が必要かも
       Eph[k+i] = EPH;
     }
   }
@@ -195,7 +197,56 @@ void ntffTM_TimeOutput(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, FILE *fpRe, FIL
   dcomplex *Eth, *Eph;  
   Eth = newDComplex(360*nInfo.arraySize);
   Eph = newDComplex(360*nInfo.arraySize);
-  ntffTM_TimeTranslate(Ux,Uy,Wz,Eth,Eph);  
+  ntffTM_TimeTranslate(Ux,Uy,Wz,Eth,Eph); //Eth, Ephを計算
+
+  int lambda_st_nm = 380, lambda_en_nm = 700;
+
+  double *out_ref[360];
+  for(int ang=0; ang<360; ang++)
+    out_ref[ang] = newDouble(lambda_en_nm-lambda_st_nm+1);
+
+  int n = 1<<13;
+  //fft用に2の累乗の配列を確保
+  dcomplex *eth = newDComplex(n);
+  for(int ang=0; ang<360; ang++)
+  {
+    int k= ang*nInfo.arraySize;
+
+    memset((void*)eth,0,sizeof(dcomplex)*n);               //0で初期化
+    memcpy((void*)eth, (void*)&Eth[k], sizeof(dcomplex)*maxTime); //コピー
+    cfft(eth, n); //FFT
+
+    FieldInfo fInfo = field_getFieldInfo();
+    for(int lambda_nm=lambda_st_nm; lambda_nm<=lambda_en_nm; lambda_nm++)
+    {
+      //線形補完 TODO : index = n-1 となるほどの小さいlambdaを取得しようとするとエラー
+      double p = C_0_S * fInfo.h_u_nm * n / lambda_nm;
+      int index = floor(p);
+      p = p-index;
+      out_ref[ang][lambda_nm-lambda_st_nm] = (1-p)*cnorm(eth[index]) + p*cnorm(eth[index+1]);
+    }
+  }
+  freeDComplex(eth);
+  
+  char buf[256];
+  
+  sprintf(buf, "%d[deg].txt",field_getFieldInfo().angle_deg);
+  
+  FILE *fp = openFile(buf);
+  for(int lambda_nm=lambda_st_nm; lambda_nm<=lambda_en_nm; lambda_nm++)
+  {
+    fprintf(fp, "%d ", lambda_nm);
+    for(int ang=0; ang<360; ang++)
+    {
+      fprintf(fp, "%lf ", out_ref[ang][lambda_nm-lambda_st_nm]);
+    }
+    fprintf(fp, "\n");
+  }
+  fclose(fp);
+
+  for(int ang=0; ang<360;ang++)
+      freeDouble(out_ref[ang]);
+  
   for(int ang=0; ang<360; ang++)
   {
     int k= ang*nInfo.arraySize;
@@ -207,6 +258,7 @@ void ntffTM_TimeOutput(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, FILE *fpRe, FIL
     fprintf(fpRe,"\n");
     fprintf(fpIm,"\n");
   }
+  
   free(Eth);
   free(Eph);
 }

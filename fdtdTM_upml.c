@@ -53,14 +53,15 @@ static void calcH(void);
 //Update
 static void update(void)
 {
+  calcMB();  
+  calcH();
+  
   calcJD();
   calcE();
   
 //  field_scatteredWave(Ez, EPS_EZ, 0, 0); //Ezは格子点上に配置されているので,ずれは(0,0)
-  field_scatteredPulse(Ez, EPS_EZ, 0, 0, 1.0); //Ezは格子点上に配置されているので,ずれは(0,0)
-  
-  calcMB();  
-  calcH();
+  field_scatteredPulse(Ez, EPS_EZ, 0, 0, 1.0); //Ezは格子点上に配置されているので,ずれは(0,0)  
+
   ntffTM_TimeCalc(Hx,Hy,Ez,Ux,Uy,Wz);
 }
 
@@ -86,6 +87,14 @@ static void finish()
 
   ntffTM_TimeOutput(Ux,Uy,Wz,fpRe, fpIm);
   printf("saved %s/ %s & %s \n",current, re, im);
+
+/*  
+  dcomplex res[360];
+  ntffTM_Frequency(Hx, Hy, Ez, res);
+  FILE *fp = fopen("res_5.txt", "w");
+  for(int i=0; i<360; i++)
+    fprintf(fp,"%.18lf\n", cnorm(res[i]));
+*/
   
   fclose(fpRe);
   fclose(fpIm);

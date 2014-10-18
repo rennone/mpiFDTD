@@ -10,6 +10,7 @@
 extern void delete(void *ptr);
 extern double dbilinear(double *p, double x, double y, int width, int height);
 extern FILE* openFile(const char* file_name);
+extern FILE* FileOpen(const char* file_name, const char* mode);
 extern bool makeDirectory(const char*);
 extern void moveDirectory(const char*);
 extern void makeAndMoveDirectory(const char*);

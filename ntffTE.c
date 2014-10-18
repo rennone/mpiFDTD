@@ -152,7 +152,6 @@ static inline void calc(double time_plus_timeShift, dcomplex eh,  dcomplex *UW_a
   }
 }
 
-
 void ntffTE_TimeOutput(dcomplex *Wx, dcomplex *Wy, dcomplex *Uz, FILE *fpRe, FILE *fpIm)
 {
   const int maxTime = field_getMaxTime();
@@ -161,6 +160,52 @@ void ntffTE_TimeOutput(dcomplex *Wx, dcomplex *Wy, dcomplex *Uz, FILE *fpRe, FIL
   Eth = newDComplex(360*nInfo.arraySize);
   Eph = newDComplex(360*nInfo.arraySize);
   ntffTE_TimeTranslate(Wx,Wy,Uz,Eth,Eph);
+
+  int lambda_st_nm = 380, lambda_en_nm = 700;
+  double *out_ref[360];
+  for(int ang=0; ang<360; ang++)
+    out_ref[ang] = newDouble(lambda_en_nm-lambda_st_nm+1);
+
+  int n = 1<<13;
+  //fft用に2の累乗の配列を確保
+  dcomplex *eph = newDComplex(n);
+  for(int ang=0; ang<360; ang++)
+  {
+    int k= ang*nInfo.arraySize;
+
+    memset((void*)eph,0,sizeof(dcomplex)*n);               //0で初期化
+    memcpy((void*)eph, (void*)&Eph[k], sizeof(dcomplex)*maxTime); //コピー
+    cfft(eph, n); //FFT
+
+    FieldInfo fInfo = field_getFieldInfo();
+    for(int lambda_nm=lambda_st_nm; lambda_nm<=lambda_en_nm; lambda_nm++)
+    {
+      //線形補完 TODO : index = n-1 となるほどの小さいlambdaを取得しようとするとエラー
+      double p = C_0_S * fInfo.h_u_nm * n / lambda_nm;
+      int index = floor(p);
+      p = p-index;
+      out_ref[ang][lambda_nm-lambda_st_nm] = (1-p)*cnorm(eph[index]) + p*cnorm(eph[index+1]);
+    }
+  }
+  freeDComplex(eph);
+  
+  char buf[256];  
+  sprintf(buf, "%d[deg].txt",field_getFieldInfo().angle_deg);  
+  FILE *fp = openFile(buf);
+  for(int lambda_nm=lambda_st_nm; lambda_nm<=lambda_en_nm; lambda_nm++)
+  {
+    fprintf(fp, "%d ", lambda_nm);
+    for(int ang=0; ang<360; ang++)
+    {
+      fprintf(fp, "%lf ", out_ref[ang][lambda_nm-lambda_st_nm]);
+    }
+    fprintf(fp, "\n");
+  }
+  fclose(fp);
+
+  for(int ang=0; ang<360;ang++)
+      freeDouble(out_ref[ang]);
+
   for(int ang=0; ang<360; ang++)
   {
     int k = ang*nInfo.arraySize;
