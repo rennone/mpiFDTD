@@ -201,9 +201,10 @@ void ntffTM_TimeOutput(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, FILE *fpRe, FIL
 
   int lambda_st_nm = 380, lambda_en_nm = 700;
 
-  double *out_ref[360];
-  for(int ang=0; ang<360; ang++)
-    out_ref[ang] = newDouble(lambda_en_nm-lambda_st_nm+1);
+  double **out_ref = (double**)malloc(sizeof(double*) * (lambda_en_nm-lambda_st_nm+1));
+
+  for(int l=0; l<=lambda_en_nm-lambda_st_nm; l++)
+    out_ref[l] = newDouble(360);
 
   int n = 1<<13;
   //fft用に2の累乗の配列を確保
@@ -223,7 +224,8 @@ void ntffTM_TimeOutput(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, FILE *fpRe, FIL
       double p = C_0_S * fInfo.h_u_nm * n / lambda_nm;
       int index = floor(p);
       p = p-index;
-      out_ref[ang][lambda_nm-lambda_st_nm] = (1-p)*cnorm(eth[index]) + p*cnorm(eth[index+1]);
+      //    out_ref[ang][lambda_nm-lambda_st_nm] = (1-p)*cnorm(eth[index]) + p*cnorm(eth[index+1]);
+      out_ref[lambda_nm-lambda_st_nm][ang] = ((1-p)*cnorm(eth[index]) + p*cnorm(eth[index+1]))/n;
     }
   }
   freeDComplex(eth);
@@ -238,14 +240,28 @@ void ntffTM_TimeOutput(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, FILE *fpRe, FIL
     fprintf(fp, "%d ", lambda_nm);
     for(int ang=0; ang<360; ang++)
     {
-      fprintf(fp, "%lf ", out_ref[ang][lambda_nm-lambda_st_nm]);
+      fprintf(fp, "%lf ", out_ref[lambda_nm-lambda_st_nm][ang]);
     }
     fprintf(fp, "\n");
   }
   fclose(fp);
 
-  for(int ang=0; ang<360;ang++)
-      freeDouble(out_ref[ang]);
+  sprintf(buf, "%d[deg]_%dnm_%dnm_b.dat", field_getFieldInfo().angle_deg, lambda_st_nm, lambda_en_nm);  
+  FILE *fp_b = FileOpen(buf, "wb");
+
+  for(int l=0; l<=lambda_en_nm-lambda_st_nm;l++)
+  {
+    if( fwrite( out_ref[l],sizeof(double), 360, fp_b) < 360 )
+    {
+      printf("error in write binary %s\n", buf);
+      exit(2);
+    }
+  }
+  fclose(fp_b);
+  
+  for(int l=0; l<=lambda_en_nm-lambda_st_nm;l++)
+      freeDouble(out_ref[l]);
+  free(out_ref);
   
   for(int ang=0; ang<360; ang++)
   {
