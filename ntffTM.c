@@ -189,6 +189,20 @@ void ntffTM_TimeTranslate(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, dcomplex *Et
   }
 }
 
+//角度で正規化
+static void normalize(double reflec[360])
+{
+  double sum = 0;
+  for(int i=0; i<360; i++)
+    sum += reflec[i];
+
+  if( sum == 0 )
+    return;
+  
+  for(int i=0; i<360; i++)
+    reflec[i] /= sum;
+}
+
 //時間領域のEthの書き出し.
 void ntffTM_TimeOutput(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, FILE *fpRe, FILE *fpIm)
 {
@@ -224,16 +238,18 @@ void ntffTM_TimeOutput(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, FILE *fpRe, FIL
       double p = C_0_S * fInfo.h_u_nm * n / lambda_nm;
       int index = floor(p);
       p = p-index;
-      //    out_ref[ang][lambda_nm-lambda_st_nm] = (1-p)*cnorm(eth[index]) + p*cnorm(eth[index+1]);
       out_ref[lambda_nm-lambda_st_nm][ang] = ((1-p)*cnorm(eth[index]) + p*cnorm(eth[index+1]))/n;
     }
   }
   freeDComplex(eth);
+
+  //角反射率化(正規化)する.
+  for(int l=0; l<=lambda_en_nm-lambda_st_nm; l++){
+    normalize(out_ref[l]);
+  }
   
-  char buf[256];
-  
-  sprintf(buf, "%d[deg].txt",field_getFieldInfo().angle_deg);
-  
+  char buf[256];  
+  sprintf(buf, "%d[deg].txt",field_getFieldInfo().angle_deg);  
   FILE *fp = openFile(buf);
   for(int lambda_nm=lambda_st_nm; lambda_nm<=lambda_en_nm; lambda_nm++)
   {
@@ -248,7 +264,6 @@ void ntffTM_TimeOutput(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, FILE *fpRe, FIL
 
   sprintf(buf, "%d[deg]_%dnm_%dnm_b.dat", field_getFieldInfo().angle_deg, lambda_st_nm, lambda_en_nm);  
   FILE *fp_b = FileOpen(buf, "wb");
-
   for(int l=0; l<=lambda_en_nm-lambda_st_nm;l++)
   {
     if( fwrite( out_ref[l],sizeof(double), 360, fp_b) < 360 )

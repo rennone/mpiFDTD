@@ -150,7 +150,7 @@ int main( int argc, char *argv[] )
   getcwd(root, 512); //カレントディレクトリを保存
  
   models_setModel(MIE_CYLINDER);       // MORPHO_SCALE,TRACE_IMAGE, ZIGZAG,LAYER
-  simulator_setSolver(TE_UPML_2D);
+  simulator_setSolver(TM_UPML_2D);
   
   MPI_Init( 0, 0 );
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);

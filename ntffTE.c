@@ -152,6 +152,19 @@ static inline void calc(double time_plus_timeShift, dcomplex eh,  dcomplex *UW_a
   }
 }
 
+static void normalize(double reflec[360])
+{
+  double sum = 0;
+  for(int i=0; i<360; i++)
+    sum += reflec[i];
+
+  if( sum == 0 )
+    return;
+  
+  for(int i=0; i<360; i++)
+    reflec[i] /= sum;
+}
+
 void ntffTE_TimeOutput(dcomplex *Wx, dcomplex *Wy, dcomplex *Uz, FILE *fpRe, FILE *fpIm)
 {
   const int maxTime = field_getMaxTime();
@@ -190,7 +203,12 @@ void ntffTE_TimeOutput(dcomplex *Wx, dcomplex *Wy, dcomplex *Uz, FILE *fpRe, FIL
     }
   }
   freeDComplex(eph);
-  
+
+  //角反射率化(正規化)する.
+  for(int l=0; l<=lambda_en_nm-lambda_st_nm; l++){
+    normalize(out_ref[l]);
+  }
+
   char buf[256];  
   sprintf(buf, "%d[deg].txt",field_getFieldInfo().angle_deg);  
   FILE *fp = openFile(buf);
