@@ -88,7 +88,7 @@ static void calcFieldSize(FieldInfo *fInfo)
 
 static void initParameter()
 {
-  config.field_info.h_u_nm    = 5;
+  config.field_info.h_u_nm    = 10;
   config.field_info.pml       = 10;
   config.field_info.lambda_nm = 500;
   config.field_info.stepNum   = 1500;
@@ -149,7 +149,7 @@ int main( int argc, char *argv[] )
 {
   getcwd(root, 512); //カレントディレクトリを保存
  
-  models_setModel(LAYER);       // MORPHO_SCALE,TRACE_IMAGE, ZIGZAG,
+  models_setModel(LAYER);  // MORPHO_SCALE,, ZIGZAG,,MIE_CYLINDER,TRACE_IMAGE
   simulator_setSolver(TM_UPML_2D);
   
   MPI_Init( 0, 0 );

@@ -3,19 +3,31 @@
 #include "function.h"
 #include <math.h>
 
+//屈折率
+#define N_0 1.0
+#define N_1 1.56
+//serikon
+//#define N_1 8.4179
+
+//異方性を入れるかのフラグ
+#define UNIAXIAL false
+#define N_0_X 1.0
+#define N_1_X 1.1
+
 //横幅
 #define ST_WIDTH_NM 300
 #define EN_WIDTH_NM 300
 #define DELTA_WIDTH_NM 10
 
-//ラメラの厚さx
-#define ST_THICK_NM_0 80
-#define EN_THICK_NM_0 160
-#define DELTA_THICK_NM_0 30
+//ラメラ1の厚さ
+#define ST_THICK_NM_1 70
+#define EN_THICK_NM_1 130
+#define DELTA_THICK_NM_1 30
 
-#define ST_THICK_NM_1 (ST_THICK_NM_0 + 10)
-#define EN_THICK_NM_1 (ST_THICK_NM_0 + 50)
-#define DELTA_THICK_NM_1 10
+//ラメラ0の厚さ
+#define ST_THICK_NM_0 (ST_THICK_NM_1 + 10)
+#define EN_THICK_NM_0 (ST_THICK_NM_1 + 50)
+#define DELTA_THICK_NM_0 10
 
 //ラメラの枚数
 #define ST_LAYER_NUM 4
@@ -30,27 +42,15 @@
 #define USE_GAP false
 #define DELTA_LEFT_GAP_Y 10
 
-//異方性を入れるかのフラグ
-#define UNIAXIAL false
-#define N_0_X 1.0
-#define N_1_X 1.1
-
 //中心に以下の幅で軸となる枝を入れる => 軸の屈折率はN_1になる
 #define ST_BRANCH_NM 0
 #define EN_BRANCH_NM 0
 #define DELTA_BRANCH_NM 50
 
-//屈折率
-#define N_0 1.0
-#define N_1 1.56
-
-//serikon
-//#define N_1 8.4179
-
 //先端における横幅の割合
 #define ST_EDGE_RATE 0.0
 #define EN_EDGE_RATE 1.0
-#define DELTA_EDGE_RATE 0.5
+#define DELTA_EDGE_RATE 1.0
 
 //ラメラの先端を丸める曲率 (0で四角形のまま, 1.0で最もカーブする)
 #define CURVE 0.0

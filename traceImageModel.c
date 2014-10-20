@@ -5,7 +5,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define ST_SCALE_WIDTH_NM 400
+#define FILE_NAME "traceImage1"
+#define ST_SCALE_WIDTH_NM 300
 #define EN_SCALE_WIDTH_NM 1000
 #define DELTA_SCALE_WIDTH_NM 100
 static int scale_width_nm = ST_SCALE_WIDTH_NM;
@@ -78,7 +79,7 @@ static void readImage()
 {
   FILE *fp = NULL;
   
-  if( !(fp = fopen("traceImage.txt", "r")))
+  if( !(fp = fopen(FILE_NAME".txt", "r")))
   {
     printf("cannot find traceImage.txt of morphoScaleModel\n");
     exit(2);
@@ -127,7 +128,9 @@ bool traceImageModel_isFinish()
 void traceImageModel_moveDirectory()
 {
   char buf[512];
-  //屈折率
+
+  makeAndMoveDirectory(FILE_NAME);
+  
   sprintf(buf,"scale_width%d", scale_width_nm);
   makeDirectory(buf);
   moveDirectory(buf); 
