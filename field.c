@@ -176,12 +176,19 @@ void field_scatteredPulse(dcomplex *p, double *eps, double gapX, double gapY, do
   FieldInfo_S fInfo_s = field_getFieldInfo_S();
   
   //waveAngleにより, t0の値を変えないとちょうどいいところにピークが来ないため,それを計算.
-  const double center_peak = (fInfo_s.N_PX/2.0+gapX)*cos_per_c+(fInfo_s.N_PY/2+gapY)*sin_per_c; //中心にピークがくる時間
-  const double t0 = -center_peak + 100; //常に300ステップの時に,領域の中心にピークが来るようにする.
+  const double center_peak = (fInfo_s.N_PX/2.0+gapX)*cos_per_c+(fInfo_s.N_PY/2+gapY)*sin_per_c; //スタートから中心へ進むのにかかる時間
+
+//常に t=500 の時に,領域の中心にピークが来るように初期位相を調整
+  const double t0 = -center_peak + 500;
   
-  for(int i=1; i<fInfo_s.N_PX-1; i++) {
-    for(int j=1; j<fInfo_s.N_PY-1; j++) {
+  for(int i=1; i<fInfo_s.N_PX-1; i++)
+  {
+    for(int j=1; j<fInfo_s.N_PY-1; j++)
+    {      
       int k = field_index(i,j);
+      if(EPSILON_0_S == eps[k])
+        continue;
+      
       const double r = (i+gapX)*cos_per_c+(j+gapY)*sin_per_c-(time-t0); // (x*cos+y*sin)/C - (time-t0)
       const double gaussian_coef = exp( -pow(r/beam_width, 2 ) );
       p[k] += dot*gaussian_coef*(EPSILON_0_S/eps[k] - 1)*cexp(I*r*w_s);     //p[k] -= かも(岡田さんのメール参照)
