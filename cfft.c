@@ -43,8 +43,8 @@ static void fft1(double ar[], double ai[], int n, int iter, int flag)
     fprintf(stderr, "Error : n != 2 ^ k  in fft1()\n");
     return;
   }
-  
-  w = (flag? M_PI: -M_PI) / (double)n;  
+
+  w = (flag? M_PI: -M_PI) / (double)n;
   xp2 = n;
   for(it = 0; it < iter; it++)
   {
@@ -53,7 +53,7 @@ static void fft1(double ar[], double ai[], int n, int iter, int flag)
     w *= 2;
 //    for(k = 0, i = - xp; k < xp2; i++)
     for(k = 0, i = - xp; k < xp2; i++, k++)
-    {      
+    {
 //      wr = cos(arg = w * k++);
 //      wi = sin(arg);
       wr = cos(w * k);

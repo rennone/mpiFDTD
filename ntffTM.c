@@ -1,10 +1,14 @@
+#include <unistd.h>
+#include <math.h>
+#include <string.h>
+#include <stdlib.h>
+#include "ntff.h"
 #include "ntffTM.h"
 #include "field.h"
 #include "function.h"
 #include "bool.h"
 #include "cfft.h"
 
-#include <math.h>
 /*
   bottom(k) = k-1
   top(k)    = k+1
@@ -188,103 +192,84 @@ void ntffTM_TimeTranslate(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, dcomplex *Et
     }
   }
 }
-
-//角度で正規化
-static void normalize(double reflec[360])
-{
-  double sum = 0;
-  for(int i=0; i<360; i++)
-    sum += reflec[i];
-
-  if( sum == 0 )
-    return;
-  
-  for(int i=0; i<360; i++)
-    reflec[i] /= sum;
-}
-
+      
 //時間領域のEthの書き出し.
-void ntffTM_TimeOutput(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, FILE *fpRe, FILE *fpIm)
+void ntffTM_TimeOutput(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz)
 {
   const int maxTime = field_getMaxTime();
   NTFFInfo nInfo = field_getNTFFInfo();
   dcomplex *Eth, *Eph;  
   Eth = newDComplex(360*nInfo.arraySize);
   Eph = newDComplex(360*nInfo.arraySize);
-  ntffTM_TimeTranslate(Ux,Uy,Wz,Eth,Eph); //Eth, Ephを計算
 
-  int lambda_st_nm = 380, lambda_en_nm = 700;
+  //Eth, Ephを計算
+  ntffTM_TimeTranslate(Ux,Uy,Wz,Eth,Eph);
+  
+  double **out_ref = (double**)malloc(sizeof(double*) * (LAMBDA_EN_NM-LAMBDA_ST_NM+1));
 
-  double **out_ref = (double**)malloc(sizeof(double*) * (lambda_en_nm-lambda_st_nm+1));
-
-  for(int l=0; l<=lambda_en_nm-lambda_st_nm; l++)
+  for(int l=0; l<=LAMBDA_EN_NM-LAMBDA_ST_NM; l++)
     out_ref[l] = newDouble(360);
 
-  int n = 1<<13;
   //fft用に2の累乗の配列を確保
-  dcomplex *eth = newDComplex(n);
+  dcomplex *eth = newDComplex(NTFF_NUM);
   for(int ang=0; ang<360; ang++)
   {
     int k= ang*nInfo.arraySize;
 
-    memset((void*)eth,0,sizeof(dcomplex)*n);               //0で初期化
+    memset((void*)eth,0,sizeof(dcomplex)*NTFF_NUM);               //0で初期化
     memcpy((void*)eth, (void*)&Eth[k], sizeof(dcomplex)*maxTime); //コピー
-    cfft(eth, n); //FFT
+    cfft(eth, NTFF_NUM); //FFT
 
     FieldInfo fInfo = field_getFieldInfo();
-    for(int lambda_nm=lambda_st_nm; lambda_nm<=lambda_en_nm; lambda_nm++)
+    for(int lambda_nm=LAMBDA_ST_NM; lambda_nm<=LAMBDA_EN_NM; lambda_nm++)
     {
       //線形補完 TODO : index = n-1 となるほどの小さいlambdaを取得しようとするとエラー
-      double p = C_0_S * fInfo.h_u_nm * n / lambda_nm;
+      double p = C_0_S * fInfo.h_u_nm * NTFF_NUM / lambda_nm;
       int index = floor(p);
       p = p-index;
-      out_ref[lambda_nm-lambda_st_nm][ang] = ((1-p)*cnorm(eth[index]) + p*cnorm(eth[index+1]))/n;
+      out_ref[lambda_nm-LAMBDA_ST_NM][ang] = ((1-p)*cnorm(eth[index]) + p*cnorm(eth[index+1]))/NTFF_NUM;
     }
-  }
+  }  
   freeDComplex(eth);
   
-  char buf[256];  
-  sprintf(buf, "%d[deg].txt",field_getFieldInfo().angle_deg);  
-  FILE *fp = openFile(buf);
-  for(int lambda_nm=lambda_st_nm; lambda_nm<=lambda_en_nm; lambda_nm++)
-  {
-    fprintf(fp, "%d ", lambda_nm);
-    for(int ang=0; ang<360; ang++)
-    {
-      fprintf(fp, "%lf ", out_ref[lambda_nm-lambda_st_nm][ang]);
-    }
-    fprintf(fp, "\n");
-  }
-  fclose(fp);
+  //カレントディレクトリを取得
+  char buf[256], parent[512];
+  getcwd(parent, 512);
 
-  sprintf(buf, "%d[deg]_%dnm_%dnm_b.dat", field_getFieldInfo().angle_deg, lambda_st_nm, lambda_en_nm);  
-  FILE *fp_b = FileOpen(buf, "wb");
-  for(int l=0; l<=lambda_en_nm-lambda_st_nm;l++)
-  {
-    if( fwrite( out_ref[l],sizeof(double), 360, fp_b) < 360 )
-    {
-      printf("error in write binary %s\n", buf);
-      exit(2);
-    }
-  }
-  fclose(fp_b);
-  
-  for(int l=0; l<=lambda_en_nm-lambda_st_nm;l++)
+  // fft変換後のデータをテキストファイルで書き出し
+  sprintf(buf, "%d[deg].txt",field_getFieldInfo().angle_deg);
+  ntff_outputEnormTxt(out_ref, buf);
+  printf("saved %s/%s\n", parent, buf);
+
+  // fft変換後のデータをバイナリファイルで書き出し
+  sprintf(buf, "%d[deg]_%dnm_%dnm_b.dat", field_getFieldInfo().angle_deg, LAMBDA_ST_NM, LAMBDA_EN_NM);
+  ntff_outputEnormBin(out_ref, buf);
+  printf("saved %s/%s\n", parent, buf);
+
+  //メモリの解放
+  for(int l=0; l<=LAMBDA_EN_NM-LAMBDA_ST_NM;l++)
       freeDouble(out_ref[l]);
   free(out_ref);
-  
-  for(int ang=0; ang<360; ang++)
-  {
+
+  // fft変換前の時間サンプリングデータを書き出し
+  char re[1024], im[1024];
+  sprintf(re, "%d[deg]_Eth_r.txt", (int)field_getWaveAngle());
+  sprintf(im, "%d[deg]_Eth_i.txt", (int)field_getWaveAngle());
+  FILE *fpRe = openFile(re);
+  FILE *fpIm = openFile(im);
+  for(int ang=0; ang<360; ang++){
     int k= ang*nInfo.arraySize;
-    for(int i=0; i < maxTime; i++)
-    {
+    for(int i=0; i < maxTime; i++){
       fprintf(fpRe,"%.20lf " , creal(Eth[k+i]));
       fprintf(fpIm,"%.20lf " , cimag(Eth[k+i]));
     }
     fprintf(fpRe,"\n");
     fprintf(fpIm,"\n");
   }
-  
+  printf("saved %s/ %s & %s \n", parent, re, im);
+  fclose(fpRe);
+  fclose(fpIm);
+
   free(Eth);
   free(Eph);
 }

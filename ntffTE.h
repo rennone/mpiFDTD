@@ -11,6 +11,6 @@ extern void ntffTE_TimeCalc(dcomplex *Ex, dcomplex *Ey, dcomplex *Hz,
 extern void ntffTE_TimeTranslate(dcomplex *Wx, dcomplex *Wy, dcomplex *Uz,dcomplex *Eth, dcomplex *Eph);
 
 //時間領域の遠方解 Wx, Wy, UzからEth, Ephを求め, fpRe, fpImに書き出す
-extern void ntffTE_TimeOutput(dcomplex *Wx, dcomplex *Wy, dcomplex *Uz, FILE *fpRe, FILE *fpIm);
+extern void ntffTE_TimeOutput(dcomplex *Wx, dcomplex *Wy, dcomplex *Uz);
 extern void ntffTE_init(void);
 #endif
