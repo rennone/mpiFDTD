@@ -36,7 +36,10 @@ static SubFieldInfo_S subFieldInfo_s;
 static void mpiSplit(void);
 
 //:public------------------------------------//
-void field_setWaveAngle(int deg) { waveInfo_s.Angle_deg = deg;}
+void field_setWaveAngle(int deg) {
+  fieldInfo.angle_deg = deg;
+  waveInfo_s.Angle_deg = deg;
+}
 
 double field_getT() {  return waveInfo_s.T_s; }
 double  field_getK(){  return waveInfo_s.K_s;}
