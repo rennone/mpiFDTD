@@ -181,6 +181,8 @@ void field_scatteredPulse(dcomplex *p, double *eps, double gapX, double gapY, do
   //waveAngleにより, t0の値を変えないとちょうどいいところにピークが来ないため,それを計算.
   const double center_peak = (fInfo_s.N_PX/2.0+gapX)*cos_per_c+(fInfo_s.N_PY/2+gapY)*sin_per_c; //スタートから中心へ進むのにかかる時間
 
+  // TODO : h_uのサイズに応じて変化させないと, パルスが不連続になる可能性が有る.
+  // t=500 では h_u = 10nm, 5nmでうまく動いているのでこうしている.
 //常に t=500 の時に,領域の中心にピークが来るように初期位相を調整
   const double t0 = -center_peak + 500;
   
@@ -316,7 +318,7 @@ void field_outputAllDataDouble(const char *fileName, double *data)
 }
 
 //:private
-//MPIにより, 領域を分割する.
+//MPIにより領域を分割する.
 static void mpiSplit(void)
 {
   int num_proc;

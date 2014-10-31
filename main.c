@@ -18,8 +18,8 @@ typedef struct Config
   enum SOLVER SolverType;
 }Config;
 
-#define ST_PHI 0
-#define EN_PHI 0
+#define ST_PHI -180
+#define EN_PHI -90
 #define DELTA_PHI 5
 
 // 以下 OPEN_GLの関数
@@ -88,10 +88,11 @@ static void calcFieldSize(FieldInfo *fInfo)
 
 static void initParameter()
 {
-  config.field_info.h_u_nm    = 5;
+  config.field_info.h_u_nm    = 10;
   config.field_info.pml       = 10;
   config.field_info.lambda_nm = 500;
-  config.field_info.stepNum   = 15000 / config.field_info.h_u_nm; //h_uによりステップ数を返す必要がある.
+  //領域の全体サイズが変化し,収束にかかる時間が変わるためh_uによりステップ数を変える必要がある.
+  config.field_info.stepNum   = 15000 / config.field_info.h_u_nm;
   config.field_info.angle_deg = ST_PHI;
   config.startAngle = ST_PHI;
   config.endAngle   = EN_PHI;
@@ -149,8 +150,8 @@ int main( int argc, char *argv[] )
 {
   getcwd(root, 512); //カレントディレクトリを保存
  
-  models_setModel(MIE_CYLINDER);       // MORPHO_SCALE,TRACE_IMAGE, ZIGZAG,LAYER
-  simulator_setSolver(TM_UPML_2D);
+  models_setModel(LAYER);       // MORPHO_SCALE,TRACE_IMAGE, ZIGZAG,,MIE_CYLINDER
+  simulator_setSolver(TE_UPML_2D);
   
   MPI_Init( 0, 0 );
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
