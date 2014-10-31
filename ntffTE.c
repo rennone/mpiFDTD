@@ -1,9 +1,13 @@
+#include <math.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include "ntff.h"
 #include "ntffTE.h"
 #include "field.h"
 #include "function.h"
 #include "bool.h"
-#include <math.h>
-#include <stdlib.h>
+#include "cfft.h"
 
 static double R0;
 
@@ -152,27 +156,83 @@ static inline void calc(double time_plus_timeShift, dcomplex eh,  dcomplex *UW_a
   }
 }
 
-
-void ntffTE_TimeOutput(dcomplex *Wx, dcomplex *Wy, dcomplex *Uz, FILE *fpRe, FILE *fpIm)
+//時間領域遠方解を出力
+void ntffTE_TimeOutput(dcomplex *Wx, dcomplex *Wy, dcomplex *Uz)
 {
   const int maxTime = field_getMaxTime();
   NTFFInfo nInfo = field_getNTFFInfo();
   dcomplex *Eth, *Eph;  
   Eth = newDComplex(360*nInfo.arraySize);
   Eph = newDComplex(360*nInfo.arraySize);
+
+  //時間領域遠方解を計算
   ntffTE_TimeTranslate(Wx,Wy,Uz,Eth,Eph);
+
+  double **out_ref = (double**)malloc( sizeof(double*)*(LAMBDA_EN_NM-LAMBDA_ST_NM+1) );
+
+  for(int l=0; l<=LAMBDA_EN_NM-LAMBDA_ST_NM; l++)
+    out_ref[l] = newDouble(360);
+
+  //fft用に2の累乗の配列を確保
+  dcomplex *eph = newDComplex(NTFF_NUM);
   for(int ang=0; ang<360; ang++)
   {
-    int k = ang*nInfo.arraySize;
-    for(int i=0; i < maxTime; i++)
+    int k= ang*nInfo.arraySize; //角度の0番目のindex
+
+    memset((void*)eph,0,sizeof(dcomplex)*NTFF_NUM);               //0で初期化
+    memcpy((void*)eph, (void*)&Eph[k], sizeof(dcomplex)*maxTime); //コピー
+    cfft(eph, NTFF_NUM); //FFT
+
+    FieldInfo fInfo = field_getFieldInfo();
+    for(int lambda_nm=LAMBDA_ST_NM; lambda_nm<=LAMBDA_EN_NM; lambda_nm++)
     {
+      //線形補完 TODO : index = n-1 となるほどの小さいlambdaを取得しようとするとエラー
+      double p = C_0_S * fInfo.h_u_nm * NTFF_NUM / lambda_nm;
+      int index = floor(p);
+      p = p-index;
+      out_ref[lambda_nm-LAMBDA_ST_NM][ang] = ((1-p)*cnorm(eph[index]) + p*cnorm(eph[index+1]))/NTFF_NUM;
+    }
+  }
+  freeDComplex(eph);
+
+  //カレントディレクトリを取得
+  char buf[256], parent[512];
+  getcwd(parent, 512);
+
+  // fft変換後のデータをテキストファイルで書き出し
+  sprintf(buf, "%d[deg].txt",(int)field_getWaveAngle());
+  ntff_outputEnormTxt(out_ref, buf);
+  printf("saved %s/%s\n", parent, buf);
+
+  // fft変換後のデータをバイナリファイルで書き出し
+  sprintf(buf, "%d[deg]_%dnm_%dnm_b.dat", (int)field_getWaveAngle(), LAMBDA_ST_NM, LAMBDA_EN_NM);
+  ntff_outputEnormBin(out_ref, buf);
+  printf("saved %s/%s\n", parent, buf);
+
+  //メモリの解放
+  for(int l=0; l<=LAMBDA_EN_NM-LAMBDA_ST_NM;l++)
+    freeDouble(out_ref[l]);
+  free(out_ref);
+  /*
+  // fft変換前の時間サンプリングデータを書き出し
+  char re[256], im[256];
+  sprintf(re, "%d[deg]_Eph_r.txt", (int)field_getWaveAngle());
+  sprintf(im, "%d[deg]_Eph_i.txt", (int)field_getWaveAngle());
+  FILE *fpRe = openFile(re);
+  FILE *fpIm = openFile(im);
+  for(int ang=0; ang<360; ang++){
+    int k = ang*nInfo.arraySize;
+    for(int i=0; i < maxTime; i++){
       fprintf(fpRe,"%.20lf " , creal(Eph[k+i]));
       fprintf(fpIm,"%.20lf " , cimag(Eph[k+i]));   
-    }
-    
+    }    
     fprintf(fpRe,"\n");
     fprintf(fpIm,"\n");
-  }  
+  }
+  printf("saved %s %s & %s\n", parent, re, im);
+  fclose(fpRe);
+  fclose(fpIm);
+  */
   free(Eth);
   free(Eph);
 }

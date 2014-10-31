@@ -25,6 +25,6 @@ extern void ntffTM_TimeCalc(dcomplex *Hx, dcomplex *Hy, dcomplex *Ez, dcomplex *
 extern void ntffTM_TimeTranslate(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, dcomplex *Eth, dcomplex *Eph);
 
 //時間領域の遠方解 Ux, Uy, WzからEth, Ephを求め, fpRe, fpImに書き出す
-extern void ntffTM_TimeOutput(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, FILE *fpRe, FILE *fpIm);
+extern void ntffTM_TimeOutput(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz);
 
 #endif

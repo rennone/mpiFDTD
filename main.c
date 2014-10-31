@@ -19,7 +19,7 @@ typedef struct Config
 }Config;
 
 #define ST_PHI -180
-#define EN_PHI -90
+#define EN_PHI 0
 #define DELTA_PHI 5
 
 // 以下 OPEN_GLの関数
@@ -88,10 +88,10 @@ static void calcFieldSize(FieldInfo *fInfo)
 
 static void initParameter()
 {
-  config.field_info.h_u_nm    = 10;
+  config.field_info.h_u_nm    = 5;
   config.field_info.pml       = 10;
   config.field_info.lambda_nm = 500;
-  config.field_info.stepNum   = 1500;
+  config.field_info.stepNum   = 15000 / config.field_info.h_u_nm; //h_uによりステップ数を返す必要がある.
   config.field_info.angle_deg = ST_PHI;
   config.startAngle = ST_PHI;
   config.endAngle   = EN_PHI;
@@ -149,7 +149,7 @@ int main( int argc, char *argv[] )
 {
   getcwd(root, 512); //カレントディレクトリを保存
  
-  models_setModel(LAYER);  // MORPHO_SCALE,, ZIGZAG,,MIE_CYLINDER,TRACE_IMAGE
+  models_setModel(LAYER);       //MORPHO_SCALE ,TRACE_IMAGE, ZIGZAG,LAYER,
   simulator_setSolver(TM_UPML_2D);
   
   MPI_Init( 0, 0 );
@@ -165,7 +165,8 @@ int main( int argc, char *argv[] )
   if( nextSimulation(rank, &changeModel) == true){
     MPI_Finalize();
     exit(0);
-  }  
+  }
+  
   //シミュレーションの初期化.
   simulator_init(config.field_info);
   screenshot();

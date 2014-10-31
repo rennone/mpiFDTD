@@ -20,12 +20,12 @@
 #define DELTA_WIDTH_NM 10
 
 //ラメラ1の厚さ
-#define ST_THICK_NM_1 70
-#define EN_THICK_NM_1 130
+#define ST_THICK_NM_1 90
+#define EN_THICK_NM_1 150
 #define DELTA_THICK_NM_1 30
 
 //ラメラ0の厚さ
-#define ST_THICK_NM_0 (ST_THICK_NM_1 + 10)
+#define ST_THICK_NM_0 (ST_THICK_NM_1 +  0)
 #define EN_THICK_NM_0 (ST_THICK_NM_1 + 50)
 #define DELTA_THICK_NM_0 10
 
@@ -40,7 +40,7 @@
 //USE_GAP flag 
 //左右でずらす => DELTA_LEFT_GAP_Y ~ thickness_nm まで変化する.
 #define USE_GAP false
-#define DELTA_LEFT_GAP_Y 10
+#define DELTA_LEFT_GAP_Y 0
 
 //中心に以下の幅で軸となる枝を入れる => 軸の屈折率はN_1になる
 #define ST_BRANCH_NM 0
@@ -232,12 +232,12 @@ static bool nextStructure()
 {
   left_gap_y_nm += DELTA_LEFT_GAP_Y;
   if( left_gap_y_nm >= (thickness_nm[0]+thickness_nm[1]) || !USE_GAP){
-  left_gap_y_nm = USE_GAP ? DELTA_LEFT_GAP_Y : 0;
+    left_gap_y_nm = USE_GAP ? DELTA_LEFT_GAP_Y : 0;
     thickness_nm[0] += DELTA_THICK_NM_0;
 
-    if(thickness_nm[0] > EN_THICK_NM_0){
+    if(thickness_nm[0] > /*EN_THICK_NM_0*/ thickness_nm[1]+50){
       thickness_nm[1] += DELTA_THICK_NM_1;
-      thickness_nm[0] = ST_THICK_NM_0;
+      thickness_nm[0] = thickness_nm[1];////ST_THICK_NM_0;
     
       if(thickness_nm[1] > EN_THICK_NM_1){ 
 	thickness_nm[1] = ST_THICK_NM_1;

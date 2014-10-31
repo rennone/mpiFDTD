@@ -55,10 +55,12 @@ static void update(void)
 {
   calcMB();  
   calcH();
-
+  
   calcJD();
   calcE();
-  field_scatteredPulse(Ez, EPS_EZ, 0, 0, 1.0); //Ezは格子点上に配置されているので,ずれは(0,0)
+  
+//  field_scatteredWave(Ez, EPS_EZ, 0, 0); //Ezは格子点上に配置されているので,ずれは(0,0)
+  field_scatteredPulse(Ez, EPS_EZ, 0, 0, 1.0); //Ezは格子点上に配置されているので,ずれは(0,0)  
 
   ntffTM_TimeCalc(Hx,Hy,Ez,Ux,Uy,Wz);
 }
@@ -75,37 +77,22 @@ static void init()
 //Finish
 static void finish()
 {
-  char current[512];
-  getcwd(current, 512); //カレントディレクトリを保存
-  char re[1024], im[1024];
-  sprintf(re, "%d[deg]_Eth_r.txt", (int)field_getWaveAngle());
-  sprintf(im, "%d[deg]_Eth_i.txt", (int)field_getWaveAngle());
-  FILE *fpRe = openFile(re);
-  FILE *fpIm = openFile(im);
-
-  ntffTM_TimeOutput(Ux,Uy,Wz,fpRe, fpIm);
-  printf("saved %s/ %s & %s \n",current, re, im);
-  
-  fclose(fpRe);
-  fclose(fpIm);
-
+  reset();
   freeMemories();
 }
 
 //Reset -> メモリとかは解放せず, もう一度シミュレーションを行う
 static void reset()
 {
-  char current[512];
-  getcwd(current, 512); //カレントディレクトリを保存
-  char re[1024], im[1024];
-  sprintf(re, "%d[deg]_Eth_r.txt", (int)field_getWaveAngle());
-  sprintf(im, "%d[deg]_Eth_i.txt", (int)field_getWaveAngle());
-  FILE *fpRe = openFile(re);
-  FILE *fpIm = openFile(im);
-  ntffTM_TimeOutput(Ux,Uy,Wz,fpRe, fpIm);
-  printf("saved %s/ %s & %s \n", current, re, im);
-  fclose(fpRe);
-  fclose(fpIm);
+  ntffTM_TimeOutput(Ux,Uy,Wz);
+
+  /*  
+      dcomplex res[360];
+      ntffTM_Frequency(Hx, Hy, Ez, res);
+      FILE *fp = fopen("res_5.txt", "w");
+      for(int i=0; i<360; i++)
+      fprintf(fp,"%.18lf\n", cnorm(res[i]));
+  */
 
 //計算領域の初期化
   memset(Hx, 0, sizeof(double complex)*N_CELL);

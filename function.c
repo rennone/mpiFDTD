@@ -33,6 +33,17 @@ FILE* openFile(const char* file_name)
   return fp;
 }
 
+FILE* FileOpen(const char* file_name, const char* mode)
+{
+  FILE *fp;
+  if( (fp=fopen(file_name, mode) ) == NULL )
+  {
+    printf("cannot open file %s \n", file_name);
+    exit(2);
+  }
+  return fp;
+}
+
 #if defined(MAC_OS) || defined(LINUX_OS)
 #include <sys/stat.h>
 #include <unistd.h>

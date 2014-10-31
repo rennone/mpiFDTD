@@ -106,31 +106,15 @@ static void init(){
 }
 
 //---------------------メモリの解放--------------------//
-static void finish(){
-  char current[512];
-  getcwd(current, 512); //カレントディレクトリを保存
-  char re[1024], im[1024];
-  sprintf(re, "%d[deg]_Eph_r.txt", (int)field_getWaveAngle());
-  sprintf(im, "%d[deg]_Eph_i.txt", (int)field_getWaveAngle());
-  FILE *fpR = openFile(re);
-  FILE *fpI = openFile(im);
-  ntffTE_TimeOutput(Wx, Wy, Uz, fpR, fpI);
-  printf("saved %s %s & %s\n", current, re, im);
-  fclose(fpR);
-  fclose(fpI);
+static void finish()
+{
+  reset();
   freeMemories();
 }
 
 static void reset()
 {
-  char re[1024], im[1024];
-  sprintf(re, "%d[deg]_Eph_r.txt", (int)field_getWaveAngle());
-  sprintf(im, "%d[deg]_Eph_i.txt", (int)field_getWaveAngle());
-  FILE *fpR = openFile(re);
-  FILE *fpI = openFile(im);
-  ntffTE_TimeOutput(Wx, Wy, Uz, fpR, fpI);
-  fclose(fpR);
-  fclose(fpI);
+  ntffTE_TimeOutput(Wx, Wy, Uz);
 
   memset(Ex, 0, sizeof(double complex)*N_CELL);
   memset(Ey, 0, sizeof(double complex)*N_CELL);

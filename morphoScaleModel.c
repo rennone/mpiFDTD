@@ -21,12 +21,12 @@
 
 //ラメラの厚さ
 #define ST_THICK_NM_0 90
-#define EN_THICK_NM_0 170
+#define EN_THICK_NM_0 150
 #define DELTA_THICK_NM_0 10
 
 //空気の部分の厚さ
 #define ST_THICK_NM_1 90
-#define EN_THICK_NM_1 170
+#define EN_THICK_NM_1 150
 #define DELTA_THICK_NM_1 10
 
 //ラメラの枚数
@@ -54,7 +54,7 @@
 //先端における横幅の割合
 #define ST_EDGE_RATE 0.0
 #define EN_EDGE_RATE 1.0
-#define DELTA_EDGE_RATE 0.5
+#define DELTA_EDGE_RATE 1.0
 
 //ラメラの先端を丸める曲率 (0で四角形のまま, 1.0で最もカーブする)
 #define CURVE 0.2
@@ -252,7 +252,7 @@ static double eps(double x, double y, int col, int row)
   }
 }
 
-/*
+
 static bool nextStructure()
 {
   left_gap_y_nm += DELTA_LEFT_GAP_Y;
@@ -279,8 +279,8 @@ static bool nextStructure()
   }
   return false;  
 }
-*/
 
+/*
 //構造を一つ進める
 static bool nextStructure()
 {
@@ -314,7 +314,7 @@ static bool nextStructure()
   }
   return false;  
 }
-
+*/
 
 //正しいディレクトリまで移動.
 void morphoScaleModel_moveDirectory()
