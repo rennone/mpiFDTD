@@ -19,7 +19,8 @@ typedef struct Config
 }Config;
 
 #define ST_PHI -180
-#define EN_PHI -90
+#define EN_PHI 0
+
 #define DELTA_PHI 5
 
 // 以下 OPEN_GLの関数
@@ -149,7 +150,7 @@ static void screenshot()
 int main( int argc, char *argv[] )
 {
   getcwd(root, 512); //カレントディレクトリを保存
- 
+
   models_setModel(LAYER);       // MORPHO_SCALE,TRACE_IMAGE, ZIGZAG,,MIE_CYLINDER
   simulator_setSolver(TE_UPML_2D);
   

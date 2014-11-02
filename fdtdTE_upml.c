@@ -166,9 +166,15 @@ static void scatteredWave(double complex *p, double *eps){
   }*/
 
 static inline void update(void)
-{
-//  fastCalcJD();
-//  fastCalcE();
+{  
+//  fastCalcMB();
+//  fastCalcH();
+  
+  calcMB();
+  calcH();
+
+  //  fastCalcJD();
+  //  fastCalcE();
   calcJD();
   calcE();
 
@@ -182,17 +188,6 @@ static inline void update(void)
   if(si != 0.0)
     field_scatteredPulse(Ey, EPS_EY, 0.0, 0.5, si); //Eyは格子点より上に0.5ずれた位置に配置
 
-//  if(co != 0.0)
-//  field_scatteredWave(Ex, EPS_EX, 0.5, 0.0);
-//  if(si != 0.0)
-//  field_scatteredWave(Ey, EPS_EY, 0.0, 0.5);
-  
-//  fastCalcMB();
-//  fastCalcH();
-  
-  calcMB();
-  calcH();
-  
   ntffTE_TimeCalc(Ex,Ey,Hz,Wx,Wy,Uz);
 }
 

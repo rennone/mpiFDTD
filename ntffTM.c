@@ -237,12 +237,12 @@ void ntffTM_TimeOutput(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz)
   getcwd(parent, 512);
 
   // fft変換後のデータをテキストファイルで書き出し
-  sprintf(buf, "%d[deg].txt",field_getFieldInfo().angle_deg);
+  sprintf(buf, "%d[deg].txt",(int)field_getWaveAngle());
   ntff_outputEnormTxt(out_ref, buf);
   printf("saved %s/%s\n", parent, buf);
 
   // fft変換後のデータをバイナリファイルで書き出し
-  sprintf(buf, "%d[deg]_%dnm_%dnm_b.dat", field_getFieldInfo().angle_deg, LAMBDA_ST_NM, LAMBDA_EN_NM);
+  sprintf(buf, "%d[deg]_%dnm_%dnm_b.dat", (int)field_getWaveAngle(), LAMBDA_ST_NM, LAMBDA_EN_NM);
   ntff_outputEnormBin(out_ref, buf);
   printf("saved %s/%s\n", parent, buf);
 
@@ -250,7 +250,7 @@ void ntffTM_TimeOutput(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz)
   for(int l=0; l<=LAMBDA_EN_NM-LAMBDA_ST_NM;l++)
       freeDouble(out_ref[l]);
   free(out_ref);
-
+  /*
   // fft変換前の時間サンプリングデータを書き出し
   char re[1024], im[1024];
   sprintf(re, "%d[deg]_Eth_r.txt", (int)field_getWaveAngle());
@@ -269,7 +269,7 @@ void ntffTM_TimeOutput(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz)
   printf("saved %s/ %s & %s \n", parent, re, im);
   fclose(fpRe);
   fclose(fpIm);
-
+  */
   free(Eth);
   free(Eph);
 }
