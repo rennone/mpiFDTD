@@ -1,4 +1,5 @@
 #include "function.h"
+#include <math.h>
 
 void delete(void *ptr)
 {
@@ -32,6 +33,17 @@ FILE* openFile(const char* file_name)
   return fp;
 }
 
+FILE* FileOpen(const char* file_name, const char* mode)
+{
+  FILE *fp;
+  if( (fp=fopen(file_name, mode) ) == NULL )
+  {
+    printf("cannot open file %s \n", file_name);
+    exit(2);
+  }
+  return fp;
+}
+
 #if defined(MAC_OS) || defined(LINUX_OS)
 #include <sys/stat.h>
 #include <unistd.h>
@@ -42,12 +54,13 @@ bool makeDirectory(const char* name)
     S_IRGRP | S_IWGRP | S_IXGRP |         /* rwx */
            S_IROTH | S_IXOTH | S_IXOTH ) == 0)
   {
-    printf("make directory %s\n",name);
+    return true;
   } else {
     //作れなかったときは、多分すでに存在するとき.
-    printf("directory %s is already exist\n", name);
+    return false;
   }
 }
+
 void moveDirectory(const char* name)
 {
   if(chdir(name)==0)
@@ -59,5 +72,10 @@ void moveDirectory(const char* name)
   }
 }
 
+void makeAndMoveDirectory(const char* name)
+{
+  makeDirectory(name);
+  moveDirectory(name);
+}
 #endif
 

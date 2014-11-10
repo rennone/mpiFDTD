@@ -92,7 +92,7 @@ double complex* fdtdTE_upml_getHz(void)
 
 double* fdtdTE_upml_getEps()
 {
-  return EPS_EY;
+  return EPS_EX;
 }
 
 //---------------------------------------------------//
@@ -106,31 +106,15 @@ static void init(){
 }
 
 //---------------------メモリの解放--------------------//
-static void finish(){
-  char current[512];
-  getcwd(current, 512); //カレントディレクトリを保存
-  char re[1024], im[1024];
-  sprintf(re, "%d[deg]_Eph_r.txt", (int)field_getWaveAngle());
-  sprintf(im, "%d[deg]_Eph_i.txt", (int)field_getWaveAngle());
-  FILE *fpR = openFile(re);
-  FILE *fpI = openFile(im);
-  ntffTE_TimeOutput(Wx, Wy, Uz, fpR, fpI);
-  printf("saved %s %s & %s\n", current, re, im);
-  fclose(fpR);
-  fclose(fpI);
+static void finish()
+{
+  reset();
   freeMemories();
 }
 
 static void reset()
 {
-  char re[1024], im[1024];
-  sprintf(re, "%d[deg]_Eph_r.txt", (int)field_getWaveAngle());
-  sprintf(im, "%d[deg]_Eph_i.txt", (int)field_getWaveAngle());
-  FILE *fpR = openFile(re);
-  FILE *fpI = openFile(im);
-  ntffTE_TimeOutput(Wx, Wy, Uz, fpR, fpI);
-  fclose(fpR);
-  fclose(fpI);
+  ntffTE_TimeOutput(Wx, Wy, Uz);
 
   memset(Ex, 0, sizeof(double complex)*N_CELL);
   memset(Ey, 0, sizeof(double complex)*N_CELL);
@@ -182,9 +166,15 @@ static void scatteredWave(double complex *p, double *eps){
   }*/
 
 static inline void update(void)
-{
-//  fastCalcJD();
-//  fastCalcE();
+{  
+//  fastCalcMB();
+//  fastCalcH();
+  
+  calcMB();
+  calcH();
+
+  //  fastCalcJD();
+  //  fastCalcE();
   calcJD();
   calcE();
 
@@ -198,17 +188,6 @@ static inline void update(void)
   if(si != 0.0)
     field_scatteredPulse(Ey, EPS_EY, 0.0, 0.5, si); //Eyは格子点より上に0.5ずれた位置に配置
 
-//  if(co != 0.0)
-//  field_scatteredWave(Ex, EPS_EX, 0.5, 0.0);
-//  if(si != 0.0)
-//  field_scatteredWave(Ey, EPS_EY, 0.0, 0.5);
-  
-//  fastCalcMB();
-//  fastCalcH();
-  
-  calcMB();
-  calcH();
-  
   ntffTE_TimeCalc(Ex,Ey,Hz,Wx,Wy,Uz);
 }
 
@@ -395,7 +374,12 @@ static void setCoefficient()
       EPS_EX[k] = models_eps(i+0.5,j, D_Y);
       EPS_EY[k] = models_eps(i,j+0.5, D_X);
       EPS_HZ[k] = 0.5*(models_eps(i+0.5,j+0.5, D_X) + models_eps(i+0.5,j+0.5, D_Y));
-
+      /*
+      if( i >= N_PX/2-1 && i <= N_PX/2+1 && EPS_EX[k] > 1)
+	{
+	  printf("%lf ", EPS_EX[k]);
+	}
+      */
       sig_ex_x = sig_max*field_sigmaX(i+0.5,j);
       sig_ex_y = sig_max*field_sigmaY(i+0.5,j);
       sig_ey_x = sig_max*field_sigmaX(i,j+0.5);

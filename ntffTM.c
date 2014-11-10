@@ -1,8 +1,14 @@
+#include <unistd.h>
+#include <math.h>
+#include <string.h>
+#include <stdlib.h>
+#include "ntff.h"
 #include "ntffTM.h"
 #include "field.h"
 #include "function.h"
 #include "bool.h"
-#include <math.h>
+#include "cfft.h"
+
 /*
   bottom(k) = k-1
   top(k)    = k+1
@@ -22,7 +28,7 @@ void ntffTM_init()
 {
   NTFFInfo nInfo = field_getNTFFInfo();
   
-  R0 = 1.0e6 * field_toCellUnit(500);//* field_getLambda_S();
+  R0 = 1.0e6 * field_toCellUnit(500);
   
   int tp = nInfo.top;    int bm = nInfo.bottom;  //上下
   int rt = nInfo.right;  int lt = nInfo.left;	 //左右
@@ -155,8 +161,8 @@ void ntffTM_Frequency( dcomplex *Hx, dcomplex *Hy, dcomplex *Ez, dcomplex result
 void ntffTM_TimeTranslate(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, dcomplex *Eth, dcomplex *Eph)
 {
   const double w_s = field_getOmega();
-  //1.0/(4*M_PI*C_0_S*R0)*
-  const double complex coef = 1.0/(4*M_PI*C_0_S*R0)*csqrt( 2*M_PI*C_0_S/(I*w_s) );
+  // don't divide by R0 -> textbook by uno
+  const double complex coef = 1.0/(4*M_PI*C_0_S)*csqrt( 2*M_PI*C_0_S/(I*w_s) );
   const int maxTime = field_getMaxTime();
   NTFFInfo nInfo = field_getNTFFInfo();  
   double theta = 0;
@@ -167,7 +173,7 @@ void ntffTM_TimeTranslate(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, dcomplex *Et
     double phi = ang*ToRad;
     double sx = cos(theta)*cos(phi);
     double sy = cos(theta)*sin(phi);
-    double sz = -cos(theta); //宇野先生の本では -sin(theta)になってる
+    double sz = -cos(theta); //宇野先生の本では -sin(theta)になってる(式としては本の方が正しいけどこのプログラムではこうしないと動かない)
     double px = -sin(phi);
     double py = cos(phi);
     
@@ -181,32 +187,89 @@ void ntffTM_TimeTranslate(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, dcomplex *Et
       double complex ETH = coef*(-Z_0_S*WTH-UPH);
       double complex EPH = coef*(-Z_0_S*WPH+UTH);
       
-      Eth[k+i] = ETH; //TODO : 物理単位に変換
+      Eth[k+i] = ETH; //TODO : 物理単位に変換が必要かも
       Eph[k+i] = EPH;
     }
   }
 }
-
+      
 //時間領域のEthの書き出し.
-void ntffTM_TimeOutput(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, FILE *fpRe, FILE *fpIm)
+void ntffTM_TimeOutput(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz)
 {
   const int maxTime = field_getMaxTime();
   NTFFInfo nInfo = field_getNTFFInfo();
   dcomplex *Eth, *Eph;  
   Eth = newDComplex(360*nInfo.arraySize);
   Eph = newDComplex(360*nInfo.arraySize);
-  ntffTM_TimeTranslate(Ux,Uy,Wz,Eth,Eph);  
+
+  //Eth, Ephを計算
+  ntffTM_TimeTranslate(Ux,Uy,Wz,Eth,Eph);
+  
+  double **out_ref = (double**)malloc(sizeof(double*) * (LAMBDA_EN_NM-LAMBDA_ST_NM+1));
+
+  for(int l=0; l<=LAMBDA_EN_NM-LAMBDA_ST_NM; l++)
+    out_ref[l] = newDouble(360);
+
+  //fft用に2の累乗の配列を確保
+  dcomplex *eth = newDComplex(NTFF_NUM);
   for(int ang=0; ang<360; ang++)
   {
     int k= ang*nInfo.arraySize;
-    for(int i=0; i < maxTime; i++)
+
+    memset((void*)eth,0,sizeof(dcomplex)*NTFF_NUM);               //0で初期化
+    memcpy((void*)eth, (void*)&Eth[k], sizeof(dcomplex)*maxTime); //コピー
+    cfft(eth, NTFF_NUM); //FFT
+
+    FieldInfo fInfo = field_getFieldInfo();
+    for(int lambda_nm=LAMBDA_ST_NM; lambda_nm<=LAMBDA_EN_NM; lambda_nm++)
     {
+      //線形補完 TODO : index = n-1 となるほどの小さいlambdaを取得しようとするとエラー
+      double p = C_0_S * fInfo.h_u_nm * NTFF_NUM / lambda_nm;
+      int index = floor(p);
+      p = p-index;
+      out_ref[lambda_nm-LAMBDA_ST_NM][ang] = ((1-p)*cnorm(eth[index]) + p*cnorm(eth[index+1]))/NTFF_NUM;
+    }
+  }  
+  freeDComplex(eth);
+  
+  //カレントディレクトリを取得
+  char buf[256], parent[512];
+  getcwd(parent, 512);
+
+  // fft変換後のデータをテキストファイルで書き出し
+  sprintf(buf, "%d[deg].txt",(int)field_getWaveAngle());
+  ntff_outputEnormTxt(out_ref, buf);
+  printf("saved %s/%s\n", parent, buf);
+
+  // fft変換後のデータをバイナリファイルで書き出し
+  sprintf(buf, "%d[deg]_%dnm_%dnm_b.dat", (int)field_getWaveAngle(), LAMBDA_ST_NM, LAMBDA_EN_NM);
+  ntff_outputEnormBin(out_ref, buf);
+  printf("saved %s/%s\n", parent, buf);
+
+  //メモリの解放
+  for(int l=0; l<=LAMBDA_EN_NM-LAMBDA_ST_NM;l++)
+      freeDouble(out_ref[l]);
+  free(out_ref);
+  /*
+  // fft変換前の時間サンプリングデータを書き出し
+  char re[1024], im[1024];
+  sprintf(re, "%d[deg]_Eth_r.txt", (int)field_getWaveAngle());
+  sprintf(im, "%d[deg]_Eth_i.txt", (int)field_getWaveAngle());
+  FILE *fpRe = openFile(re);
+  FILE *fpIm = openFile(im);
+  for(int ang=0; ang<360; ang++){
+    int k= ang*nInfo.arraySize;
+    for(int i=0; i < maxTime; i++){
       fprintf(fpRe,"%.20lf " , creal(Eth[k+i]));
       fprintf(fpIm,"%.20lf " , cimag(Eth[k+i]));
     }
     fprintf(fpRe,"\n");
     fprintf(fpIm,"\n");
   }
+  printf("saved %s/ %s & %s \n", parent, re, im);
+  fclose(fpRe);
+  fclose(fpIm);
+  */
   free(Eth);
   free(Eph);
 }
@@ -231,7 +294,6 @@ void ntffTM_TimeCalc(dcomplex *Hx, dcomplex *Hy, dcomplex *Ez, dcomplex *Ux, dco
 {
   FieldInfo_S fInfo_s      = field_getFieldInfo_S();  
 //  const double coef = 1.0/(4*M_PI*C_0_S*R0);
-
   double timeE = field_getTime() - 1;   //t - Δt
   double timeH = field_getTime() - 0.5; //t - Δt/2
   

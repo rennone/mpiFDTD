@@ -36,7 +36,10 @@ static SubFieldInfo_S subFieldInfo_s;
 static void mpiSplit(void);
 
 //:public------------------------------------//
-void field_setWaveAngle(int deg) { waveInfo_s.Angle_deg = deg;}
+void field_setWaveAngle(int deg) {
+  fieldInfo.angle_deg = deg;
+  waveInfo_s.Angle_deg = deg;
+}
 
 double field_getT() {  return waveInfo_s.T_s; }
 double  field_getK(){  return waveInfo_s.K_s;}
@@ -70,7 +73,6 @@ int field_index(int i, int j){
 
 int ind(const int i, const int j){  return i*N_PY + j;}//1次元配列に変換
 
-
 double field_toCellUnit(const double phisycalUnit){
   return phisycalUnit/fieldInfo.h_u_nm; //セル単位に変換 
 }
@@ -96,6 +98,8 @@ void field_init(FieldInfo field_info)
   fieldInfo_s.N_X   = fieldInfo_s.N_PX - 2*fieldInfo_s.N_PML;
   fieldInfo_s.N_Y   = fieldInfo_s.N_PY - 2*fieldInfo_s.N_PML;
   fieldInfo_s.N_CELL= fieldInfo_s.N_PY*fieldInfo_s.N_PX;
+  fieldInfo_s.DX    = fieldInfo_s.N_PY;
+  fieldInfo_s.DY    = 1;
   
   //入射波パラメータの計算
   waveInfo_s.Lambda_s = field_toCellUnit(fieldInfo.lambda_nm);
@@ -175,12 +179,21 @@ void field_scatteredPulse(dcomplex *p, double *eps, double gapX, double gapY, do
   FieldInfo_S fInfo_s = field_getFieldInfo_S();
   
   //waveAngleにより, t0の値を変えないとちょうどいいところにピークが来ないため,それを計算.
-  const double center_peak = (fInfo_s.N_PX/2.0+gapX)*cos_per_c+(fInfo_s.N_PY/2+gapY)*sin_per_c; //中心にピークがくる時間
-  const double t0 = -center_peak + 100; //常に300ステップの時に,領域の中心にピークが来るようにする.
+  const double center_peak = (fInfo_s.N_PX/2.0+gapX)*cos_per_c+(fInfo_s.N_PY/2+gapY)*sin_per_c; //スタートから中心へ進むのにかかる時間
+
+  // TODO : h_uのサイズに応じて変化させないと, パルスが不連続になる可能性が有る.
+  // t=500 では h_u = 10nm, 5nmでうまく動いているのでこうしている.
+//常に t=500 の時に,領域の中心にピークが来るように初期位相を調整
+  const double t0 = -center_peak + 500;
   
-  for(int i=1; i<fInfo_s.N_PX-1; i++) {
-    for(int j=1; j<fInfo_s.N_PY-1; j++) {
+  for(int i=1; i<fInfo_s.N_PX-1; i++)
+  {
+    for(int j=1; j<fInfo_s.N_PY-1; j++)
+    {      
       int k = field_index(i,j);
+      if(EPSILON_0_S == eps[k])
+        continue;
+      
       const double r = (i+gapX)*cos_per_c+(j+gapY)*sin_per_c-(time-t0); // (x*cos+y*sin)/C - (time-t0)
       const double gaussian_coef = exp( -pow(r/beam_width, 2 ) );
       p[k] += dot*gaussian_coef*(EPSILON_0_S/eps[k] - 1)*cexp(I*r*w_s);     //p[k] -= かも(岡田さんのメール参照)
@@ -305,7 +318,7 @@ void field_outputAllDataDouble(const char *fileName, double *data)
 }
 
 //:private
-//MPIにより, 領域を分割する.
+//MPIにより領域を分割する.
 static void mpiSplit(void)
 {
   int num_proc;

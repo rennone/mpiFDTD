@@ -11,7 +11,7 @@
 #define RIGHT true
 
 //異方性を入れるかのフラグ
-#define UNIAXIAL true
+#define UNIAXIAL false
 #define N_0_X 1.1
 
 //横幅
@@ -20,27 +20,31 @@
 #define DELTA_WIDTH_NM 10
 
 //ラメラの厚さ
-#define ST_THICK_NM_0 80
-#define EN_THICK_NM_0 170
-#define DELTA_THICK_NM_0 30
+#define ST_THICK_NM_0 90
+#define EN_THICK_NM_0 150
+#define DELTA_THICK_NM_0 10
 
 //空気の部分の厚さ
-#define ST_THICK_NM_1 80
-#define EN_THICK_NM_1 170
-#define DELTA_THICK_NM_1 30
+#define ST_THICK_NM_1 90
+#define EN_THICK_NM_1 150
+#define DELTA_THICK_NM_1 10
 
 //ラメラの枚数
-#define ST_LAYER_NUM 8
-#define EN_LAYER_NUM 12
-#define DELTA_LAYER_NUM 2
+#define ST_LAYER_NUM 4
+#define EN_LAYER_NUM 4
+#define DELTA_LAYER_NUM 1
 
-//互い違い
+//互い違い => 左右で n_0 n_1を入れ替え
 #define ASYMMETRY true
+
+//左右でずらす => 0 ~ thickness_nm[0] まで変化する.( 0だとずれは無い. thicknessで完全な互い違い )
+#define USE_GAP false
+#define DELTA_LEFT_GAP_Y 10
 
 //中心に以下の幅で軸となる枝を入れる
 #define ST_BRANCH_NM 0
-#define EN_BRANCH_NM 50
-#define DELTA_BRANCH_NM 10
+#define EN_BRANCH_NM 0
+#define DELTA_BRANCH_NM 50
 
 //屈折率
 #define N_0 1.56
@@ -48,15 +52,15 @@
 //#define N_0 8.4179 //serikon
 
 //先端における横幅の割合
-#define ST_EDGE_RATE 1.0
+#define ST_EDGE_RATE 0.0
 #define EN_EDGE_RATE 1.0
-#define DELTA_EDGE_RATE 0.5
+#define DELTA_EDGE_RATE 1.0
 
 //ラメラの先端を丸める曲率 (0で四角形のまま, 1.0で最もカーブする)
 #define CURVE 0.2
 
 //エッジの角度をランダムに傾ける
-#define RANDOMNESS 30
+#define RANDOMNESS 0
 #define RANDOM_SEED 0 //各プロセスで同じ角度になるようにseedを固定する
 
 //1ラメラの式
@@ -85,6 +89,14 @@ static double ep_x_s;      //異方性(x方向用)の誘電率
 
 static double edge_width_rate = ST_EDGE_RATE;
 
+//DELTA_LEFT_GAP_Y
+#if USE_GAP
+static int left_gap_y_nm = DELTA_LEFT_GAP_Y;
+#else
+static int left_gap_y_nm = 0;
+#endif
+
+static double left_gap_y_s;
 
 static bool inLamela( Lamela *lamera, double x, double y)
 {
@@ -146,10 +158,16 @@ static double eps(double x, double y, int col, int row)
 
   if( fabs(_x) > 0.5)
   {
-    calcLamela(_x-0.5, _x+0.5, _y-0.5, _y+0.5, _x<0 ? &lams[LEFT] : &lams[RIGHT]);
+    if(_x < 0)
+    {
+      calcLamela(_x-0.5, _x+0.5, _y-left_gap_y_s-0.5, _y-left_gap_y_s+0.5, _x<0 ? &lams[LEFT] : &lams[RIGHT]);
+    } else
+    {
+      calcLamela(_x-0.5, _x+0.5, _y-0.5, _y+0.5, _x<0 ? &lams[LEFT] : &lams[RIGHT]);
+    }
   } else
   {
-    calcLamela(_x-0.5,      0, _y-0.5, _y+0.5, &lams[LEFT]);
+    calcLamela(_x-0.5,      0, _y-left_gap_y_s-0.5, _y-left_gap_y_s+0.5, &lams[LEFT]);
     calcLamela( 0    , _x+0.5, _y-0.5, _y+0.5, &lams[RIGHT]);
   }
 
@@ -160,6 +178,9 @@ static double eps(double x, double y, int col, int row)
     for(double j=-half_split+0.5; j<half_split; j+=1){
       double sx = _x + col*i/split; //細分化したセルの位置
       double sy = _y + row*j/split;
+
+      if(sx < 0)
+        sy-=left_gap_y_s;
       
       //枝の部分にあるか判定
       if(sy>=0 && sy <= height_s){
@@ -231,37 +252,75 @@ static double eps(double x, double y, int col, int row)
   }
 }
 
-//構造を一つ進める
+
 static bool nextStructure()
 {
-  thickness_nm[0] += DELTA_THICK_NM_0;
-  thickness_nm[1] += DELTA_THICK_NM_1;
-
-  if(thickness_nm[0] > EN_THICK_NM_0)
+  left_gap_y_nm += DELTA_LEFT_GAP_Y;
+  if( left_gap_y_nm >= thickness_nm[0] + thickness_nm[1] )
   {
-    thickness_nm[0] = ST_THICK_NM_0;
-    thickness_nm[1] = ST_THICK_NM_1;
-
-    edge_width_rate += DELTA_EDGE_RATE;
-    if(edge_width_rate > EN_EDGE_RATE)
-    {
-      edge_width_rate = ST_EDGE_RATE;
-
-      branch_width_nm += DELTA_BRANCH_NM;
-      if(branch_width_nm > EN_BRANCH_NM)
-      	{
-	  printf("there are no models which hasn't been simulated yet\n");     
-	  return true;
-	}
+    left_gap_y_nm = 0;
+    thickness_nm[0] += DELTA_THICK_NM_0;
+    thickness_nm[1] += DELTA_THICK_NM_1;    
+    if(thickness_nm[1] > EN_THICK_NM_1){
+      thickness_nm[0] = ST_THICK_NM_0;
+      thickness_nm[1] = ST_THICK_NM_1;
+      edge_width_rate += DELTA_EDGE_RATE;
+      
+      if(edge_width_rate > EN_EDGE_RATE){
+        edge_width_rate = ST_EDGE_RATE;
+        branch_width_nm += DELTA_BRANCH_NM;
+	
+        if(branch_width_nm > EN_BRANCH_NM){
+          printf("there are no models which hasn't been simulated yet\n");
+          return true;
+        }
+      }
     }
   }
   return false;  
 }
 
+/*
+//構造を一つ進める
+static bool nextStructure()
+{
+  left_gap_y_nm += DELTA_LEFT_GAP_Y;
+  //gapを使わない場合は無条件に入る
+  if( left_gap_y_nm >= thickness_nm[0] + thickness_nm[1] || !USE_GAP)
+  {
+    left_gap_y_nm = USE_GAP ? DELTA_LEFT_GAP_Y : 0;
+    thickness_nm[0] += DELTA_THICK_NM_0;    
+    if(thickness_nm[0] > EN_THICK_NM_0)
+    {
+      thickness_nm[0] = ST_THICK_NM_0;
+      thickness_nm[1] += DELTA_THICK_NM_1;
+      if(thickness_nm[1] > EN_THICK_NM_1)
+      {
+        thickness_nm[1] = ST_THICK_NM_1;
+        edge_width_rate += DELTA_EDGE_RATE;
+        if(edge_width_rate > EN_EDGE_RATE)
+        {
+          edge_width_rate = ST_EDGE_RATE;
+
+          branch_width_nm += DELTA_BRANCH_NM;
+          if(branch_width_nm > EN_BRANCH_NM)
+          {
+            printf("there are no models which hasn't been simulated yet\n");     
+            return true;
+          }
+        }
+      }
+    }
+  }
+  return false;  
+}
+*/
 
 //正しいディレクトリまで移動.
 void morphoScaleModel_moveDirectory()
-{      
+{
+//  UN_DONE("not implement leftGap in MorphoScale");
+
   if(ASYMMETRY){
     makeDirectory("asymmetry");
     moveDirectory("asymmetry");
@@ -286,13 +345,26 @@ void morphoScaleModel_moveDirectory()
   sprintf(buf,"curve_%.2lf", CURVE);
   makeDirectory(buf);
   moveDirectory(buf);
+  
+  sprintf(buf, "width%d", width_nm);
+  makeAndMoveDirectory(buf);
+  
+  sprintf(buf, "thick%d_%d",thickness_nm[0], thickness_nm[1]);
+  makeAndMoveDirectory(buf);
 
-  sprintf(buf, "thick%d_%d_layer%d_edge%.1lf_branch%d",
-          thickness_nm[0], thickness_nm[1], layerNum, edge_width_rate, branch_width_nm);
-  makeDirectory(buf);
-  moveDirectory(buf);
+  sprintf(buf, "gap%d", left_gap_y_nm);
+  makeAndMoveDirectory(buf);
+  
+  sprintf(buf,"layer%d",layerNum);
+  makeAndMoveDirectory(buf);
 
-  sprintf(buf, "randome%d_%d", RANDOMNESS, RANDOM_SEED );
+  sprintf(buf, "edge%.1lf", edge_width_rate);
+  makeAndMoveDirectory(buf);
+
+  sprintf(buf, "branch%d", branch_width_nm);
+  makeAndMoveDirectory(buf);
+
+  sprintf(buf, "random%d_%d", RANDOMNESS, RANDOM_SEED );
   makeDirectory(buf);
   moveDirectory(buf);
 }
@@ -303,8 +375,9 @@ void morphoScaleModel_init()
   thickness_s[0] = field_toCellUnit(thickness_nm[0]);
   thickness_s[1] = field_toCellUnit(thickness_nm[1]);
   branch_width_s = field_toCellUnit(branch_width_nm);
+  left_gap_y_s   = field_toCellUnit(left_gap_y_nm);
   
-  height_s = (thickness_s[0] + thickness_s[1])*layerNum;  
+  height_s = (thickness_s[0] + thickness_s[1])*layerNum + (thickness_s[0] + thickness_s[1]);   //最後はgapの分
   ep_s   = N_0*N_0*EPSILON_0_S;
   ep_x_s = N_0_X*N_0_X*EPSILON_0_S;
 
@@ -355,7 +428,8 @@ bool morphoScaleModel_isFinish(void)
 void morphoScaleModel_needSize(int *x, int *y)
 {
   *x = width_nm + branch_width_nm;
-  *y = (thickness_nm[0]+thickness_nm[1])*layerNum;
+   //最後の項はgapの分(これは固定にしないと,gapによりフィールドの領域が変わるので図が変に見える).
+  *y = (thickness_nm[0]+thickness_nm[1])*layerNum + (USE_GAP ? thickness_nm[0]+thickness_nm[1] : 0 );
 }
 
 /*

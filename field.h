@@ -32,8 +32,9 @@ typedef struct FieldInfo_S
 {
   int N_X, N_Y;   //領域のサイズ(セル)
   int N_PX, N_PY; //PMLレイヤを含めた領域サイズ(セル)
-  int N_CELL;    //全セル数
+  int N_CELL;     //全セル数
   int N_PML;      //PMLレイヤの層の数
+  int DX, DY;     //x,yのインデックスのオフセット量(まだ使ってない) todo
 }FieldInfo_S;
 
 //MPI分割後の小領域のパラメータ

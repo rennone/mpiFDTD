@@ -53,14 +53,15 @@ static void calcH(void);
 //Update
 static void update(void)
 {
+  calcMB();  
+  calcH();
+  
   calcJD();
   calcE();
   
 //  field_scatteredWave(Ez, EPS_EZ, 0, 0); //Ezは格子点上に配置されているので,ずれは(0,0)
-  field_scatteredPulse(Ez, EPS_EZ, 0, 0, 1.0); //Ezは格子点上に配置されているので,ずれは(0,0)
-  
-  calcMB();  
-  calcH();
+  field_scatteredPulse(Ez, EPS_EZ, 0, 0, 1.0); //Ezは格子点上に配置されているので,ずれは(0,0)  
+
   ntffTM_TimeCalc(Hx,Hy,Ez,Ux,Uy,Wz);
 }
 
@@ -76,35 +77,22 @@ static void init()
 //Finish
 static void finish()
 {
-  char current[512];
-  getcwd(current, 512); //カレントディレクトリを保存
-  char re[1024], im[1024];
-  sprintf(re, "%d[deg]_Eth_r.txt", (int)field_getWaveAngle());
-  sprintf(im, "%d[deg]_Eth_i.txt", (int)field_getWaveAngle());
-  FILE *fpRe = openFile(re);
-  FILE *fpIm = openFile(im);
-
-  ntffTM_TimeOutput(Ux,Uy,Wz,fpRe, fpIm);
-  printf("saved %s/ %s & %s \n",current, re, im);
-  
-  fclose(fpRe);
-  fclose(fpIm);
-
+  reset();
   freeMemories();
 }
 
-//Reset -> メモリとかは解放せず, もう一度シミュレーションを行うよう
+//Reset -> メモリとかは解放せず, もう一度シミュレーションを行う
 static void reset()
 {
-  char re[1024], im[1024];
-  sprintf(re, "%d[deg]_Eth_r.txt", (int)field_getWaveAngle());
-  sprintf(im, "%d[deg]_Eth_i.txt", (int)field_getWaveAngle());
-  FILE *fpRe = openFile(re);
-  FILE *fpIm = openFile(im);
-  ntffTM_TimeOutput(Ux,Uy,Wz,fpRe, fpIm);
-  printf("saved %s & %s \n", re, im);
-  fclose(fpRe);
-  fclose(fpIm);
+  ntffTM_TimeOutput(Ux,Uy,Wz);
+
+  /*  
+      dcomplex res[360];
+      ntffTM_Frequency(Hx, Hy, Ez, res);
+      FILE *fp = fopen("res_5.txt", "w");
+      for(int i=0; i<360; i++)
+      fprintf(fp,"%.18lf\n", cnorm(res[i]));
+  */
 
 //計算領域の初期化
   memset(Hx, 0, sizeof(double complex)*N_CELL);
@@ -246,8 +234,8 @@ static void setCoefficient(void){
   for(int i=0; i<fInfo_s.N_PX; i++){
     for(int j=0; j<fInfo_s.N_PY; j++){
       int k = field_index(i,j);
-      EPS_EZ[k] = models_eps(i,j, D_XY);     //todo D_X, D_Yにしなくていいのか?
-      EPS_HX[k] = models_eps(i,j+0.5, D_XY);
+      EPS_EZ[k] = models_eps(i,j, D_XY);     
+      EPS_HX[k] = models_eps(i,j+0.5, D_XY);//todo D_X, D_Yにしなくていいのか?
       EPS_HY[k] = models_eps(i+0.5,j, D_XY);
       
       sig_ez_x = sig_max*field_sigmaX(i,j);
@@ -291,94 +279,59 @@ static void allocateMemories()
   Dz = newDComplex(N_CELL);
   Jz = newDComplex(N_CELL);
   
-  Hx = (double complex*)malloc(sizeof(double complex)*N_CELL);
-  Mx = (double complex*)malloc(sizeof(double complex)*N_CELL);
-  Bx = (double complex*)malloc(sizeof(double complex)*N_CELL);
+  Hx = newDComplex(N_CELL);
+  Mx = newDComplex(N_CELL);
+  Bx = newDComplex(N_CELL);
   
-  Hy = (double complex*)malloc(sizeof(double complex)*N_CELL);
-  My = (double complex*)malloc(sizeof(double complex)*N_CELL);
-  By = (double complex*)malloc(sizeof(double complex)*N_CELL);
+  Hy = newDComplex(N_CELL);
+  My = newDComplex(N_CELL);
+  By = newDComplex(N_CELL);
   
+  C_JZ = newDouble(N_CELL);
+  C_MX = newDouble(N_CELL);
+  C_MY = newDouble(N_CELL);
+
+  C_DZ = newDouble(N_CELL);
+  C_BX = newDouble(N_CELL);
+  C_BY = newDouble(N_CELL);
+
+  C_JZHXHY = newDouble(N_CELL);
+  C_MXEZ = newDouble(N_CELL);
+  C_MYEZ = newDouble(N_CELL);
+
+  C_DZJZ0 = newDouble(N_CELL);
+  C_DZJZ1 = newDouble(N_CELL);
+
+  C_BXMX1 = newDouble(N_CELL);
+  C_BXMX0 = newDouble(N_CELL);
+
+  C_BYMY1 = newDouble(N_CELL);
+  C_BYMY0 = newDouble(N_CELL);
+
+  EPS_HY = newDouble(N_CELL);
+  EPS_HX = newDouble(N_CELL);
+  EPS_EZ = newDouble(N_CELL);
+
   int step = field_getNTFFInfo().arraySize;
-  Ux = newDComplex(360*step);//(double complex*)malloc(sizeof(double complex)*360*step);
-  Uy = newDComplex(360*step);//(double complex*)malloc(sizeof(double complex)*360*step);
-  Wz = newDComplex(360*step);//(double complex*)malloc(sizeof(double complex)*360*step);
-  
-  C_JZ = (double *)malloc(sizeof(double)*N_CELL);
-  C_MX = (double *)malloc(sizeof(double)*N_CELL);
-  C_MY = (double *)malloc(sizeof(double)*N_CELL);
-
-  C_DZ = (double *)malloc(sizeof(double)*N_CELL);
-  C_BX = (double *)malloc(sizeof(double)*N_CELL);
-  C_BY = (double *)malloc(sizeof(double)*N_CELL);
-
-  C_JZHXHY = (double *)malloc(sizeof(double)*N_CELL);
-  C_MXEZ = (double *)malloc(sizeof(double)*N_CELL);
-  C_MYEZ = (double *)malloc(sizeof(double)*N_CELL);
-
-  C_DZJZ0 = (double *)malloc(sizeof(double)*N_CELL);
-  C_DZJZ1 = (double *)malloc(sizeof(double)*N_CELL);
-
-  C_BXMX1 = (double *)malloc(sizeof(double)*N_CELL);
-  C_BXMX0 = (double *)malloc(sizeof(double)*N_CELL);
-
-  C_BYMY1 = (double *)malloc(sizeof(double)*N_CELL);
-  C_BYMY0 = (double *)malloc(sizeof(double)*N_CELL);
-
-  EPS_HY = (double *)malloc(sizeof(double)*N_CELL);
-  EPS_HX = (double *)malloc(sizeof(double)*N_CELL);
-  EPS_EZ = (double *)malloc(sizeof(double)*N_CELL);
-
-  memset(Hx, 0, sizeof(double complex)*N_CELL);
-  memset(Hy, 0, sizeof(double complex)*N_CELL);
-  memset(Ez, 0, sizeof(double complex)*N_CELL);
-
-  memset(Mx, 0, sizeof(double complex)*N_CELL);
-  memset(My, 0, sizeof(double complex)*N_CELL);
-  memset(Jz, 0, sizeof(double complex)*N_CELL);
-
-  memset(Bx, 0, sizeof(double complex)*N_CELL);
-  memset(By, 0, sizeof(double complex)*N_CELL);
-  memset(Dz, 0, sizeof(double complex)*N_CELL);
+  Ux = newDComplex(360*step);
+  Uy = newDComplex(360*step);
+  Wz = newDComplex(360*step);
 }
 
 static void freeMemories()
-{  
-  if(Ez != NULL){   free(Ez); Ez = NULL;  }  
-  if(Hx != NULL){   free(Hx); Hx = NULL;  }
-  if(Hy != NULL){   free(Hy); Hy = NULL;  }
+{
+  delete(Hx);  delete(Hy);  delete(Ez);  
+  delete(Mx);  delete(My);  delete(Jz);
+  delete(Bx);  delete(By);  delete(Dz);
+  delete(Ux);  delete(Uy);  delete(Wz);
 
-  if(Dz != NULL){   free(Dz); Dz = NULL;  }  
-  if(Hx != NULL){   free(Hx); Hx = NULL;  }
-  if(Hy != NULL){   free(Hy); Hy = NULL;  }
-  
-  delete(Bx);
-  delete(By);
-  delete(Jz);
+  delete(C_JZ); delete(C_JZHXHY); 
+  delete(C_DZ); delete(C_DZJZ1); delete(C_DZJZ0);
 
-  delete(Ux);
-  delete(Uy);
-  delete(Wz);
-  
-  if(C_JZ != NULL){ free(C_JZ); C_JZ = NULL;  }
-  if(C_JZHXHY != NULL){ free(C_JZHXHY); C_JZHXHY = NULL;  }
-  
-  if(C_DZ != NULL){ free(C_DZ); C_DZ = NULL;  }
-  if(C_DZJZ1 != NULL){ free(C_DZJZ1); C_DZJZ1 = NULL;  }
-  if(C_DZJZ0 != NULL){ free(C_DZJZ0); C_DZJZ0 = NULL;  }
+  delete(C_MX); delete(C_MXEZ);
+  delete(C_BX); delete(C_BXMX1); delete(C_BXMX0);
 
-  if(C_MX != NULL){ free(C_MX); C_MX = NULL;  }
-  if(C_MXEZ != NULL){ free(C_MXEZ); C_MXEZ = NULL;  }
-  
-  if(C_BX != NULL){ free(C_BX); C_BX = NULL;  }
-  if(C_BXMX1 != NULL){ free(C_BXMX1); C_BXMX1 = NULL;  }
-  if(C_BXMX0 != NULL){ free(C_BXMX0); C_BXMX0 = NULL;  }
-  
-  if(C_MY != NULL){ free(C_MY); C_MY = NULL;  }
-  if(C_MYEZ != NULL){ free(C_MYEZ); C_MYEZ = NULL;  }
-
-  if(C_BY != NULL){ free(C_BY); C_BY = NULL;  }
-  if(C_BYMY1 != NULL){ free(C_BYMY1); C_BYMY1 = NULL;  }
-  if(C_BYMY0 != NULL){ free(C_BYMY0); C_BYMY0 = NULL;  }    
+  delete(C_MY); delete(C_MYEZ);
+  delete(C_BY); delete(C_BYMY1); delete(C_BYMY0);
 }
 

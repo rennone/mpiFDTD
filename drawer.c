@@ -1,17 +1,20 @@
+#include "drawer.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <string.h>
+#include <math.h>
+#include "function.h"
 static int putBmpHeader(FILE *s, int x, int y, int c);
 static int fputc4LowHigh(unsigned long d, FILE *s);
 static int fputc2LowHigh(unsigned short d, FILE *s);
 
+typedef struct {
+ float r,g,b;
+}colorf;
 
 #ifdef USE_OPENGL
 
-#include "drawer.h"
-#include "function.h"
-#include <string.h>
-#include <math.h>
 #include <GL/glew.h>
 
 
@@ -24,14 +27,9 @@ static int fputc2LowHigh(unsigned short d, FILE *s);
 #include <GL/glut.h>
 #endif
 
-
-typedef struct {
- GLfloat r,g,b;
-}colorf;
-
 static const int vertexNum = 4; //頂点数
-#define TEX_NX 256
-#define TEX_NY 256
+#define TEX_NX 256  //テクスチャの横幅
+#define TEX_NY 256  //縦幅
 static colorf texColor[TEX_NX][TEX_NY];
 static GLuint ver_buf, tex_buf;
 static GLuint texId;
@@ -63,8 +61,8 @@ void (*drawer_getDraw(void))(void)
 {
   return drawer_draw;
 }
-//--------------------------------------//
 
+//--------------------------------------//
 void drawer_init(enum COLOR_MODE cm)
 {
   if(cm == CREAL)
@@ -114,7 +112,13 @@ void drawer_draw()
   glDrawArrays( GL_POLYGON, 0, vertexNum);  
 }
 
-//todo 可変長引数を利用して, 複数のデータの平均で色を出すようにするべき?
+void drawer_clear()
+{  
+  //初期化
+  memset(texColor, 0 , sizeof(texColor));
+}
+
+//電磁場の値(phi)からテクスチャの色を変える
 void drawer_paintImage(int left, int bottom, int right, int top, int width, int height, double complex *phis)
 {
   colorf c;
@@ -135,7 +139,7 @@ void drawer_paintImage(int left, int bottom, int right, int top, int width, int 
   }
 }
 
-
+//モデルの誘電率(phi)からテクスチャの色を変える(暗くする)
 void drawer_paintModel(int left, int bottom, int right, int top, int width, int height, double *phis)
 {
   double dphi;
@@ -240,14 +244,10 @@ static void colorTransform(double phi, colorf *col)
 
 static void modelColorTransform(double n, colorf *col)
 {
-  double phi = n - 1.0;
-  double range = 2.0; //波の振幅  
-  double ab_phi = phi < 0 ? -phi : phi;
-  double a = ab_phi < range ? (ab_phi <  range/3.0 ? 3.0/range*ab_phi : (-3.0/4.0/range*ab_phi+1.25) ) : 0.5;
-  
-  col->r = phi > 0 ? a:0;
-  col->b = phi < 0 ? a:0;
-  col->g = min(1.0, max(0.0, -3*ab_phi+2));
+  colorTransform(0, col);
+  col->r -= (1-1.0/n/n);
+  col->g -= (1-1.0/n/n);
+  col->b -= (1-1.0/n/n);  
 }
 
 void drawer_outputImage(char *fileName, dcomplex *data, double *model, int width, int height)

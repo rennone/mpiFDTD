@@ -8,6 +8,7 @@
 #include "field.h"
 #include "parser.h"
 #include "function.h"
+#include "drawer.h"
 
 typedef struct Config
 {
@@ -19,12 +20,12 @@ typedef struct Config
 
 #define ST_PHI -180
 #define EN_PHI 0
+
 #define DELTA_PHI 5
 
 // 以下 OPEN_GLの関数
 #ifdef USE_OPENGL
 
-#include "drawer.h"
 #define WINDOW_WIDTH 300
 #define WINDOW_HEIGHT 300
 #include <GL/glew.h>
@@ -52,56 +53,6 @@ int numProc;
 Config config;
 char root[512]; //ルートディレクトリ
 
-//ファイルからのパラメータ呼び出し
-static void readConfig(FieldInfo *field_info)
-{
-  FILE *fp = NULL;
-  if( !(fp = fopen("config.txt", "r")) )
-  {
-    printf("cannot find config.txt of main\n");
-  }
-
-  int err;
-  char buf[1024],tmp[1024];
-
-  parser_nextLine(fp, buf);
-  field_info->width_nm    = atoi(buf);
-
-  parser_nextLine(fp, buf);
-  field_info->height_nm   = atoi(buf);
-
-  parser_nextLine(fp, buf);
-  field_info->h_u_nm      = atoi(buf);
-
-  parser_nextLine(fp, buf);
-  field_info->pml         = atoi(buf);
-
-  parser_nextLine(fp, buf);
-  field_info->lambda_nm   = strtod(buf,tmp);
-
-  parser_nextLine(fp, buf);
-  field_info->stepNum     = atoi(buf);
-
-//入射角度
-  parser_nextLine(fp, buf);
-  config.startAngle = atoi(buf);
-
-  parser_nextLine(fp, buf);
-  config.endAngle = atoi(buf);
-
-  parser_nextLine(fp, buf);
-  config.deltaAngle = atoi(buf);
-
-  //モデルの種類
-  parser_nextLine(fp, buf);
-  config.ModelType = atoi(buf);
-
-  //Solver情報
-  parser_nextLine(fp, buf);
-  config.SolverType = atoi(buf);
-
-  fclose(fp);
-}
 
 static void moveDir()
 {
@@ -115,34 +66,6 @@ static void moveDir()
   moveDirectory(buf);
 
   simulator_moveDirectory();  
-}
-
-static void initConfigFromText()
-{
-  //同時にファイルを読み込むのはヤバい気がするので, rank0だけが読み込んで同期する
-  if(rank == 0)
-  {    
-    readConfig(&config.field_info);
-    printf("===========FieldSetting=======\n");
-    printf("fieldSize(nm) = (%d, %d) \nh_u = %d \npml = %d\n", config.field_info.width_nm, config.field_info.height_nm,
-           config.field_info.h_u_nm, config.field_info.pml);
-    printf("lambda(nm) = %d  \nstep = %d\n", config.field_info.lambda_nm, config.field_info.stepNum);
-
-    printf("angle = %d .. %d (delta = %d)\n", config.startAngle, config.endAngle, config.deltaAngle);
-    printf("==============================\n");
-  }
-    
-  //configを同期
-  if(rank == 0)
-  {
-    for(int i=1; i<numProc; i++)
-    {
-      MPI_Send((int*)&config, sizeof(Config)/sizeof(int), MPI_INT, i, 1, MPI_COMM_WORLD);
-    }
-  }else{
-    MPI_Status status;
-    MPI_Recv((int*)&config, sizeof(Config)/sizeof(int), MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
-  }
 }
 
 static void calcFieldSize(FieldInfo *fInfo)
@@ -166,10 +89,11 @@ static void calcFieldSize(FieldInfo *fInfo)
 
 static void initParameter()
 {
-  config.field_info.h_u_nm    = 5;
+  config.field_info.h_u_nm    = 10;
   config.field_info.pml       = 10;
   config.field_info.lambda_nm = 500;
-  config.field_info.stepNum   = 1500;
+  //領域の全体サイズが変化し,収束にかかる時間が変わるためh_uによりステップ数を変える必要がある.
+  config.field_info.stepNum   = 15000 / config.field_info.h_u_nm;
   config.field_info.angle_deg = ST_PHI;
   config.startAngle = ST_PHI;
   config.endAngle   = EN_PHI;
@@ -203,6 +127,11 @@ bool nextSimulation(int progress, bool *changeModel)
       if(models_isFinish()) {
         return true;
       }
+
+#ifdef USE_OPENGL
+      drawer_clear(); //画像をクリア
+#endif
+      
     }
   }
   return false;
@@ -221,8 +150,8 @@ static void screenshot()
 int main( int argc, char *argv[] )
 {
   getcwd(root, 512); //カレントディレクトリを保存
-  
-  models_setModel(LAYER);       //,, ,TRACE_IMAGE, ZIGZAG,MORPHO_SCALE, 
+
+  models_setModel(LAYER);       // MORPHO_SCALE,TRACE_IMAGE, ZIGZAG,,MIE_CYLINDER
   simulator_setSolver(TE_UPML_2D);
   
   MPI_Init( 0, 0 );
@@ -238,7 +167,8 @@ int main( int argc, char *argv[] )
   if( nextSimulation(rank, &changeModel) == true){
     MPI_Finalize();
     exit(0);
-  }  
+  }
+  
   //シミュレーションの初期化.
   simulator_init(config.field_info);
   screenshot();
@@ -382,4 +312,84 @@ static void idle(void)
 
 }
 // 以上 OPENGLの関数
+
+/*
+  //ファイルからのパラメータ呼び出し
+static void readConfig(FieldInfo *field_info)
+{
+  FILE *fp = NULL;
+  if( !(fp = fopen("config.txt", "r")) )
+  {
+    printf("cannot find config.txt of main\n");
+  }
+
+  char buf[1024],**tmp;
+
+  parser_nextLine(fp, buf);
+  field_info->width_nm    = atoi(buf);
+
+  parser_nextLine(fp, buf);
+  field_info->height_nm   = atoi(buf);
+
+  parser_nextLine(fp, buf);
+  field_info->h_u_nm      = atoi(buf);
+
+  parser_nextLine(fp, buf);
+  field_info->pml         = atoi(buf);
+
+  parser_nextLine(fp, buf);
+  field_info->lambda_nm   = strtod(buf,tmp);
+
+  parser_nextLine(fp, buf);
+  field_info->stepNum     = atoi(buf);
+
+//入射角度
+  parser_nextLine(fp, buf);
+  config.startAngle = atoi(buf);
+
+  parser_nextLine(fp, buf);
+  config.endAngle = atoi(buf);
+
+  parser_nextLine(fp, buf);
+  config.deltaAngle = atoi(buf);
+
+  //モデルの種類
+  parser_nextLine(fp, buf);
+  config.ModelType = atoi(buf);
+
+  //Solver情報
+  parser_nextLine(fp, buf);
+  config.SolverType = atoi(buf);
+
+  fclose(fp);
+}
+
+static void initConfigFromText()
+{
+  //同時にファイルを読み込むのはヤバい気がするので, rank0だけが読み込んで同期する
+  if(rank == 0)
+  {    
+    readConfig(&config.field_info);
+    printf("===========FieldSetting=======\n");
+    printf("fieldSize(nm) = (%d, %d) \nh_u = %d \npml = %d\n", config.field_info.width_nm, config.field_info.height_nm,
+           config.field_info.h_u_nm, config.field_info.pml);
+    printf("lambda(nm) = %d  \nstep = %d\n", config.field_info.lambda_nm, config.field_info.stepNum);
+
+    printf("angle = %d .. %d (delta = %d)\n", config.startAngle, config.endAngle, config.deltaAngle);
+    printf("==============================\n");
+  }
+    
+  //configを同期
+  if(rank == 0)
+  {
+    for(int i=1; i<numProc; i++)
+    {
+      MPI_Send((int*)&config, sizeof(Config)/sizeof(int), MPI_INT, i, 1, MPI_COMM_WORLD);
+    }
+  }else{
+    MPI_Status status;
+    MPI_Recv((int*)&config, sizeof(Config)/sizeof(int), MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
+  }
+}
+*/
 #endif
