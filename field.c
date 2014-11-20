@@ -105,6 +105,7 @@ void field_init(FieldInfo field_info)
   waveInfo_s.Lambda_s = field_toCellUnit(fieldInfo.lambda_nm);
   waveInfo_s.T_s      = waveInfo_s.Lambda_s/C_0_S;
   waveInfo_s.K_s      = 2*M_PI/waveInfo_s.Lambda_s;
+  waveInfo_s.K_0_s    = 2*M_PI/waveInfo_s.Lambda_s;
   waveInfo_s.Omega_s  = C_0_S*waveInfo_s.K_s;
   waveInfo_s.Angle_deg   = fieldInfo.angle_deg;
 
@@ -139,6 +140,59 @@ void field_init(FieldInfo field_info)
   double len = (ntff_info.top - ntff_info.bottom)/2;
   ntff_info.RFperC = len*2;
   ntff_info.arraySize = maxTime + 2*ntff_info.RFperC;
+}
+
+dcomplex field_pointLight()
+{
+  double time = field_getTime();
+  double w_s  = field_getOmega();
+  double ray_coef = field_getRayCoef();
+
+  return ray_coef*cexp(I*w_s*time);
+}
+
+//PML用の散乱波
+void field_nsScatteredWaveNotUPML(dcomplex *p, double *eps, double gapX, double gapY)
+{
+  FieldInfo_S fInfo_s = field_getFieldInfo_S();
+  double time = field_getTime();
+  double w_s  = field_getOmega();
+  double ray_coef = field_getRayCoef();
+  double k_s = field_getK();
+  double rad = field_getWaveAngle()*M_PI/180.0;
+  double ks_cos = cos(rad)*k_s, ks_sin = sin(rad)*k_s;//毎回計算すると時間かかりそうだから代入しておく  
+  for(int i=1; i<fInfo_s.N_PX-1; i++) {
+    for(int j=1; j<fInfo_s.N_PY-1; j++) {
+      int k = field_index(i,j);
+      double kr = (i+gapX)*ks_cos+(j+gapY)*ks_sin;
+      double n  = sqrt( eps[k] / EPSILON_0_S );
+     // 光速 C_0_S が変化するので, kをそれに合わせる必要がある
+      double u0 = sin(w_s*0.5) / sin(  k_s*0.5);
+      double u1 = sin(w_s*0.5) / sin(n*k_s*0.5);
+      double _n = u0 / u1;
+      p[k] += ray_coef*
+        ( 1.0/(_n*n) - 1.0)* ( cexp( I*(kr-w_s*(time+1.0)) ) - cexp( I*(kr-w_s*(time)) ));  //p[k] -= かも(岡田さんのメール参照)
+    }
+  }
+}
+
+void field_scatteredWaveNotUPML(dcomplex *p, double *eps, double gapX, double gapY)
+{
+  FieldInfo_S fInfo_s = field_getFieldInfo_S();
+  double time = field_getTime();
+  double w_s  = field_getOmega();
+  double ray_coef = field_getRayCoef();
+  double k_s = field_getK();
+  double rad = field_getWaveAngle()*M_PI/180.0;
+  double ks_cos = cos(rad)*k_s, ks_sin = sin(rad)*k_s;//毎回計算すると時間かかりそうだから代入しておく  
+  for(int i=1; i<fInfo_s.N_PX-1; i++) {
+    for(int j=1; j<fInfo_s.N_PY-1; j++) {
+      int k = field_index(i,j);
+      double kr = (i+gapX)*ks_cos+(j+gapY)*ks_sin;
+      p[k] += ray_coef*
+        ( EPSILON_0_S / eps[k] - 1.0)* ( cexp( I*(kr-w_s*(time+0.5)) ) - cexp( I*(kr-w_s*(time-0.5)) ));  //p[k] -= かも(岡田さんのメール参照)
+    }
+  }
 }
 
 //単一波長の散乱波
@@ -214,6 +268,7 @@ double field_sigmaX(const double x, const double y)
   else
     return pow(1.0*(x - (N_PX-N_PML-1))/N_PML, M);
 }
+
 double field_sigmaY(const double x, double y)
 {
   const int M = 2;
@@ -226,6 +281,7 @@ double field_sigmaY(const double x, double y)
   else
     return pow(1.0*(y - (N_PY-N_PML-1))/N_PML,M);
 }
+
 //pml用の係数のひな形 Δt = 1
 //ep_mu εかμ(Eの係数->ε, Hの係数-> μ
 //sig  σ
@@ -238,6 +294,20 @@ double field_pmlCoef_LXY(double ep_mu, double sig)
   return 1.0/(ep_mu + sig); // 1.0/{ep_mu(1.0 + sig/ep_mu)}と同じ
 }
 
+//NS PML用のβを取得
+double field_ns_beta(double alpha, double alpha_aster)
+{
+  double tanh_a     = tanh(alpha);//(exp(alpha) - exp(-alpha)) / (exp(alpha) + exp(-alpha));
+  double tanh_a_ast = tanh(alpha_aster);//(exp(alpha_aster) - exp(-alpha_aster)) / (exp(alpha_aster) + exp(-alpha_aster));
+  return tanh_a / (1 + tanh_a*tanh_a_ast);
+}
+double field_ns_beta_aster(double alpha, double alpha_aster)
+{
+  double tanh_a     = tanh(alpha);//(exp(alpha) - exp(-alpha)) / (exp(alpha) + exp(-alpha));
+  double tanh_a_ast = tanh(alpha_aster);//(exp(alpha_aster) - exp(-alpha_aster)) / (exp(alpha_aster) + exp(-alpha_aster));
+  return tanh_a_ast / (1 + tanh_a*tanh_a_ast);
+}
+    
 //------------------getter-------------------------//
  void field_nextStep(void){
   time+=1.0;

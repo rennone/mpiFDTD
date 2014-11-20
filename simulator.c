@@ -11,7 +11,7 @@
 #include "fdtdTE.h"
 #include "fdtdTM_upml.h"
 #include "fdtdTE_upml.h"
-
+#include "nsFdtdTM.h"
 #include "models.h"
 #include <sys/time.h>
 
@@ -60,6 +60,24 @@ static void setTE()
   getDrawData = getDataY;
   printf("TE mode \n");
   solverDir = "TE";
+}
+
+static void setNsTM()
+{
+  update       = nsFdtdTM_getUpdate();
+  initMethod   = nsFdtdTM_getInit();
+  finishMethod = nsFdtdTM_getFinish();
+  resetMethod  = nsFdtdTM_getReset();
+  
+  getEpsMethod = nsFdtdTM_getEps;
+  getDataX = nsFdtdTM_getHx;
+  getDataY = nsFdtdTM_getHy;
+  getDataZ = nsFdtdTM_getEz;
+
+  getDrawData = getDataZ;
+  printf("NS TM UPML mode \n");
+
+  solverDir = "NS_TM";
 }
 
 static void setTMupml()
@@ -155,6 +173,9 @@ static void setSolver(enum SOLVER solver)
     break;
   case MPI_TE_UPML_2D:
     setMPITEupml();
+    break;
+  case NS_TM_2D:
+    setNsTM();
     break;
   default:
     printf("error, not implement simulator (simulator.c)\n");

@@ -153,6 +153,10 @@ static inline double EPSHY(const int i, const int j){
 
 static void reset()
 {
+  FieldInfo fInfo = field_getFieldInfo();
+  char buf[128];
+  sprintf(buf, "tm_%dnm.txt",fInfo.h_u_nm);
+  field_outputElliptic(buf,Ez);
   memset(Hx, 0, sizeof(double complex)*N_CELL);
   memset(Hy, 0, sizeof(double complex)*N_CELL);
   memset(Ezx,0, sizeof(double complex)*N_CELL);
@@ -201,6 +205,7 @@ static void init(){
   int i,j;
   for(i=0; i<N_PX; i++){
     for(j=0; j<N_PY; j++){
+      
       EPS_EZ[ind(i,j)] = models_eps(i,j, D_XY);     //todo D_X, D_Yにしなくていいのか?
       EPS_HX[ind(i,j)] = models_eps(i,j+0.5, D_Y);
       EPS_HY[ind(i,j)] = models_eps(i+0.5,j, D_X);
@@ -236,7 +241,9 @@ static void init(){
   }  
 }
 
-static void finish(){
+static void finish()
+{
+  reset();
   
   if(Hx != NULL){    free(Hx); Hx = NULL;}
   if(Hy != NULL){    free(Hy); Hy = NULL;}
@@ -281,12 +288,12 @@ static void scatteredWave(double complex *p, double *eps){
 }
 
 static void update(){
+  calcH();
   calcE();
 
-  scatteredWave(Ezx, EPS_EZ);
+  field_scatteredWaveNotUPML(Ezx, EPS_EZ, 0.0, 0.0);
 //  scatteredWave(Ezy, EPS_EZ);
 
-  calcH();
 }
 
 static inline void calcE()
@@ -310,9 +317,11 @@ static inline void calcH()
   int i,j;
   for(i=1; i<N_PX-1; i++)
     for(j=1; j<N_PY-1; j++)
-      Hx[ind(i,j)] = CHX(i,j)*HX(i,j) - CHXLY(i,j)*( EZX(i,j+1)-EZX(i,j) + EZY(i,j+1)-EZY(i,j));
+      Hx[ind(i,j)] = CHX(i,j)*HX(i,j)
+        - CHXLY(i,j)*( EZX(i,j+1)-EZX(i,j) + EZY(i,j+1)-EZY(i,j));
 
   for(i=1; i<N_PX-1; i++)
     for(j=1; j<N_PY-1; j++)
-      Hy[ind(i,j)] = CHY(i,j)*HY(i,j) + CHYLX(i,j)*( EZX(i+1,j)-EZX(i,j) + EZY(i+1,j)-EZY(i,j) );  
+      Hy[ind(i,j)] = CHY(i,j)*HY(i,j)
+        + CHYLX(i,j)*( EZX(i+1,j)-EZX(i,j) + EZY(i+1,j)-EZY(i,j) );  
 }

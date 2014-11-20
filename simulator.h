@@ -12,7 +12,8 @@ enum SOLVER
   TM_UPML_2D,
   TE_UPML_2D,
   MPI_TM_UPML_2D,
-  MPI_TE_UPML_2D
+  MPI_TE_UPML_2D,
+  NS_TM_2D
 };
 
 extern void simulator_init(FieldInfo field_info);

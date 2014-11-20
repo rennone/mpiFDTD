@@ -82,6 +82,7 @@ void circleModel_init(void)
 
 void circleModel_needSize(int *x_nm,int *y_nm)
 {
-  *x_nm = radius_nm*2;
-  *y_nm = radius_nm*2;
+  //検証時には半径*1.2の位置を使っているので多めに取っておく
+  *x_nm = 1.3*radius_nm*2;
+  *y_nm = 1.3*radius_nm*2;
 }
