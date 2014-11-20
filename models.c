@@ -23,8 +23,9 @@ static void noModel(void)
   dir = "NoModel";
   epsMethod = noModel_EPS();
   isFinishMethod = noModel_isFinish;
-  printf("not implemented no Model");
-  exit(2);
+  needSizeMethod = noModel_needSize;
+  initModelMethod     = noModel_init;
+  moveDirectoryMethod = noModel_moveDirectory;
 }
 
 static void circleModel(void)

@@ -27,3 +27,19 @@ bool noModel_isFinish(void)
 {
   return true;
 }
+
+void noModel_init()
+{
+  
+}
+
+void noModel_needSize(int *x, int *y)
+{
+  *x = 1000;
+  *y = 1000;
+}
+
+void noModel_moveDirectory()
+{
+  makeAndMoveDirectory("NoModel");
+}

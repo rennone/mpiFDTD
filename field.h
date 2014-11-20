@@ -54,7 +54,8 @@ typedef struct WaveInfo_S
   double Lambda_s; //波長
   double T_s;      //周期
   double Omega_s;  //角周波数
-  double K_s;      //波数
+  double K_s;      //波数(非推奨)
+  double K_0_s;    //真空中の波数(波数は媒質に依存するため, 真空中の波数であることを明記するために名前を変える)
   double Angle_deg;   //入射角
 } WaveInfo_S;
 
@@ -104,11 +105,15 @@ extern void field_init(FieldInfo field_info);
 extern void field_reset(void);
 //extern void setField(const int wid, const int hei, const double h, const int pml, const double lambda, const double step);
 
-//pml用のσを取ってくる
+//pml用のσを取得する関数群
 extern double field_sigmaX(double x, double y);
 extern double field_sigmaY(double x, double y);
 extern double field_pmlCoef(double x, double y);
 extern double field_pmlCoef_LXY(double x, double y);
+
+//ns pml用のβ,β*を取得する関数群
+extern double field_ns_beta(double alpha, double alpha_aster);
+extern double field_ns_beta_aster(double alpha, double alpha_aster);
 
 extern double field_toCellUnit(const double);
 extern double field_toPhisycalUnit(const double);
@@ -132,10 +137,17 @@ extern SubFieldInfo_S field_getSubFieldInfo_S(void);
 extern FieldInfo_S field_getFieldInfo_S(void);
 extern FieldInfo field_getFieldInfo(void);
 
-//散乱波
 // gapX, gapY : Ex-z, Hx-zは格子点からずれた位置に配置され散る為,格子点からのずれを送る必要がある.
+extern void field_nsScatteredWaveNotUPML(dcomplex *p, double *eps, double gapX, double gapY);
+extern void field_scatteredWaveNotUPML(dcomplex *p, double *eps, double gapX, double gapY);
+//散乱波
+
+//UPML専用
 extern void field_scatteredWave(dcomplex *p, double *eps, double gapX, double gapY);
 extern void field_scatteredPulse(dcomplex *p, double *eps, double gapX, double gapY, double dot); //dotは波の方向とx(y,z軸)との内積
+
+//点光源
+extern dcomplex field_pointLight(void);
 
 //座標->インデックス変換
 //(乗算命令があるので何度も呼び出すような処理では使わない方がいい)
@@ -149,7 +161,7 @@ extern void field_outputAllDataDouble(const char *fileName,double* data); //
 
 
 // for(i=1..N_PX-1)
-//   for(j=1..N_PY-1) と同じ
+//   for(j=1..N_PY-1) と同じ(はず)
 #define FAST_FOR_FOR(k, fInfo_s) \
   for(int k=fInfo_s.N_PY+1, last = fInfo_s.N_CELL-fInfo_s.N_PY; k<last; k+=2) \
     for(int endRow = k+fInfo_s.N_PY-2; k<endRow; k++)
