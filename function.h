@@ -4,8 +4,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "bool.h"
+
+// TODO : max(i++, j) のような使い方だと,挙動がうまくいかない
 #define max(a,b) (a > b ? a : b)
 #define min(a,b) (a < b ? a : b)
+
 
 extern void delete(void *ptr);
 extern double dbilinear(double *p, double x, double y, int width, int height);

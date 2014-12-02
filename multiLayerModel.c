@@ -2,7 +2,8 @@
 #include "field.h"
 #include "function.h"
 #include <math.h>
-
+#include "evaluate.h"
+#include <mpi.h>
 //屈折率
 #define N_0 1.0
 #define N_1 1.56
@@ -66,6 +67,8 @@ static double branch_width_s; //枝の幅
 
 static int layerNum = ST_LAYER_NUM;     //枚数
 
+static double curve_rate = CURVE;
+
 //N_0 N_1から計算
 static double ep_s[2];        //誘電率 = n*n*ep0
 static double ep_x_s[2];      //異方性用のx方向の誘電率
@@ -84,6 +87,8 @@ static double left_gap_y_s;
 //CURVE から計算
 static double c0, c1; //2次関数の比例定数
 
+static void GAInitialize();
+  
 static double calc_width(double sx, double sy, double wid, double hei, double modY, int k)
 {
   double p = 1 - sy/hei;
@@ -186,12 +191,13 @@ static double eps(double x, double y, int col, int row)
 
 double ( *multiLayerModel_EPS(void))(double, double, int, int)
 {
+  GAInitialize();
   return eps;
 }
 
-/*
+
 //構造を一つ進める
-static bool nextStructure()
+static bool nextStructure1()
 {
   left_gap_y_nm += DELTA_LEFT_GAP_Y;
   if( left_gap_y_nm >= (thickness_nm[0]+thickness_nm[1]) || !USE_GAP)
@@ -225,10 +231,9 @@ static bool nextStructure()
   }
   return false;  
 }
-*/
 
 //構造を一つ進める
-static bool nextStructure()
+static bool nextStructure2()
 {
   left_gap_y_nm += DELTA_LEFT_GAP_Y;
   if( left_gap_y_nm >= (thickness_nm[0]+thickness_nm[1]) || !USE_GAP){
@@ -263,12 +268,12 @@ static bool nextStructure()
   return false;  
 }
 
-
+/*
 bool multiLayerModel_isFinish(void)
 {
-  return nextStructure();
+  return nextStructure2();
 }
-
+*/
 void multiLayerModel_needSize(int *x_nm, int *y_nm)
 {
   (*x_nm) = max( width_nm[0], width_nm[1]) + branch_width_nm;
@@ -301,7 +306,7 @@ void multiLayerModel_moveDirectory()
     moveDirectory(buf);
   }
   
-  sprintf(buf,"curve_%.2lf", CURVE);
+  sprintf(buf,"curve_%.2lf", curve_rate);
   makeAndMoveDirectory(buf);
 
   sprintf(buf, "width%d_%d", width_nm[0], width_nm[0]);
@@ -316,7 +321,7 @@ void multiLayerModel_moveDirectory()
   sprintf(buf, "layer%d", layerNum);
   makeAndMoveDirectory(buf);
 
-  sprintf(buf, "edge%.1lf", edge_width_rate);
+  sprintf(buf, "edge%.2lf", edge_width_rate);
   makeAndMoveDirectory(buf);
 
   sprintf(buf, "branch%d", branch_width_nm);
@@ -338,6 +343,264 @@ void multiLayerModel_init()
   
   branch_width_s = field_toCellUnit(branch_width_nm);
   
-  c0 = -4*width_s[0]*CURVE/thickness_s[0]/thickness_s[0];
-  c1 = -4*width_s[1]*CURVE/thickness_s[1]/thickness_s[1];
+  c0 = -4*width_s[0]*curve_rate/thickness_s[0]/thickness_s[0];
+  c1 = -4*width_s[1]*curve_rate/thickness_s[1]/thickness_s[1];
+}
+
+typedef enum Kinds
+{
+  eTHICK_NM_0,
+  eTHICK_NM_1,
+  eLAYER_NUM,
+  eEDGE,    //先端の縮小率%
+  eCURVE,   //ラメラのカーブの割合%
+  eBRANCH_NM,
+  eKIND_NUM
+} Kinds;
+  
+// 0~4bit  : ラメラ0の幅    ( 10nm ~ 320nm )
+// 5~9bit  : ラメラ1の幅    ( 10nm ~ 320nm )
+//10~13bit : ラメラの枚数   ( 1 ~ 16毎 )
+//14~17bit : 先端の縮小率  edge   ( 0, 1/15, 2/15 ~ 15/15)
+//18~21bit : ラメラの丸め率 curve ( 0, 1/15, ~  15/15)
+//22~26bit : 幹の太さ( ラメラ1の幅の 0, 1/15, ~ 15/15)
+//個体
+typedef struct Individual
+{
+  double eval;       //評価値(適応度)
+  int cells[eKIND_NUM]; //個体の状態
+} Individual;
+static void printIndiv(Individual *p);
+
+//2つが同じ個体か調べる
+static bool Equal(Individual *a, Individual *b)
+{  
+  for(int i=0; i<eKIND_NUM; i++)
+    if( a->cells[i] != b->cells[i] )
+      return false;
+
+  return true;
+}
+
+//現在の設定をIndividual化する
+Individual SettingToInidividual(double value)
+{
+  Individual p;
+  p.cells[eTHICK_NM_0] = thickness_nm[0];
+  p.cells[eTHICK_NM_1] = thickness_nm[1];
+  p.cells[eLAYER_NUM] = layerNum;
+  p.cells[eEDGE]      = (int)(edge_width_rate * 100);
+  p.cells[eCURVE]     = (int)(curve_rate * 100);
+  p.cells[eBRANCH_NM] = branch_width_nm;
+
+  p.eval = value;
+  return p;
+}
+
+//個体を現在の設定に反映する.
+void IndividualToSetting(Individual *p)
+{
+  thickness_nm[0] = p->cells[eTHICK_NM_0];
+  thickness_nm[1] = p->cells[eTHICK_NM_1];
+  layerNum        = p->cells[eLAYER_NUM];
+  edge_width_rate = p->cells[eEDGE] / 100.0;
+  curve_rate      = p->cells[eCURVE] / 100.0;
+  branch_width_nm = p->cells[eBRANCH_NM];
+
+  printIndiv(p);
+}
+
+static int rank = -1;
+static int numProc = -1;
+static int N_Param = -1;
+static Individual *curGeneration = NULL; //現世代
+static Individual *nexGeneration = NULL; //次世代
+
+static MPI_Datatype MPI_INDIVIDUAL;
+
+static Individual Memo[100000];
+static int numOfMemo = 0;
+
+//すでに存在するか
+static bool Exist(Individual *p)
+{
+  for(int i=0; i<numOfMemo; i++)
+    if( Equal(p, &Memo[i]) )
+      return true;
+  
+  return false;
+}
+
+static Individual RandomMake()
+{
+  Individual p;
+  p.cells[eTHICK_NM_0] = (rand() % 50) * 10 + 10; // 10 ~ 500nm
+  p.cells[eTHICK_NM_1] = (rand() % 50) * 10 + 50; // 50 ~ 550nm
+  p.cells[eLAYER_NUM]  = rand() % 10 + 2;    // 1 ~ 10
+  p.cells[eEDGE]       = rand() % 101;        // 0 ~ 100%
+  p.cells[eCURVE]      = rand() % 101;        // 0 ~ 100%
+
+  //ブランチの太さ
+  p.cells[eBRANCH_NM]  = 10*(rand() % (ST_WIDTH_NM / 40));
+
+  return p;
+}
+
+static void BuildDerivedType()
+{
+  Individual p;
+  MPI_Datatype typelists[2];
+  typelists[0] = MPI_DOUBLE;
+  typelists[1] = MPI_INT;
+
+  int block_length[2];
+  block_length[0] = 1;         //1番目の方は１個
+  block_length[1] = eKIND_NUM; //2番目の型は配列なのでeKIND_NUM個
+
+  MPI_Aint displacements[2];
+  MPI_Aint start_address;
+  MPI_Aint address;
+  MPI_Address(&(p.eval), &start_address);
+  displacements[0] = 0;
+    
+  MPI_Address(&(p.cells[0]), &address);
+  displacements[1] = address - start_address;
+
+  MPI_Type_struct(2, block_length, displacements, typelists, &MPI_INDIVIDUAL);
+  MPI_Type_commit(&MPI_INDIVIDUAL);
+}
+
+static void printIndiv(Individual *p)
+{
+  printf("v = %lf\n", p->eval);
+  for(int i=0; i<eKIND_NUM; i++)
+    printf("%d\n", p->cells[i]);
+  printf("\n");
+}
+
+static void BuildTypeTest()
+{
+  //テスト
+  Individual p;
+  p.eval = rank;
+  for(int i=0; i<eKIND_NUM; i++)
+    p.cells[i] = (i+1)*rank;
+  
+  if(rank == 0){
+    for(int i=1; i<numProc; i++)
+    {
+      MPI_Status status;
+      Individual s;
+      MPI_Recv(&s, 1, MPI_INDIVIDUAL, i, 0, MPI_COMM_WORLD, &status);
+      printIndiv(&s);
+    }
+  }
+  else{
+    MPI_Send(&p, 1, MPI_INDIVIDUAL, 0, 0, MPI_COMM_WORLD);
+  }
+}
+
+//次世代を生成
+static void MakeNextGeneration()
+{
+  printf("Error : MakeNextGeneration is not implemented\n");
+  // TODO : 一旦完全にランダムで行っている
+    for(int i=0; i<N_Param; i++){
+      nexGeneration[i] = RandomMake();
+    }
+}
+
+#include <time.h>
+static void GAInitialize()
+{
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if(rank == 0)
+  {
+    //プロセス + 1(優秀遺伝子用)だけ,個体数を持つようにする
+    MPI_Comm_size(MPI_COMM_WORLD, &numProc);
+    
+    N_Param = numProc;
+    curGeneration = (Individual*)malloc(sizeof(Individual)*N_Param);
+    nexGeneration = (Individual*)malloc(sizeof(Individual)*N_Param);
+  }
+
+  BuildDerivedType(); //
+
+  srand( (unsigned)time( NULL ) );
+
+  printf("test%d\n",rank);
+  //最初はランダムに生成する.
+  if(rank == 0)
+  {
+    for(int i=0; i<N_Param; i++)
+    {
+      Individual p = RandomMake();
+      
+      for(int k=0; k<5; k++)
+      {
+        if( Exist(&p) )
+          p = RandomMake();
+        else
+          break;
+      }
+      
+      nexGeneration[i] = p;
+    }
+    
+    for(int i=1; i<numProc; i++)
+      MPI_Send(&nexGeneration[i], 1, MPI_INDIVIDUAL, i, 0, MPI_COMM_WORLD);
+
+    IndividualToSetting(&nexGeneration[0]); //設定に反映
+  }
+  else
+  {
+    MPI_Status status;
+    Individual next;
+    MPI_Recv(&next, 1, MPI_INDIVIDUAL, 0, 0, MPI_COMM_WORLD, &status);
+    IndividualToSetting(&next); //設定に反映
+  }
+  printf("finish%d\n",rank);
+}
+
+//反射率を用いた評価関数
+void multiLayerModel_evaluate(double **reflec, int stLambda, int enLamba)
+{
+  double value = evaluate_evaluate(reflec, stLambda, enLamba);
+
+  Individual current = SettingToInidividual(value);
+  if(rank == 0){
+    curGeneration[0] = current;
+    for(int i=1; i<numProc; i++)
+    {
+      MPI_Status status;
+      MPI_Recv(&curGeneration[i],
+               1, MPI_INDIVIDUAL, i, 0, MPI_COMM_WORLD, &status);
+      printIndiv(&curGeneration[i]);
+    }
+  }
+  else{
+    MPI_Send(&current, 1, MPI_INDIVIDUAL, 0, 0, MPI_COMM_WORLD);
+  }
+
+  // TODO : プロセスごとにフィールド領域が大きく違うため
+  // 計算時間に差がでる. ここで同期を取るのはよろしくない
+  if(rank == 0)
+  {
+    //次世代を生成
+    MakeNextGeneration();
+    for(int i=1; i<numProc; i++)
+      MPI_Send(&nexGeneration[i], 1, MPI_INDIVIDUAL, 0, 0, MPI_COMM_WORLD);
+  }
+  else
+  {
+    MPI_Status status;
+    Individual next;
+    MPI_Recv(&next, 1, MPI_INDIVIDUAL, 0, 0, MPI_COMM_WORLD, &status);
+    IndividualToSetting(&next); //設定に反映
+  }
+}
+
+bool multiLayerModel_isFinish(void)
+{  
+  return false;
 }

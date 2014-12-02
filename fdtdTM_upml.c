@@ -6,6 +6,7 @@
 #include "field.h"
 #include "models.h"
 #include "ntffTM.h"
+#include "ntff.h"
 #include "function.h"
 
 //Ez(i    , j    ) -> Ez[i,j];
@@ -84,8 +85,35 @@ static void finish()
 //Reset -> メモリとかは解放せず, もう一度シミュレーションを行う
 static void reset()
 {
-  ntffTM_TimeOutput(Ux,Uy,Wz);
+  int stLambda, enLamba;
+  double **norm = ntffTM_TimeCalcNorm(Ux,Uy,Wz, &stLambda, &enLamba);
 
+
+  //カレントディレクトリを取得
+  char buf[256], parent[512];
+  getcwd(parent, 512);
+
+  // fft変換後のデータをテキストファイルで書き出し
+  sprintf(buf, "%d[deg].txt",(int)field_getWaveAngle());
+  ntff_outputEnormTxt(norm, buf);
+  printf("saved %s/%s\n", parent, buf);
+
+  // fft変換後のデータをバイナリファイルで書き出し
+  sprintf(buf, "%d[deg]_%dnm_%dnm_b.dat", (int)field_getWaveAngle(), LAMBDA_ST_NM, LAMBDA_EN_NM);
+  ntff_outputEnormBin(norm, buf);
+  printf("saved %s/%s\n", parent, buf);
+
+  //反射角で正規化する => 反射率を計算
+  for(int i=0; i<=enLamba-stLambda; i++)  
+    ntff_normalize(norm[i]);  
+  
+  for(int i=0; i<=enLamba-stLambda; i++)
+    freeDouble(norm[i]);
+  free(norm);
+
+  
+  printf("finishfinish\n");
+//  ntffTM_TimeOutput(Ux,Uy,Wz);
   /*  
       dcomplex res[360];
       ntffTM_Frequency(Hx, Hy, Ez, res);

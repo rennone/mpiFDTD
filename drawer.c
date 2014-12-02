@@ -17,7 +17,6 @@ typedef struct {
 
 #include <GL/glew.h>
 
-
 #include <time.h>
 
 #ifdef MAC_OS

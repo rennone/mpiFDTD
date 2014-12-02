@@ -134,37 +134,6 @@ static void reset()
   memset(Uz, 0, size);
 }
 
-/*
-//Standard Scattered Wave
-static void scatteredWave(double complex *p, double *eps){
-  double time = field_getTime();
-  double w_s  = field_getOmega();
-  double ray_coef = field_getRayCoef();
-  double k_s = field_getK();  
-  double rad = 1.0*field_getWaveAngle()*M_PI/180.0;	//ラジアン変換
-  double ks_cos = cos(rad)*k_s, ks_sin = sin(rad)*k_s;	//毎回計算すると時間かかりそうだから,代入しておく
-
-  //ガウシアンパルス
-    double _cos = cos(rad), _sin = sin(rad);
-  const double beam_width = 50;
-  const double t0 = 100;
-  
-  int i,j;
-  for(i=N_PML; i<N_X+N_PML; i++){
-    for(j=N_PML; j<N_Y+N_PML; j++){
-      double ikx = i*ks_cos + j*ks_sin; //k_s*(i*cos + j*sin)
-      
-      //p[ind(i,j)] += ray_coef*(EPSILON_0_S/eps[ind(i,j)] - 1)*( cos(ikx-w_s*time) + I*sin(ikx-w_s*time) );
-      int k = field_index(i,j);
-      //ガウシアンパルス
-      const double r = (i*_cos+j*_sin)/C_0_S-(time-t0);
-      const double gaussian_coef = exp( -pow(r/beam_width, 2 ) );
-      p[k] += gaussian_coef*(EPSILON_0_S/eps[k] - 1)*cexp(I*r*w_s);    
-      
-    }
-  }
-  }*/
-
 static inline void update(void)
 {  
 //  fastCalcMB();
@@ -187,6 +156,7 @@ static inline void update(void)
     field_scatteredPulse(Ex, EPS_EX, 0.5, 0.0, co); //Exは格子点より右に0.5ずれた位置に配置
   if(si != 0.0)
     field_scatteredPulse(Ey, EPS_EY, 0.0, 0.5, si); //Eyは格子点より上に0.5ずれた位置に配置
+
 
   ntffTE_TimeCalc(Ex,Ey,Hz,Wx,Wy,Uz);
 }

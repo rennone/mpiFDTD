@@ -8,4 +8,6 @@ extern void multiLayerModel_moveDirectory();
 extern void multiLayerModel_needSize(int *, int*);
 extern void multiLayerModel_init();
 
+//評価
+extern void multiLayerModel_evaluate(double **reflec, int stLambda, int enLamba);
 #endif
