@@ -96,23 +96,25 @@ static void reset()
   // fft変換後のデータをテキストファイルで書き出し
   sprintf(buf, "%d[deg].txt",(int)field_getWaveAngle());
   ntff_outputEnormTxt(norm, buf);
-  printf("saved %s/%s\n", parent, buf);
+  //printf("saved %s/%s\n", parent, buf);
 
   // fft変換後のデータをバイナリファイルで書き出し
   sprintf(buf, "%d[deg]_%dnm_%dnm_b.dat", (int)field_getWaveAngle(), LAMBDA_ST_NM, LAMBDA_EN_NM);
   ntff_outputEnormBin(norm, buf);
-  printf("saved %s/%s\n", parent, buf);
+  //printf("saved %s/%s\n", parent, buf);
 
   //反射角で正規化する => 反射率を計算
   for(int i=0; i<=enLamba-stLambda; i++)  
     ntff_normalize(norm[i]);  
-  
+
+  //GAに評価を渡す.
+  models_evaluate(norm, stLambda, enLamba);
+
+  //解放
   for(int i=0; i<=enLamba-stLambda; i++)
     freeDouble(norm[i]);
   free(norm);
 
-  
-  printf("finishfinish\n");
 //  ntffTM_TimeOutput(Ux,Uy,Wz);
   /*  
       dcomplex res[360];

@@ -10,4 +10,6 @@ extern void multiLayerModel_init();
 
 //評価
 extern void multiLayerModel_evaluate(double **reflec, int stLambda, int enLamba);
+//毎フレーム実行される
+extern void multiLayerModel_update();
 #endif

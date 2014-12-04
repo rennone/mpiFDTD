@@ -65,7 +65,7 @@ void moveDirectory(const char* name)
 {
   if(chdir(name)==0)
   {
-    printf("move to %s\n",name);
+    //printf("move to %s\n",name);
   } else {
     printf("cannot move to %s\n",name);
     exit(2);

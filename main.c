@@ -19,8 +19,8 @@ typedef struct Config
   enum SOLVER SolverType;
 }Config;
 
-#define ST_PHI 0
-#define EN_PHI 0
+#define ST_PHI -90
+#define EN_PHI -90
 
 #define DELTA_PHI 5
 
@@ -158,7 +158,7 @@ int main( int argc, char *argv[] )
 
   colorTransform_init();
   models_setModel(LAYER);       // MORPHO_SCALE,TRACE_IMAGE, ZIGZAG,NO_MODEL,MIE_CYLINDER
-  simulator_setSolver(TM_UPML_2D);  
+  simulator_setSolver(TM_UPML_2D);
 
 //  initConfigFromText();
   initParameter();  //パラメータを設定
@@ -279,13 +279,15 @@ static void idle(void)
 {
   simulator_calc();
 
+  //Note:
+  //GAでルートプロセスが,他のプロセスの終了を確認するために入れている.
+  models_update(); //モデルのアップデート処理
+  
   //シミュレーションが続くなら再描画して終わり
   if( !simulator_isFinish() ){
     glutPostRedisplay();  //再描画
     return;
   }
-
-  printf("finish rank %d\n",rank);
   
   bool changeModel;
 

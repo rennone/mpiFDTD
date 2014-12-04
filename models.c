@@ -163,3 +163,8 @@ void models_evaluate(double **reflec, int stLambda, int enLamba)
 {
   multiLayerModel_evaluate(reflec, stLambda, enLamba);
 }
+
+void models_update()
+{
+  multiLayerModel_update();
+}

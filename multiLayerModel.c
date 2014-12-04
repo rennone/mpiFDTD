@@ -124,7 +124,7 @@ static double eps(double x, double y, int col, int row)
   double _y = y-oy;
 
   //上下左右に飛び出ていないか確認(細分化したセルがあるため, 0.5の余白をとっている)
-  if( fabs(_x) > (width/2+0.5) ||  _y < -0.5 || _y > height+0.5 )  
+  if( fabs(_x) > (width/2.0+0.5) ||  _y < -0.5 || _y > height+0.5 )  
     return EPSILON_0_S;
 
   height = thick*layerNum; //元にもどす.
@@ -282,8 +282,13 @@ void multiLayerModel_needSize(int *x_nm, int *y_nm)
   (*y_nm) = (thickness_nm[0]+thickness_nm[1])*layerNum + (USE_GAP ? thickness_nm[0]+thickness_nm[0] : 0) ;
 }
 
+static char  root[512];
 void multiLayerModel_moveDirectory()
 {
+  getcwd(root, 512);
+  makeDirectory("GA_Images");
+  sprintf(root, "%s/GA_Images",root);
+  printf("root == %s\n",root);
   if(ASYMMETRY){
     makeDirectory("asymmetry");
     moveDirectory("asymmetry");
@@ -326,6 +331,9 @@ void multiLayerModel_moveDirectory()
 
   sprintf(buf, "branch%d", branch_width_nm);
   makeAndMoveDirectory(buf);
+
+  getcwd(buf, 512);
+  printf("move to %s\n", buf);
 }
 
 void multiLayerModel_init()
@@ -367,7 +375,8 @@ typedef enum Kinds
 //個体
 typedef struct Individual
 {
-  double eval;       //評価値(適応度)
+  double evals[EVAL_NUM]; // RGBそれぞれに対する. 評価値(適応度)
+  // double eval;       //評価値(適応度)
   int cells[eKIND_NUM]; //個体の状態
 } Individual;
 static void printIndiv(Individual *p);
@@ -383,7 +392,7 @@ static bool Equal(Individual *a, Individual *b)
 }
 
 //現在の設定をIndividual化する
-Individual SettingToInidividual(double value)
+Individual SettingToInidividual(double evals[EVAL_NUM])
 {
   Individual p;
   p.cells[eTHICK_NM_0] = thickness_nm[0];
@@ -393,7 +402,10 @@ Individual SettingToInidividual(double value)
   p.cells[eCURVE]     = (int)(curve_rate * 100);
   p.cells[eBRANCH_NM] = branch_width_nm;
 
-  p.eval = value;
+//  p.eval = value;
+  for(int i=0; i<EVAL_NUM; i++)
+    p.evals[i] = evals[i];
+  
   return p;
 }
 
@@ -403,11 +415,9 @@ void IndividualToSetting(Individual *p)
   thickness_nm[0] = p->cells[eTHICK_NM_0];
   thickness_nm[1] = p->cells[eTHICK_NM_1];
   layerNum        = p->cells[eLAYER_NUM];
-  edge_width_rate = p->cells[eEDGE] / 100.0;
-  curve_rate      = p->cells[eCURVE] / 100.0;
+  edge_width_rate = 1.0*p->cells[eEDGE] / 100.0;
+  curve_rate      = 1.0*p->cells[eCURVE] / 100.0;
   branch_width_nm = p->cells[eBRANCH_NM];
-
-  printIndiv(p);
 }
 
 static int rank = -1;
@@ -415,12 +425,13 @@ static int numProc = -1;
 static int N_Param = -1;
 static Individual *curGeneration = NULL; //現世代
 static Individual *nexGeneration = NULL; //次世代
-
+static int indivNoCur = 0; //現世代で実行済みの個体数
 static MPI_Datatype MPI_INDIVIDUAL;
 
 static Individual Memo[100000];
 static int numOfMemo = 0;
 
+static enum EvalKinds targetEval = EVAL_BLUE;
 //すでに存在するか
 static bool Exist(Individual *p)
 {
@@ -431,36 +442,29 @@ static bool Exist(Individual *p)
   return false;
 }
 
-static Individual RandomMake()
+
+ //計算した個体は保存しておく
+static void AddMemo(Individual p)
 {
-  Individual p;
-  p.cells[eTHICK_NM_0] = (rand() % 50) * 10 + 10; // 10 ~ 500nm
-  p.cells[eTHICK_NM_1] = (rand() % 50) * 10 + 50; // 50 ~ 550nm
-  p.cells[eLAYER_NUM]  = rand() % 10 + 2;    // 1 ~ 10
-  p.cells[eEDGE]       = rand() % 101;        // 0 ~ 100%
-  p.cells[eCURVE]      = rand() % 101;        // 0 ~ 100%
-
-  //ブランチの太さ
-  p.cells[eBRANCH_NM]  = 10*(rand() % (ST_WIDTH_NM / 40));
-
-  return p;
+   Memo[numOfMemo++] = p;
 }
 
 static void BuildDerivedType()
 {
-  Individual p;
   MPI_Datatype typelists[2];
   typelists[0] = MPI_DOUBLE;
   typelists[1] = MPI_INT;
 
   int block_length[2];
-  block_length[0] = 1;         //1番目の方は１個
-  block_length[1] = eKIND_NUM; //2番目の型は配列なのでeKIND_NUM個
+  block_length[0] = EVAL_NUM;  //1番目の型は配列でEVAL_NUM個
+  block_length[1] = eKIND_NUM; //2番目の型は配列でeKIND_NUM個
 
   MPI_Aint displacements[2];
   MPI_Aint start_address;
   MPI_Aint address;
-  MPI_Address(&(p.eval), &start_address);
+
+  Individual p; //アドレスの差分取得用
+  MPI_Address(&(p.evals[0]), &start_address);
   displacements[0] = 0;
     
   MPI_Address(&(p.cells[0]), &address);
@@ -472,17 +476,31 @@ static void BuildDerivedType()
 
 static void printIndiv(Individual *p)
 {
-  printf("v = %lf\n", p->eval);
+  for(int i=0; i<EVAL_NUM; i++)
+    printf("v = %lf\n", p->evals[i]);
+  
   for(int i=0; i<eKIND_NUM; i++)
     printf("%d\n", p->cells[i]);
   printf("\n");
 }
 
+
+//
+typedef enum Tags
+{
+  tInitIndiv, //初期の個体通信用
+  tEval,      //評価通信用
+  tNextIndiv, //次の個体通信用
+  tImageNo,  //画像番号
+} Tags;
+
 static void BuildTypeTest()
 {
   //テスト
   Individual p;
-  p.eval = rank;
+  for(int i=0; i<EVAL_NUM; i++)
+    p.evals[i] = rank;
+  
   for(int i=0; i<eKIND_NUM; i++)
     p.cells[i] = (i+1)*rank;
   
@@ -500,107 +518,387 @@ static void BuildTypeTest()
   }
 }
 
-//次世代を生成
-static void MakeNextGeneration()
+//突然変異
+static Individual Mutation()
 {
-  printf("Error : MakeNextGeneration is not implemented\n");
-  // TODO : 一旦完全にランダムで行っている
-    for(int i=0; i<N_Param; i++){
-      nexGeneration[i] = RandomMake();
-    }
+  Individual p;
+  p.cells[eTHICK_NM_0] = (rand() % 50) * 10 + 10; // 10 ~ 500nm
+  p.cells[eTHICK_NM_1] = (rand() % 50) * 10 + 50; // 50 ~ 550nm
+  p.cells[eLAYER_NUM]  = rand() % 10 + 1;     // 1 ~ 10
+  p.cells[eEDGE]       = (rand() % 21)*5;     // 0 ~ 100%
+  p.cells[eCURVE]      = (rand() % 21)*5;     // 0 ~ 100%
+
+  //ブランチの太さ
+  p.cells[eBRANCH_NM]  = 10*(rand() % (ST_WIDTH_NM / 40));
+
+  for(int i=0; i<EVAL_NUM; i++)
+    p.evals[i] = -1000;
+
+  if( p.cells[eLAYER_NUM] <= 0)
+  {
+    printf("LayerNum == 0 at Mutation\n");
+    exit(2);
+  }
+
+  return p;
 }
 
+//0~Mod-1の乱数を２つ被らずに取得
+static void random2(int Mod, int *a, int *b)
+{
+  *a = rand() % Mod;
+  *b = rand() % Mod;
+  while( *b == *a)   *b = rand() % Mod;  
+}
+
+// 交叉
+
+static void CrossOver(Individual *p1, Individual *p2)
+{
+  int p2Cross       = 50; //二点交叉の確率
+  int pUniformCorss = 50; //一様交叉の確率
+  int p = rand()%100;
+  //2点交叉
+  if(p < p2Cross){
+    int a, b;
+    random2(eKIND_NUM, &a, &b);
+
+    int st = min(a,b);
+    int en = max(a,b);
+    for(int i=st; i<=en; i++){
+      int tmp = p1->cells[i];
+      p1->cells[i] = p2->cells[i];
+      p2->cells[i] = tmp;
+    }
+  }
+  //一様交叉
+  else
+  {
+    for(int i=0; i<eKIND_NUM; i++)
+    {
+      if(rand()%2){
+        int tmp = p1->cells[i];
+        p1->cells[i] = p2->cells[i];
+        p2->cells[i] = tmp;
+      }
+    }
+  }
+  
+  if(p1->cells[eLAYER_NUM] == 0 || p2->cells[eLAYER_NUM] == 0)
+  {
+    printf("LayerNum == 0 at Cross\n");
+    exit(2);
+  }
+}
+
+//選択
+static Individual Select()
+{
+  Individual res = Memo[0];
+  for(int i=1; i<numOfMemo; i++)
+  {
+    if( Memo[i].evals[targetEval] > res.evals[targetEval] )
+      res = Memo[i];
+  }
+
+  if(res.cells[eLAYER_NUM] <= 0)
+  {
+    printf("LayerNum == 0 at Select\n");
+    exit(2);
+  }
+  
+  return res;
+}
+
+// 世代交代
+// シミュレーションが終わった最新のnumProc個の個体を用いて世代交代する
+// 
+static void Heterogenesis()
+{
+  printf("Heterogenesis\n");
+  //現世代を取得
+  //シミュレーションが終わった最新のN_Param個を現世代とする
+  Individual current[N_Param];
+  for(int i=0; i<N_Param; i++)
+  {
+    if( numOfMemo - i <= 0 )
+      current[i] = Mutation();
+    else
+      current[i] = Memo[numOfMemo - 1 - i];
+  }
+ 
+  int selectP   = 20; //選択確率
+  int crossP    = 65; //交叉確率
+  int mutationP = 15; //突然変異確率
+  for(int i=0; i<N_Param;)
+  {
+    int p = rand()%100;
+    if( p < selectP)
+    {
+      nexGeneration[i++] = Select();      
+    }
+    else if(p < selectP + crossP)
+    {
+      int a, b;
+      random2(N_Param, &a, &b);
+      Individual p1 = current[a];
+      Individual p2 = current[b];
+      CrossOver(&p1, &p2);
+      nexGeneration[i++] = p1;
+      nexGeneration[i++] = p2;
+    }
+    else
+    {
+      nexGeneration[i++] = Mutation();
+    }
+  }
+}
+
+//次の個体を生成
+static Individual NextGeneration()
+{
+  //現世代すべて計算済みなら世代交代する.
+  if( indivNoCur >= N_Param ){
+    Heterogenesis();
+    indivNoCur = 0;
+  }
+  
+  Individual next = nexGeneration[indivNoCur++];
+  return next;
+}
+
+//初期の設定はランクによりランダムに決定する.
+static Individual InitialGeneration(int rank)
+{
+  double evals[EVAL_NUM] = {-1000};
+  Individual p = SettingToInidividual(evals);
+  return p;
+}
+
+static MPI_Request *requests, *flgRequests;
+static bool *finishedFlags;
 #include <time.h>
 static void GAInitialize()
 {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if(rank == 0)
   {
-    //プロセス + 1(優秀遺伝子用)だけ,個体数を持つようにする
+    //プロセス数だけ,個体数を持つようにする
     MPI_Comm_size(MPI_COMM_WORLD, &numProc);
     
     N_Param = numProc;
     curGeneration = (Individual*)malloc(sizeof(Individual)*N_Param);
     nexGeneration = (Individual*)malloc(sizeof(Individual)*N_Param);
+    requests      = (MPI_Request*)malloc(sizeof(MPI_Request) * numProc);
+    finishedFlags = (bool*)malloc(sizeof(bool) * numProc);
+    flgRequests   = (bool*)malloc(sizeof(bool) * numProc);
   }
 
-  BuildDerivedType(); //
+  BuildDerivedType(); //構造体を送受信するための方を定義
 
   srand( (unsigned)time( NULL ) );
 
-  printf("test%d\n",rank);
   //最初はランダムに生成する.
   if(rank == 0)
   {
+    //最初は全部突然変異
     for(int i=0; i<N_Param; i++)
-    {
-      Individual p = RandomMake();
-      
-      for(int k=0; k<5; k++)
-      {
-        if( Exist(&p) )
-          p = RandomMake();
-        else
-          break;
-      }
-      
-      nexGeneration[i] = p;
-    }
+      nexGeneration[i] = Mutation();
     
-    for(int i=1; i<numProc; i++)
-      MPI_Send(&nexGeneration[i], 1, MPI_INDIVIDUAL, i, 0, MPI_COMM_WORLD);
+    //初期の設定を入れる
+    for(int i=0; i<numProc; i++)
+      curGeneration[i] = NextGeneration();
+    
+    //自分を設定
+    IndividualToSetting(&curGeneration[0]);
 
-    IndividualToSetting(&nexGeneration[0]); //設定に反映
+    //他のプロセスのものを生成して送る.
+    for(int i=1; i<numProc; i++) {
+      MPI_Send(&curGeneration[i], 1, MPI_INDIVIDUAL, i, tInitIndiv, MPI_COMM_WORLD);
+    }
   }
   else
   {
     MPI_Status status;
     Individual next;
-    MPI_Recv(&next, 1, MPI_INDIVIDUAL, 0, 0, MPI_COMM_WORLD, &status);
+    MPI_Recv(&next, 1, MPI_INDIVIDUAL, 0, tInitIndiv, MPI_COMM_WORLD, &status);  //個体を受け取る.
     IndividualToSetting(&next); //設定に反映
   }
-  printf("finish%d\n",rank);
+  
+  //ルートプロセスは評価を受け入れるために, 受信態勢に入る
+  if( rank == 0 )
+  {
+    for(int i=1; i<numProc; i++)
+    {
+      MPI_Irecv(&(curGeneration[i]),
+                1, MPI_INDIVIDUAL, i, tEval, MPI_COMM_WORLD, &requests[i]); 
+    }
+  }
 }
 
-//反射率を用いた評価関数
-void multiLayerModel_evaluate(double **reflec, int stLambda, int enLamba)
+#include "simulator.h"
+static void save( int imgNo, Individual *p, double *r, double *g, double *b)
 {
-  double value = evaluate_evaluate(reflec, stLambda, enLamba);
+  //画像を保存
+  //評価値はファイル名には記述しない.
+  //.txtに書いているので, 評価値を使いたいときは読み込むプログラムを書けば良い
+  char buf[512];
 
-  Individual current = SettingToInidividual(value);
-  if(rank == 0){
-    curGeneration[0] = current;
-    for(int i=1; i<numProc; i++)
-    {
-      MPI_Status status;
-      MPI_Recv(&curGeneration[i],
-               1, MPI_INDIVIDUAL, i, 0, MPI_COMM_WORLD, &status);
-      printIndiv(&curGeneration[i]);
+  //色の画像を保存
+  sprintf(buf, "%s/%d.bmp", root, imgNo );
+  drawer_outputLineImage(buf, r, g ,b);
+
+  //領域の画像を保存
+  sprintf(buf, "%s/%d_img.bmp", root, imgNo );
+  FieldInfo_S fInfo_s = field_getFieldInfo_S();
+  drawer_outputImage(buf, simulator_getDrawingData(), simulator_getEps(), fInfo_s.N_PX, fInfo_s.N_PY);
+
+  //領域の設定を保存
+  sprintf(buf, "%s/%d.txt", root, imgNo);  
+  
+  FILE *fp = FileOpen(buf, "w");
+  fprintf(fp, "evalValueRed = %.18lf\n", p->evals[EVAL_RED]);
+  fprintf(fp, "evalValueGreen = %.18lf\n", p->evals[EVAL_GREEN]);
+  fprintf(fp, "evalValueBlue = %.18lf\n", p->evals[EVAL_BLUE]);
+  fprintf(fp, "thick_nm_0 = %d\n", p->cells[eTHICK_NM_0]);
+  fprintf(fp, "thick_nm_1 = %d\n", p->cells[eTHICK_NM_1]);
+  fprintf(fp, "layer_num = %d\n", p->cells[eLAYER_NUM]);
+  fprintf(fp, "edge = %d\n", p->cells[eEDGE]);
+  fprintf(fp, "curve = %d\n", p->cells[eCURVE]);
+  fprintf(fp, "branch_nm = %d\n", p->cells[eBRANCH_NM]);
+  fclose(fp);
+}
+
+static MPI_Request req, reqImg;
+//反射率を用いた評価関数
+void multiLayerModel_evaluate(double **reflec, int stLambda, int enLambda)
+{
+  //色に変換する.
+  double red[360]   = {};
+  double green[360] = {};
+  double blue[360]  = {};
+
+  for(int deg=0; deg<360; deg++)
+  {
+    for(int i = 0; i <= enLambda - stLambda; i++){
+
+      double r=0,g=0,b=0;
+      colorTransform_trans(i+stLambda, reflec[i][deg], &r, &g, &b);
+      red[deg]   += r;
+      green[deg] += g;
+      blue[deg]  += b;
     }
   }
-  else{
-    MPI_Send(&current, 1, MPI_INDIVIDUAL, 0, 0, MPI_COMM_WORLD);
+
+  for(int i=0; i<360; i++){
+    red[i] = min(1.0, max(0.0, red[i]));
+    green[i] = min(1.0, max(0.0, green[i]));
+    blue[i] = min(1.0, max(0.0, blue[i]));
+  }
+  //評価を求める.
+  const int eval_deg = 40; //左右eval_degの視野角で評価
+  double evals[EVAL_NUM] = {};
+  for(int deg=90-eval_deg; deg<=90+eval_deg; deg++)
+  {
+    double h=0,s=0,v=0;
+    bool res = colorTransform_rgbTohsv(red[deg],green[deg],blue[deg], &h, &s, &v);
+    if( !res )
+      continue;
+    evals[EVAL_BLUE] += evaluate_eval(h, s, v, EVAL_BLUE);
+    evals[EVAL_RED]  += evaluate_eval(h, s, v, EVAL_RED);
+    evals[EVAL_GREEN]+= evaluate_eval(h, s, v, EVAL_GREEN);
   }
 
-  // TODO : プロセスごとにフィールド領域が大きく違うため
-  // 計算時間に差がでる. ここで同期を取るのはよろしくない
+  // eval_degの範囲で最大値が変わらないように正規化
+  for(int evalKinds=0; evalKinds<EVAL_NUM; evalKinds++)
+    evals[evalKinds] /= (2.0*eval_deg+1.0);
+
   if(rank == 0)
   {
-    //次世代を生成
-    MakeNextGeneration();
-    for(int i=1; i<numProc; i++)
-      MPI_Send(&nexGeneration[i], 1, MPI_INDIVIDUAL, 0, 0, MPI_COMM_WORLD);
+    for(int i=0; i<EVAL_NUM; i++)
+      curGeneration[0].evals[i] = evals[i];
+    
+    //画像を保存
+    int imgNo = numOfMemo;
+    save(imgNo, &curGeneration[0], red, green, blue);
+    AddMemo(curGeneration[0]);
   }
+  else{
+    Individual p = SettingToInidividual(evals);
+    MPI_Isend(&p, 1, MPI_INDIVIDUAL, 0, tEval, MPI_COMM_WORLD, &req);
+    printf("-----------------sended\n");
+  }
+
+  // ルートランクは自分で次を計算する.
+  if( rank == 0)
+  {
+    curGeneration[0] = NextGeneration();
+    IndividualToSetting(&curGeneration[0]);
+  }
+  
+  // ルートランク以外はルートから受け取るようにする.
+  // ルートプロセスは毎フレーム,他のプロセスが終わったか確認しに行き
+  // 終わっていたら次を計算し送る(update関数中から送信される.)
   else
   {
+    //同期通信で受け取る.
     MPI_Status status;
     Individual next;
-    MPI_Recv(&next, 1, MPI_INDIVIDUAL, 0, 0, MPI_COMM_WORLD, &status);
+    
+    printf("rank %d recieving--------\n", rank);    
+    int imgNo;
+    MPI_Recv(&imgNo, 1, MPI_INT, 0, tImageNo, MPI_COMM_WORLD, &status);          //画像の番号を受け取る.    
+    MPI_Recv(&next, 1, MPI_INDIVIDUAL, 0, tNextIndiv, MPI_COMM_WORLD, &status);
+
+    Individual cur = SettingToInidividual(evals);
+    save(imgNo, &cur, red, green, blue);
+
     IndividualToSetting(&next); //設定に反映
+    printIndiv(&next);
+    printf("-----------------recieved\n");
   }
 }
 
 bool multiLayerModel_isFinish(void)
 {  
   return false;
+}
+
+//polling用
+void multiLayerModel_update()
+{
+  if( rank != 0 )
+    return;
+
+  for(int i=1; i<numProc; i++)
+  {
+    MPI_Status status;
+    int flag;
+    //通信が終了したか確認する.
+    MPI_Test(&requests[i], &flag, &status);
+    // 他のプロセスから個体を受け取った場合 => 次の個体を送信する.
+    if( flag )
+    {
+      int No = numOfMemo; //現在の番号
+      MPI_Isend(&No,1, MPI_INT, i, tImageNo, MPI_COMM_WORLD, &reqImg);
+      AddMemo(curGeneration[i]);
+      
+      Individual p = NextGeneration(); //次の個体を計算
+      curGeneration[i] = p;            //コピーする
+      
+      printf("root ------------- nextGeneration\n");
+      printIndiv(&p);
+      printf(" ------------- \n");
+      
+      //非同期通信で次の個体を送る.　＝＞受け取り側は同期通信
+      MPI_Isend(&p, 1, MPI_INDIVIDUAL, i, tNextIndiv, MPI_COMM_WORLD, &req);
+
+      //現世代は受け取ったのでrequestを初期化
+      requests[i] = MPI_REQUEST_NULL;
+      
+      //次の評価を待つ
+      MPI_Irecv(&(curGeneration[i]),
+                1, MPI_INDIVIDUAL, i, tEval, MPI_COMM_WORLD, &requests[i]);
+    }
+  }
 }

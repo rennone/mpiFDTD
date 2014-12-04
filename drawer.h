@@ -21,5 +21,5 @@ extern void drawer_clear(void);
 
 extern void drawer_outputImage(char *fileName, dcomplex* data, double *model, int width, int height);
 extern void drawer_screenshot(const char* filename);
-
+extern void drawer_outputLineImage(char *fileName, double red[360], double green[360], double blue[360]);
 #endif //_DRAWER_H

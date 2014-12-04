@@ -249,6 +249,59 @@ static void modelColorTransform(double n, colorf *col)
   col->b -= (1-1.0/n/n);  
 }
 
+void drawer_outputLineImage(char *fileName, double red[360], double green[360], double blue[360])
+{
+  int height = 64;
+  int width  = 180;
+  const int bpp = 24; //1ピクセルセル24ビット
+  const int data_width = (width>>2)<<2;
+  const int datasize = height*data_width*(bpp>>3);
+//  const int datasize = height*((((width*bpp/8) + 3) >> 2) << 2); //横のバイト列は4の倍数でなければならないので切り上げ
+
+
+  unsigned char *buf = (unsigned char*)malloc(sizeof(unsigned char)*datasize);
+  memset(buf, 0, sizeof(unsigned char)*datasize);
+
+  colorf c;
+  int k=0;
+  for(int j=0; j<height; j++)
+    for(int i=0; i<data_width; i++)
+    {
+      buf[k]   = max(0, min(255, blue[i]*255));
+      buf[k+1] = max(0, min(255, green[i]*255));
+      buf[k+2] = max(0, min(255, red[i]*255));
+      k+= (bpp>>3);
+    }
+
+  FILE *fp = fopen(fileName, "wb");
+  if(fp==NULL)
+  {
+    printf("can not open file %s",fileName);
+    free(buf);
+    return;
+  }
+
+  if( !putBmpHeader(fp, data_width, height, bpp) ) {
+    printf("can not write headers");
+    fclose(fp);
+    free(buf);
+    return;
+  }
+
+  if( fwrite((unsigned char*)buf, sizeof(unsigned char), datasize, fp) != datasize)
+  {
+    printf("can not write data");
+    fclose(fp);
+    free(buf);
+    return;
+  }
+
+  free(buf);
+  fclose(fp);
+  return;
+}
+ 
+
 void drawer_outputImage(char *fileName, dcomplex *data, double *model, int width, int height)
 {
   const int bpp = 24; //1ピクセルセル24ビット

@@ -15,11 +15,15 @@ static double K = 0;
 // 引数 : rgb, hsv (0~1)
 // 戻り値 : false => hがundefined
 bool colorTransform_rgbTohsv(double r, double g, double b, double *h, double *s, double *v)
-{  
+{
+  r = max( 0.0, min( 1.0, r) );
+  g = max( 0.0, min( 1.0, g) );
+  b = max( 0.0, min( 1.0, b) );
+  
   double mx = max(r, max(g, b));
   double mn = min(r, min(g, b));
 
-  if( mn == mx ){
+  if( mn == mx || mx <= 0.00000001 ){
     *h = -1;
     *s = 0;
     *v = 0;
@@ -51,7 +55,7 @@ void colorTransform_init()
   for(int i=0; i<LAMBDA_RANGE; i++)
   {
     double lambda=0, x=0, y=0, z=0, s=0;
-    if( fscanf(fp, "%lf,%lf,%lf,%lf, %lf", &lambda, &x, &y, &x, &s) == EOF )
+    if( fscanf(fp, "%lf,%lf,%lf,%lf, %lf", &lambda, &x, &y, &z, &s) == EOF )
       break;
 
     if( i == 0)

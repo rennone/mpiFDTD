@@ -16,22 +16,33 @@ static double func(double a)
 #define BLUE_EVAL
 
 // HSV値から評価値を返す
-static double evaluate(double h, double s, double v)
+double evaluate_eval(double h, double s, double v, enum EvalKinds k)
 {
   // hsv表色系での重み付け
-#if defined BLUE_EVAL
-  double mean     = 225; //平均(Hの値)
-  double variance = 30;  //分散
-#elif defined GREEN_EVAL
-  double mean     = 135;
-  double variance = 40;
-#elif defined RED_EVAL
-  double mean     = 0;
-  double variance = 30;
-#endif
+   //(hの)平均, 分散
+  double mean, variance;
+  switch(k)
+  {
+  case EVAL_RED:
+    mean     = 0;
+    variance = 30;
+    break;
+  case EVAL_GREEN:
+    mean     = 135;
+    variance = 40;
+    break;
+  case EVAL_BLUE:
+    mean     = 225;
+    variance = 30;
+    break;
+    //ありえない値
+  default:
+    mean     = -10000;
+    variance = 1;
+  }
 
+  double c = 100; //中心の重みがcになるように係数設定
   double d = 0; //中心から離れると,dに漸近するように差分設定
-  double c = 1; //中心の重みがcになるように係数設定
 
   // 円周上における距離なので
   // 例えば0と350との距離が10になるように,差が180を越えると+-360する.  
@@ -42,6 +53,7 @@ static double evaluate(double h, double s, double v)
   
   // hによるガウス分布から評価する
   double value = (c-d) * exp( -pow(h-mean,2)/(2*pow(variance,2)) ) + d;
+
   //彩度と明度は大きい方が良い(鮮やか)のでそのまま重み付けする.
   return value * s * v;
 }
@@ -57,16 +69,23 @@ double evaluate_evaluate(double **reflec, int stLambda, int enLambda)
   
   for(int i = 0; i <= enLambda - stLambda; i++)
   {
-    double r, g, b;    
+    double red, green, blue;    
     for(int deg=90-eval_deg; deg<=90+eval_deg; deg++)
     {
       double r,g,b;
       colorTransform_trans(i+stLambda, reflec[i][deg], &r, &g, &b);
-      double h,s,v;
-      colorTransform_rgbTohsv(r,g,b, &h, &s, &v);
-      value += evaluate(h, s, v);
-    }
-  }
+      red   += r;
+      green += g;
+      blue  += b;      
+    }    
+    double h,s,v;
+    bool res = colorTransform_rgbTohsv(red,green,blue, &h, &s, &v);      
+    if( !res )
+      continue;
 
+    value += evaluate_eval(h, s, v, EVAL_BLUE);
+  }
+  // degの範囲を変えても最大が変わらないように正規化
+  value = value / (2.0*eval_deg+1);
   return value;
 }
