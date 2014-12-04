@@ -428,7 +428,8 @@ static Individual *nexGeneration = NULL; //次世代
 static int indivNoCur = 0; //現世代で実行済みの個体数
 static MPI_Datatype MPI_INDIVIDUAL;
 
-static Individual Memo[100000];
+#define MEMO_STRAGE 100000
+static Individual *Memo;//[MEMO_STRAGE];
 static int numOfMemo = 0;
 
 static enum EvalKinds targetEval = EVAL_BLUE;
@@ -685,7 +686,8 @@ static void GAInitialize()
   {
     //プロセス数だけ,個体数を持つようにする
     MPI_Comm_size(MPI_COMM_WORLD, &numProc);
-    
+
+    Memo = (Individual*)malloc(sizeof(Individual)*MEMO_STRAGE);
     N_Param = numProc;
     curGeneration = (Individual*)malloc(sizeof(Individual)*N_Param);
     nexGeneration = (Individual*)malloc(sizeof(Individual)*N_Param);
@@ -860,8 +862,9 @@ void multiLayerModel_evaluate(double **reflec, int stLambda, int enLambda)
 }
 
 bool multiLayerModel_isFinish(void)
-{  
-  return false;
+{
+  
+  return numOfMemo >= MEMO_STRAGE;
 }
 
 //polling用
