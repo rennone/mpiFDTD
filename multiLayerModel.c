@@ -738,9 +738,29 @@ static void GAInitialize()
   }
 }
 
+#include "drawer.h"
 #include "simulator.h"
-static void save( int imgNo, Individual *p, double *r, double *g, double *b)
+static void save( int imgNo, Individual *p, double r[360], double g[360], double b[360])
 {
+  double limit = 13; //評価値13以上がないと保存しない(無駄なので)
+  bool canSave = false;
+  for(int i=0; i<EVAL_NUM; i++)
+    canSave |= p->evals[EVAL_RED] > 13;
+
+  if( !canSave )
+    return;
+
+  static colorf img[180][64];
+
+  for(int i=0; i<180; i++){
+    for(int j=0; j<64; j++){
+      img[i][j].r = r[i];
+      img[i][j].g = g[i];
+      img[i][j].b = b[i];
+    }
+  }
+    
+  
   //画像を保存
   //評価値はファイル名には記述しない.
   //.txtに書いているので, 評価値を使いたいときは読み込むプログラムを書けば良い
@@ -748,7 +768,7 @@ static void save( int imgNo, Individual *p, double *r, double *g, double *b)
 
   //色の画像を保存
   sprintf(buf, "%s/%d.bmp", root, imgNo );
-  drawer_outputLineImage(buf, r, g ,b);
+  drawer_saveImage(buf, img, 180, 64);
 
   //領域の画像を保存
   sprintf(buf, "%s/%d_img.bmp", root, imgNo );
