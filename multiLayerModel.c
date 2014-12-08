@@ -765,16 +765,20 @@ static void save( int imgNo, Individual *p, double r[360], double g[360], double
   if( !canSave )
     return;
 
-  static colorf img[180][64];
-
+  static colorf **img = NULL;
+  if( img == NULL ){
+    img = (colorf**)malloc(sizeof(colorf*)*180);
+    for(int i=0; i<180; i++)
+      img[i] = (colorf*)malloc(sizeof(colorf)*64);
+  }
+  
   for(int i=0; i<180; i++){
     for(int j=0; j<64; j++){
       img[i][j].r = r[i];
       img[i][j].g = g[i];
       img[i][j].b = b[i];
     }
-  }
-    
+  }    
   
   //画像を保存
   //評価値はファイル名には記述しない.

@@ -247,14 +247,14 @@ static void modelColorTransform(double n, colorf *col)
 
 void drawer_saveImage(char *fileName, colorf **cells, int width, int height)
 {
-  const int bpp = 24; //1ピクセルセル24ビット
-  const int data_width = (width>>2)<<2;
-  const int datasize = height*data_width*(bpp>>3);
+  const int bpp        = 24; //1ピクセルセル24ビット
+  const int data_width = (width>>2)<<2; //4の倍数に切り下げ
+  const int datasize   = height*data_width*(bpp>>3);
 
   unsigned char *buf = (unsigned char*)malloc(sizeof(unsigned char)*datasize);
+
   memset(buf, 0, sizeof(unsigned char)*datasize);
 
-  colorf c;
   int k=0;
   for(int j=0; j<height; j++)
     for(int i=0; i<data_width; i++)
@@ -262,9 +262,8 @@ void drawer_saveImage(char *fileName, colorf **cells, int width, int height)
       buf[k]   = max(0, min(255, cells[i][j].b*255));
       buf[k+1] = max(0, min(255, cells[i][j].g*255));
       buf[k+2] = max(0, min(255, cells[i][j].r*255));
-      k+= (bpp>>3);
+      k+= (bpp>>3);      
     }
-
   FILE *fp = fopen(fileName, "wb");
   if(fp==NULL)
   {
