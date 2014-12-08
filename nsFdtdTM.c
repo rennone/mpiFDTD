@@ -65,44 +65,18 @@ Solver* nsFdtdTM_getSolver()
   for(int i=1; i<fInfo_s.N_PX-1; i++)          \
     for(int j=1; j<fInfo_s.N_PY-1; j++)
 
-
-static void CheckBorder(double limit)
-{
-  bool exist = false;
-  FieldInfo_S fInfo_s = field_getFieldInfo_S();
-  FOR_FOR(fInfo_s, i, j)
-  {
-    int k = field_index(i,j);
-    if( fabs(creal(Ez[k])) > limit)
-    {
-      printf("%d %d    %lf\n", i, j, creal(Ez[k]));
-      exist = true;
-      printf("time == %d\n\n\n", (int)field_getTime());
-      return;
-    }
-  }
-  if(exist)
-    printf("time == %d\n\n\n", (int)field_getTime());
-}
-
 static void update()
 {
   calcH();
-  calcE();
+  calcE();  
+
+  field_nsScatteredWaveNotUPML(Ezy, EPS_EZ, 0, 0, 1.0);
   
   FieldInfo_S fInfo_s = field_getFieldInfo_S();
-  int k = field_index(fInfo_s.N_PX/2, fInfo_s.N_PY/2);
-  //Ezy[k] += 50*field_pointLight();
-
-  field_nsScatteredWaveNotUPML(Ezy, EPS_EZ, 0, 0);
-  //field_scatteredWaveNotUPML(Ezx, EPS_EZ, 0, 0);
-  FOR_FOR(fInfo_s, i, j)
-  {
+  FOR_FOR(fInfo_s, i, j){
     int k = field_index(i,j);
     Ez[k] = Ezx[k] + Ezy[k];
   }
-
-//  CheckBorder(10);
 }
 
 static bool InPML(double i, double j)
@@ -134,10 +108,6 @@ static void calcE()
   }
 }
 
-//101
-bool NO_NS_EZ = false;
-bool NO_NS_HX = false;
-bool NO_NS_HY = false;
 static void calcH()
 {
   FieldInfo_S fInfo_s = field_getFieldInfo_S();
@@ -160,7 +130,7 @@ static void calcH()
   {
     int k = field_index(i,j);
 
-    if( NO_NS_HX || InPML(i,j+0.5) )
+    if( InPML(i,j+0.5) )
     {
       Hx[k] = C_HX[k]*Hx[k] - C_HXLY[k]* (
           Ez[k+dy] - Ez[k] );  // dy
@@ -180,7 +150,7 @@ static void calcH()
   {
     int k = field_index(i,j);
 
-    if( NO_NS_HY || InPML(i+0.5,j) )
+    if( InPML(i+0.5,j) )
     {
       Hy[k] = C_HY[k]*Hy[k] + C_HYLX[k]*(
         Ez[k+dx] - Ez[k] );
@@ -342,7 +312,7 @@ static void setCoefficient()
       sig_hy_y  = sig_max*field_sigmaY(i+0.5,j);  //σ_y  for hy
       sig_hy_yy = MU_0_S/EPSILON_0_S * sig_hy_y;  //σ_y* for hy
 
-      // PML領域では α = α*, β = β* となるので,簡略化
+      // PML領域以外では α = α*, β = β* となるので,簡略化
       double a_hx_y = sig_hx_y / (2*EPSILON_0_S);
       double a_hy_x = sig_hy_x / (2*EPSILON_0_S);
       double a_ez_x = sig_ez_x / (2*EPSILON_0_S);
@@ -354,11 +324,11 @@ static void setCoefficient()
       double b_ez_y = beta(a_ez_y);
       
       // EZ
-      if( NO_NS_EZ || InPML(i,j) )
+      if( InPML(i,j) )
       {
         // Standard FDTD
         C_EZX[k]   =     field_pmlCoef(EPS_EZ[k], sig_ez_x);
-        C_EZXLX[k] = field_pmlCoef_LXY(EPS_EZ[k], sig_ez_x);      
+        C_EZXLX[k] = field_pmlCoef_LXY(EPS_EZ[k], sig_ez_x);
         C_EZY[k]   =     field_pmlCoef(EPS_EZ[k], sig_ez_y);
         C_EZYLY[k] = field_pmlCoef_LXY(EPS_EZ[k], sig_ez_y);
       }
@@ -377,7 +347,7 @@ static void setCoefficient()
       }
 
       // HX
-      if( NO_NS_HX || InPML(i, j+0.5) )
+      if( InPML(i, j+0.5) )
       {
         C_HX[k]    =     field_pmlCoef(MU_0_S, sig_hx_yy);
         C_HXLY[k]  = field_pmlCoef_LXY(MU_0_S, sig_hx_yy);             
@@ -395,7 +365,7 @@ static void setCoefficient()
       }
 
       // HY
-      if( NO_NS_HY || InPML(i+0.5, j) )
+      if( InPML(i+0.5, j) )
       {
         C_HY[k]    =     field_pmlCoef(MU_0_S, sig_hy_xx);
         C_HYLX[k]  = field_pmlCoef_LXY(MU_0_S, sig_hy_xx);
