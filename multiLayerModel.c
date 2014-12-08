@@ -432,7 +432,6 @@ static MPI_Datatype MPI_INDIVIDUAL;
 static Individual *Memo;//[MEMO_STRAGE];
 static int numOfMemo = 0;
 
-static enum EvalKinds targetEval = EVAL_BLUE;
 //すでに存在するか
 static bool Exist(Individual *p)
 {
@@ -538,6 +537,7 @@ static Individual Mutation()
   if( p.cells[eLAYER_NUM] <= 0)
   {
     printf("LayerNum == 0 at Mutation\n");
+    MPI_Finalize();
     exit(2);
   }
 
@@ -588,8 +588,22 @@ static void CrossOver(Individual *p1, Individual *p2)
   if(p1->cells[eLAYER_NUM] == 0 || p2->cells[eLAYER_NUM] == 0)
   {
     printf("LayerNum == 0 at Cross\n");
+    MPI_Finalize();
     exit(2);
   }
+}
+
+//評価値の中で最大のものを評価とする
+static double maxEvals(Individual *p)
+{  
+  double mx = -1000;
+  for(int i=0; i<EVAL_NUM; i++)
+  {
+    mx = max( mx, p->evals[i] );
+  }
+
+  //念のため, pの中身が 0~100の間にあるかチェック      
+  return mx;
 }
 
 //選択
@@ -598,13 +612,14 @@ static Individual Select()
   Individual res = Memo[0];
   for(int i=1; i<numOfMemo; i++)
   {
-    if( Memo[i].evals[targetEval] > res.evals[targetEval] )
+    if( maxEvals(&Memo[i])  > maxEvals(&res) )
       res = Memo[i];
   }
 
   if(res.cells[eLAYER_NUM] <= 0)
   {
     printf("LayerNum == 0 at Select\n");
+    MPI_Finalize();
     exit(2);
   }
   
