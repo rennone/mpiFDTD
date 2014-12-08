@@ -387,37 +387,20 @@ static void freeMemories()
   if(Ey != NULL){    free(Ey); Ey = NULL;}  
   if(Hz != NULL){    free(Hz); Hz = NULL;}
 
-  delete(Dx);
-  delete(Dy);
-  delete(Bz);
-  
-  delete(Jx);
-  delete(Jy);
-  delete(Mz);
+  delete(Ex); delete(Ey); delete(Hz);
+  delete(Dx); delete(Dy); delete(Bz);
+  delete(Jx); delete(Jy); delete(Mz);
 
-  delete(Wx);
-  delete(Wy);
-  delete(Uz);
+  delete(Wx); delete(Wy); delete(Uz);
+
+  delete(EPS_EX); delete(EPS_EY); delete(EPS_HZ);
   
-  if(C_JX!= NULL){    free(C_JX);  C_JX = NULL;}
-  if(C_JXHZ!= NULL){   free(C_JXHZ); C_JXHZ = NULL;}
-  if(C_DX!= NULL){   free(C_DX); C_DX = NULL;}
-  if(C_DXJX0 != NULL){   free(C_DXJX0); C_DXJX0 = NULL;}
-  if(C_DXJX1 != NULL){   free(C_DXJX1); C_DXJX1 = NULL;}
+  delete(C_JX); delete(C_JXHZ);
+  delete(C_DX); delete(C_DXJX1); delete(C_DXJX0);
+
+  delete(C_JY); delete(C_JYHZ);
+  delete(C_DY); delete(C_DYJY1); delete(C_DYJY0);
   
-  if(C_JY!= NULL){    free(C_JY);  C_JY = NULL;}
-  if(C_JYHZ!= NULL){   free(C_JYHZ); C_JYHZ = NULL;}
-  if(C_DY!= NULL){   free(C_DY); C_DY = NULL;}
-  if(C_DYJY0 != NULL){   free(C_DYJY0); C_DYJY0 = NULL;}
-  if(C_DYJY1 != NULL){   free(C_DYJY1); C_DYJY1 = NULL;}
-  
-  if(C_MZ!= NULL){    free(C_MZ);  C_MZ = NULL;}
-  if(C_MZEXEY!= NULL){   free(C_MZEXEY); C_MZEXEY = NULL;}
-  if(C_BZ != NULL){   free(C_BZ); C_BZ = NULL;}
-  if(C_BZMZ0 != NULL){   free(C_BZMZ0); C_BZMZ0 = NULL;}
-  if(C_BZMZ1 != NULL){   free(C_BZMZ1); C_BZMZ1 = NULL;}
-  
-  if(EPS_EX != NULL)   free(EPS_EX);
-  if(EPS_EY != NULL)   free(EPS_EY);
-  if(EPS_HZ != NULL)   free(EPS_HZ);
+  delete(C_MZ); delete(C_MZEXEY);
+  delete(C_BZ); delete(C_BZMZ1); delete(C_BZMZ0);  
 }
