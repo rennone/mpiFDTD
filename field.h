@@ -138,13 +138,15 @@ extern FieldInfo_S field_getFieldInfo_S(void);
 extern FieldInfo field_getFieldInfo(void);
 
 // gapX, gapY : Ex-z, Hx-zは格子点からずれた位置に配置され散る為,格子点からのずれを送る必要がある.
-extern void field_nsScatteredWaveNotUPML(dcomplex *p, double *eps, double gapX, double gapY);
+//dotは波の方向とx(とy,z軸)との内積
+
+extern void field_nsScatteredWaveNotUPML(dcomplex *p, double *eps, double gapX, double gapY, double dot);
 extern void field_scatteredWaveNotUPML(dcomplex *p, double *eps, double gapX, double gapY);
 //散乱波
 
 //UPML専用
 extern void field_scatteredWave(dcomplex *p, double *eps, double gapX, double gapY);
-extern void field_scatteredPulse(dcomplex *p, double *eps, double gapX, double gapY, double dot); //dotは波の方向とx(y,z軸)との内積
+extern void field_scatteredPulse(dcomplex *p, double *eps, double gapX, double gapY, double dot); //dotは波の方向とx(とy,z軸)との内積
 
 //点光源
 extern dcomplex field_pointLight(void);

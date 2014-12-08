@@ -12,6 +12,7 @@
 #include "fdtdTM_upml.h"
 #include "fdtdTE_upml.h"
 #include "nsFdtdTM.h"
+#include "nsFdtdTE.h"
 #include "models.h"
 #include <sys/time.h>
 
@@ -75,9 +76,27 @@ static void setNsTM()
   getDataZ = nsFdtdTM_getEz;
 
   getDrawData = getDataZ;
-  printf("NS TM UPML mode \n");
+  printf("NS TM mode \n");
 
   solverDir = "NS_TM";
+}
+
+static void setNsTE()
+{
+  update       = nsFdtdTE_getUpdate();
+  initMethod   = nsFdtdTE_getInit();
+  finishMethod = nsFdtdTE_getFinish();
+  resetMethod  = nsFdtdTE_getReset();
+  
+  getEpsMethod = nsFdtdTE_getEps;
+  getDataX = nsFdtdTE_getEx;
+  getDataY = nsFdtdTE_getEy;
+  getDataZ = nsFdtdTE_getHz;
+
+  getDrawData = getDataY;
+  printf("NS TE mode \n");
+
+  solverDir = "NS_TE";
 }
 
 static void setTMupml()
@@ -177,6 +196,9 @@ static void setSolver(enum SOLVER solver)
   case NS_TM_2D:
     setNsTM();
     break;
+case NS_TE_2D:
+setNsTE();
+break;
   default:
     printf("error, not implement simulator (simulator.c)\n");
     exit(2);

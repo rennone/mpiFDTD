@@ -152,12 +152,12 @@ dcomplex field_pointLight()
 }
 
 //PML用の散乱波
-void field_nsScatteredWaveNotUPML(dcomplex *p, double *eps, double gapX, double gapY)
+void field_nsScatteredWaveNotUPML(dcomplex *p, double *eps, double gapX, double gapY, double dot)
 {
   FieldInfo_S fInfo_s = field_getFieldInfo_S();
   double time = field_getTime();
   double w_s  = field_getOmega();
-  double ray_coef = field_getRayCoef();
+  double ray_coef = field_getRayCoef() * dot;
   double k_s = field_getK();
   double rad = field_getWaveAngle()*M_PI/180.0;
   double ks_cos = cos(rad)*k_s, ks_sin = sin(rad)*k_s;//毎回計算すると時間かかりそうだから代入しておく  
