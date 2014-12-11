@@ -600,10 +600,11 @@ static double maxEvals(Individual *p)
   for(int i=0; i<EVAL_NUM; i++)
   {
     mx = max( mx, p->evals[i] );
-  }
+  }      
+  // return mx;
+  enum EvalKinds targetEval = EVAL_BLUE;
 
-  //念のため, pの中身が 0~100の間にあるかチェック      
-  return mx;
+  return p->evals[targetEval];
 }
 
 //選択
