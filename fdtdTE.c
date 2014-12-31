@@ -244,7 +244,8 @@ static void init()
 
 //---------------------メモリの解放--------------------//
 static void finish()
-{  
+{
+  reset();
   if(Ex != NULL){    free(Ex); Ex = NULL;}
   if(Ey != NULL){    free(Ey); Ey = NULL;}  
   if(Hzx != NULL){   free(Hzx); Hzx = NULL;}
@@ -267,9 +268,11 @@ static void finish()
 
 static void reset()
 {
-  /*
-output process
-   */
+  FieldInfo fInfo = field_getFieldInfo();
+  char buf[128];
+  sprintf(buf, "te_%dnm.txt",fInfo.h_u_nm);
+  field_outputElliptic(buf, Ey);
+
   memset(Ex, 0, sizeof(double complex)*N_CELL);
   memset(Ey, 0, sizeof(double complex)*N_CELL);
   memset(Hzx,0, sizeof(double complex)*N_CELL);
@@ -277,31 +280,9 @@ output process
   memset(Hz,0, sizeof(double complex)*N_CELL);
 }
 
-//Standard Scattered Wave
-static void scatteredWave(double complex *p, double *eps)
-{
-  double time = field_getTime();
-  double w_s  = field_getOmega();
-  double ray_coef = field_getRayCoef();
-  double k_s = field_getK();  
-  double rad = 1.0*field_getWaveAngle()*M_PI/180.0;	//ラジアン変換
-  double ks_cos = cos(rad)*k_s, ks_sin = sin(rad)*k_s;	//毎回計算すると時間かかりそうだから,代入しておく
-  
-  int i,j;
-  for(i=N_PML; i<N_X+N_PML; i++){
-    for(j=N_PML; j<N_Y+N_PML; j++){
-      double ikx = i*ks_cos + j*ks_sin; //k_s*(i*cos + j*sin)
-      p[ind(i,j)] += ray_coef*(EPSILON_0_S/eps[ind(i,j)] - 1)*(
-        cos(ikx-w_s*(time+0.5)) + I*sin(ikx-w_s*(time+0.5))
-        -cos(ikx-w_s*(time-0.5)) - I*sin(ikx-w_s*(time-0.5))
-        );
-    }
-  }
-}
-
 static void update(){
   calcE();
-  scatteredWave(Ey, EPS_EY);
+  field_scatteredWaveNotUPML(Ey, EPS_EY, 0.0, 0.5);
   calcH();
 }
 
@@ -312,12 +293,12 @@ static inline void calcE(void)
   //Ex
   for(i=1; i<N_PX-1; i++)
     for(j=1; j<N_PY-1; j++)
-      Ex[ind(i,j)] = CEX(i,j)*EX(i,j) + CEXLY(i,j)*( HZX(i,j+1) - HZX(i,j) + HZY(i,j+1) - HZY(i,j) );
+      Ex[ind(i,j)] = CEX(i,j)*EX(i,j) + CEXLY(i,j)*( HZX(i,j) - HZX(i,j-1) + HZY(i,j) - HZY(i,j-1) );
   
   //Ey
   for(i=1; i<N_PX-1; i++)
     for(j=1; j<N_PY-1; j++)
-      Ey[ind(i,j)] = CEY(i,j)*EY(i,j) - CEYLX(i,j)*( HZX(i+1,j) - HZX(i,j) + HZY(i+1,j) - HZY(i,j) );
+      Ey[ind(i,j)] = CEY(i,j)*EY(i,j) - CEYLX(i,j)*( HZX(i,j) - HZX(i-1,j) + HZY(i,j) - HZY(i-1,j) );
 }
 
 //磁界の計算 
@@ -327,12 +308,12 @@ static inline void calcH()
   //Hzx
   for(i=1; i<N_PX-1; i++)
     for(j=1; j<N_PY-1; j++)
-      Hzx[ind(i,j)] = CHZX(i,j)*HZX(i,j) - CHZXLX(i,j)*(EY(i,j)-EY(i-1,j) );
+      Hzx[ind(i,j)] = CHZX(i,j)*HZX(i,j) - CHZXLX(i,j)*(EY(i+1,j)-EY(i,j) );
 
   //Hzy
   for(i=1; i<N_PX-1; i++)
     for(j=1; j<N_PY-1; j++)
-      Hzy[ind(i,j)] = CHZY(i,j)*HZY(i,j) + CHZYLY(i,j)*(EX(i,j)-EX(i,j-1) );
+      Hzy[ind(i,j)] = CHZY(i,j)*HZY(i,j) + CHZYLY(i,j)*(EX(i,j+1)-EX(i,j) );
 
   for(i=1; i<N_PX-1; i++)
     for(j=1; j<N_PY-1; j++)
