@@ -152,7 +152,7 @@ static void setCoefficient()
     int k = field_index(i,j);
     EPS_EX[k] = models_eps(i+0.5,j, D_Y);
     EPS_EY[k] = models_eps(i,j+0.5, D_X);
-    EPS_HZ[k] = 0.5*(models_eps(i+0.5,j+0.5, D_X) + models_eps(i+0.5,j+0.5, D_Y));
+    EPS_HZ[k] = models_eps(i+0.5, j+0.5, D_XY);//0.5*(models_eps(i+0.5,j+0.5, D_X) + models_eps(i+0.5,j+0.5, D_Y));
 
     // (領域内はσ = 0なので関係ない)
     sig_ex_x  = sig_max*field_sigmaX(i+0.5,j);  //σ_x for ex
