@@ -22,17 +22,17 @@
 //ラメラ1の厚さ
 #define ST_THICK_NM_1 90
 #define EN_THICK_NM_1 150
-#define DELTA_THICK_NM_1 30
+#define DELTA_THICK_NM_1 10
 
 //ラメラ0の厚さ
-#define ST_THICK_NM_0 (ST_THICK_NM_1 +  0)
-#define EN_THICK_NM_0 (ST_THICK_NM_1 + 50)
+#define ST_THICK_NM_0 100
+#define EN_THICK_NM_0 150
 #define DELTA_THICK_NM_0 10
 
 //ラメラの枚数
 #define ST_LAYER_NUM 4
-#define EN_LAYER_NUM 4
-#define DELTA_LAYER_NUM 2
+#define EN_LAYER_NUM 10
+#define DELTA_LAYER_NUM 4
 
 //互い違い => 左右で n_0 n_1を入れ替え
 #define ASYMMETRY false
@@ -44,13 +44,13 @@
 
 //中心に以下の幅で軸となる枝を入れる => 軸の屈折率はN_1になる
 #define ST_BRANCH_NM 0
-#define EN_BRANCH_NM 0
+#define EN_BRANCH_NM 50
 #define DELTA_BRANCH_NM 50
 
 //先端における横幅の割合
 #define ST_EDGE_RATE 0.0
 #define EN_EDGE_RATE 1.0
-#define DELTA_EDGE_RATE 1.0
+#define DELTA_EDGE_RATE 0.5
 
 //ラメラの先端を丸める曲率 (0で四角形のまま, 1.0で最もカーブする)
 #define CURVE 0.0
@@ -189,9 +189,13 @@ double ( *multiLayerModel_EPS(void))(double, double, int, int)
   return eps;
 }
 
-/*
+static bool nextStructure3()
+{
+
+}
+
 //構造を一つ進める
-static bool nextStructure()
+static bool nextStructure2()
 {
   left_gap_y_nm += DELTA_LEFT_GAP_Y;
   if( left_gap_y_nm >= (thickness_nm[0]+thickness_nm[1]) || !USE_GAP)
@@ -225,20 +229,21 @@ static bool nextStructure()
   }
   return false;  
 }
-*/
+
 
 //構造を一つ進める
-static bool nextStructure()
+static bool nextStructure1()
 {
   left_gap_y_nm += DELTA_LEFT_GAP_Y;
   if( left_gap_y_nm >= (thickness_nm[0]+thickness_nm[1]) || !USE_GAP){
     left_gap_y_nm = USE_GAP ? DELTA_LEFT_GAP_Y : 0;
     thickness_nm[0] += DELTA_THICK_NM_0;
-
-    if(thickness_nm[0] > /*EN_THICK_NM_0*/ thickness_nm[1]+50){
-      thickness_nm[1] += DELTA_THICK_NM_1;
-      thickness_nm[0] = thickness_nm[1];////ST_THICK_NM_0;
     
+    //TODO :Check
+    if(thickness_nm[0] > thickness_nm[1] + 50/*EN_THICK_NM_0*/){
+      thickness_nm[1] += DELTA_THICK_NM_1;
+      thickness_nm[0] = thickness_nm[1] + 10;//ST_THICK_NM_0;
+
       if(thickness_nm[1] > EN_THICK_NM_1){ 
 	thickness_nm[1] = ST_THICK_NM_1;
 	edge_width_rate += DELTA_EDGE_RATE;
@@ -266,7 +271,7 @@ static bool nextStructure()
 
 bool multiLayerModel_isFinish(void)
 {
-  return nextStructure();
+  return nextStructure1();
 }
 
 void multiLayerModel_needSize(int *x_nm, int *y_nm)

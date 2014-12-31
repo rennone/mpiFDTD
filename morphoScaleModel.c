@@ -21,21 +21,21 @@
 
 //ラメラの厚さ
 #define ST_THICK_NM_0 90
-#define EN_THICK_NM_0 150
+#define EN_THICK_NM_0 160
 #define DELTA_THICK_NM_0 10
 
 //空気の部分の厚さ
 #define ST_THICK_NM_1 90
-#define EN_THICK_NM_1 150
+#define EN_THICK_NM_1 160
 #define DELTA_THICK_NM_1 10
 
 //ラメラの枚数
-#define ST_LAYER_NUM 4
-#define EN_LAYER_NUM 4
-#define DELTA_LAYER_NUM 1
+#define ST_LAYER_NUM 6
+#define EN_LAYER_NUM 10
+#define DELTA_LAYER_NUM 2
 
 //互い違い => 左右で n_0 n_1を入れ替え
-#define ASYMMETRY true
+#define ASYMMETRY false
 
 //左右でずらす => 0 ~ thickness_nm[0] まで変化する.( 0だとずれは無い. thicknessで完全な互い違い )
 #define USE_GAP false
@@ -43,8 +43,8 @@
 
 //中心に以下の幅で軸となる枝を入れる
 #define ST_BRANCH_NM 0
-#define EN_BRANCH_NM 0
-#define DELTA_BRANCH_NM 50
+#define EN_BRANCH_NM 50
+#define DELTA_BRANCH_NM 25
 
 //屈折率
 #define N_0 1.56
@@ -54,10 +54,10 @@
 //先端における横幅の割合
 #define ST_EDGE_RATE 0.0
 #define EN_EDGE_RATE 1.0
-#define DELTA_EDGE_RATE 1.0
+#define DELTA_EDGE_RATE 0.5
 
 //ラメラの先端を丸める曲率 (0で四角形のまま, 1.0で最もカーブする)
-#define CURVE 0.2
+#define CURVE 0.0
 
 //エッジの角度をランダムに傾ける
 #define RANDOMNESS 0
@@ -256,11 +256,11 @@ static double eps(double x, double y, int col, int row)
 static bool nextStructure()
 {
   left_gap_y_nm += DELTA_LEFT_GAP_Y;
-  if( left_gap_y_nm >= thickness_nm[0] + thickness_nm[1] )
+  if( left_gap_y_nm >= thickness_nm[0] + thickness_nm[1] || !USE_GAP)
   {
-    left_gap_y_nm = 0;
+    left_gap_y_nm = USE_GAP ? DELTA_LEFT_GAP_Y : 0;
     thickness_nm[0] += DELTA_THICK_NM_0;
-    thickness_nm[1] += DELTA_THICK_NM_1;    
+    thickness_nm[1] += DELTA_THICK_NM_1;
     if(thickness_nm[1] > EN_THICK_NM_1){
       thickness_nm[0] = ST_THICK_NM_0;
       thickness_nm[1] = ST_THICK_NM_1;
@@ -271,8 +271,12 @@ static bool nextStructure()
         branch_width_nm += DELTA_BRANCH_NM;
 	
         if(branch_width_nm > EN_BRANCH_NM){
-          printf("there are no models which hasn't been simulated yet\n");
-          return true;
+	  layerNum += DELTA_LAYER_NUM;
+	  branch_width_nm = ST_BRANCH_NM;
+	  if(layerNum > EN_LAYER_NUM){
+	    printf("there are no models which hasn't been simulated yet\n");
+	    return true;
+	  }
         }
       }
     }
@@ -280,9 +284,9 @@ static bool nextStructure()
   return false;  
 }
 
-/*
+
 //構造を一つ進める
-static bool nextStructure()
+static bool nextStructure1()
 {
   left_gap_y_nm += DELTA_LEFT_GAP_Y;
   //gapを使わない場合は無条件に入る
@@ -305,8 +309,12 @@ static bool nextStructure()
           branch_width_nm += DELTA_BRANCH_NM;
           if(branch_width_nm > EN_BRANCH_NM)
           {
-            printf("there are no models which hasn't been simulated yet\n");     
-            return true;
+	    layerNum += DELTA_LAYER_NUM;
+	    branch_width_nm = ST_BRANCH_NM;
+	    if(layerNum > EN_LAYER_NUM){
+	      printf("there are no models which hasn't been simulated yet\n");
+	      return true;
+	    }
           }
         }
       }
@@ -314,7 +322,6 @@ static bool nextStructure()
   }
   return false;  
 }
-*/
 
 //正しいディレクトリまで移動.
 void morphoScaleModel_moveDirectory()
