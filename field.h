@@ -46,6 +46,7 @@ typedef struct SubFieldInfo_S
   int SUB_N_CELL;
   int Rank; //自身のランク
   int RtRank, LtRank, TpRank, BmRank; //周りの領域のプロセスランク
+  int SUB_DX, SUB_DY;
 }SubFieldInfo_S;
 
 //入射波のパラメータ
@@ -157,10 +158,11 @@ extern int field_index(int i, int j);
 extern int field_subIndex(int i, int j);
 
 //output method
-extern void field_outputElliptic(const char *fileName,double complex* data); //
+extern void field_outputElliptic(const char *fileName,double complex* data, double radius_s); //
 extern void field_outputAllDataComplex(const char *fileName,double complex* data); //
 extern void field_outputAllDataDouble(const char *fileName,double* data); //
 
+extern void field_initMPI();
 
 // for(i=1..N_PX-1)
 //   for(j=1..N_PY-1) と同じ(はず)

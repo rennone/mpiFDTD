@@ -155,8 +155,9 @@ static void reset()
 {
   FieldInfo fInfo = field_getFieldInfo();
   char buf[128];
+  double radius_s = field_toCellUnit(1.2*fInfo.lambda_nm);
   sprintf(buf, "tm_%dnm.txt",fInfo.h_u_nm);
-  field_outputElliptic(buf,Ez);
+  field_outputElliptic(buf,Ez, radius_s);
   memset(Hx, 0, sizeof(double complex)*N_CELL);
   memset(Hy, 0, sizeof(double complex)*N_CELL);
   memset(Ezx,0, sizeof(double complex)*N_CELL);

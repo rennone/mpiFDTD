@@ -192,7 +192,7 @@ void ntffTM_TimeTranslate(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, dcomplex *Et
     }
   }
 }
-      
+
 //時間領域のEthの書き出し.
 void ntffTM_TimeOutput(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz)
 {
@@ -272,6 +272,56 @@ void ntffTM_TimeOutput(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz)
   */
   free(Eth);
   free(Eph);
+}
+
+//時間領域の遠方解 Ux, Uy, WzからEthを求め
+//それをfftした結果から波長,反射角ごとのEthのノルムを返す
+// res[λ][deg]でアクセスできる. 0 <= deg <= 359, stLambda <= λ <= enLamba
+double** ntffTM_TimeCalcNorm(dcomplex *Ux, dcomplex *Uy, dcomplex *Wz, int *stLambda, int *enLamba)
+{
+  *stLambda = LAMBDA_ST_NM; //戻り値の波長の範囲を指定
+  *enLamba  = LAMBDA_EN_NM;
+  
+  const int maxTime = field_getMaxTime();
+  NTFFInfo nInfo = field_getNTFFInfo();
+  dcomplex *Eth, *Eph;  
+  Eth = newDComplex(360*nInfo.arraySize);
+  Eph = newDComplex(360*nInfo.arraySize);
+
+  //Eth, Ephを計算
+  ntffTM_TimeTranslate(Ux,Uy,Wz,Eth,Eph);
+  
+  double **out_ref = (double**)malloc(sizeof(double*) * (LAMBDA_EN_NM-LAMBDA_ST_NM+1));
+
+  for(int l=0; l<=LAMBDA_EN_NM-LAMBDA_ST_NM; l++)
+    out_ref[l] = newDouble(360);
+
+  //fft用に2の累乗の配列を確保
+  dcomplex *eth = newDComplex(NTFF_NUM);
+  for(int ang=0; ang<360; ang++)
+  {
+    int k= ang*nInfo.arraySize;
+
+    memset((void*)eth,0,sizeof(dcomplex)*NTFF_NUM);               //0で初期化
+    memcpy((void*)eth, (void*)&Eth[k], sizeof(dcomplex)*maxTime); //コピー
+    cfft(eth, NTFF_NUM); //FFT
+
+    FieldInfo fInfo = field_getFieldInfo();
+    for(int lambda_nm=LAMBDA_ST_NM; lambda_nm<=LAMBDA_EN_NM; lambda_nm++)
+    {
+      //線形補完 TODO : index = n-1 となるほどの小さいlambdaを取得しようとするとエラー
+      double p = C_0_S * fInfo.h_u_nm * NTFF_NUM / lambda_nm;
+      int index = floor(p);
+      p = p-index;
+      out_ref[lambda_nm-LAMBDA_ST_NM][ang] = ((1-p)*cnorm(eth[index]) + p*cnorm(eth[index+1]))/NTFF_NUM;
+    }
+  }  
+  freeDComplex(eth);
+
+  free(Eth);
+  free(Eph);
+
+  return out_ref;
 }
 
 // eとU[stp] もしくは hとW[stp]を渡す

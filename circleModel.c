@@ -3,11 +3,11 @@
 #include "field.h"
 #include "function.h"
 
-#define ST_RADIUS_NM 500
-#define EN_RADIUS_NM 500
+#define ST_RADIUS_NM 16
+#define EN_RADIUS_NM 16
 #define DELTA_RADIUS_NM 100
 
-#define N 1.6
+#define N 2.745
 static int radius_nm = ST_RADIUS_NM;
 
 //フィールド領域が決まってから決まる
@@ -42,8 +42,8 @@ static double eps(double x, double y, int col, int row)
   if(len <= (radius_s-1)*(radius_s-1))
     return epsilon_s;
 
-  //さらに32*32分割し媒質内と媒質外の数を求めepsilonを決定する
-  double split = 10;
+  //さらにsplit*split分割し媒質内と媒質外の数を求めepsilonを決定する
+  double split = 200;
   double half_split = split/2;
   double sum=0;
   for(double i=-half_split+0.5; i<half_split; i+=1){
@@ -74,7 +74,7 @@ void circleModel_moveDirectory()
 void circleModel_init(void)
 {
   FieldInfo_S fInfo_s = field_getFieldInfo_S();
-  radius_s  = field_toCellUnit(radius_nm);  
+  radius_s  = field_toCellUnit(radius_nm);
   posx_s    = fInfo_s.N_PX/2;
   posy_s    = fInfo_s.N_PY/2;
   epsilon_s = N*N*EPSILON_0_S;
@@ -83,6 +83,6 @@ void circleModel_init(void)
 void circleModel_needSize(int *x_nm,int *y_nm)
 {
   //検証時には半径*1.2の位置を使っているので多めに取っておく
-  *x_nm = 2.3*radius_nm*2;
-  *y_nm = 2.3*radius_nm*2;
+  *x_nm = 1.5*radius_nm*2;
+  *y_nm = 1.5*radius_nm*2;
 }

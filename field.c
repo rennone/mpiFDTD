@@ -33,8 +33,6 @@ static FieldInfo_S    fieldInfo_s;
 static WaveInfo_S     waveInfo_s;
 static SubFieldInfo_S subFieldInfo_s;
 
-static void mpiSplit(void);
-
 //:public------------------------------------//
 void field_setWaveAngle(int deg) {
   fieldInfo.angle_deg = deg;
@@ -109,7 +107,6 @@ void field_init(FieldInfo field_info)
   waveInfo_s.Omega_s  = C_0_S*waveInfo_s.K_s;
   waveInfo_s.Angle_deg   = fieldInfo.angle_deg;
 
-  //  mpiSplit();  //小領域のパラメータを計算
 
   // 下位バージョンとの互換性の為
   H_u = fieldInfo.h_u_nm;  
@@ -238,6 +235,7 @@ void field_scatteredPulse(dcomplex *p, double *eps, double gapX, double gapY, do
   // TODO : h_uのサイズに応じて変化させないと, パルスが不連続になる可能性が有る.
   // t=500 では h_u = 10nm, 5nmでうまく動いているのでこうしている.
 //常に t=500 の時に,領域の中心にピークが来るように初期位相を調整
+  // TODO : 領域の大きさによっては, t0 = 0 になるのでよろしくない.
   const double t0 = -center_peak + 500;
   
   for(int i=1; i<fInfo_s.N_PX-1; i++)
@@ -319,7 +317,7 @@ double field_ns_beta_aster(double alpha, double alpha_aster)
 }
 
 //---------------output method---------------//
-void field_outputElliptic(const char *fileName, double complex* data)
+void field_outputElliptic(const char *fileName, double complex* data, double radius_s)
 {
   printf("output start\n");
   //file open
@@ -332,8 +330,8 @@ void field_outputElliptic(const char *fileName, double complex* data)
 
   for(int ang=180; ang >=0; ang--){
     double rad = ang*M_PI/180.0;
-    double x = 1.2*lambda_s*cos(rad)+N_PX/2.0;
-    double y = 1.2*lambda_s*sin(rad)+N_PY/2.0;
+    double x = radius_s*cos(rad)+N_PX/2.0;
+    double y = radius_s*sin(rad)+N_PY/2.0;
     double norm = cnorm(cbilinear(data,x,y,N_PX,N_PY));
     fprintf(fp, "%d %lf \n", 180-ang, norm);    
   }
@@ -389,7 +387,7 @@ void field_outputAllDataDouble(const char *fileName, double *data)
 
 //:private
 //MPIにより領域を分割する.
-static void mpiSplit(void)
+void field_initMPI()
 {
   int num_proc;
   int dim       = 2;        //number of dimension is 2
@@ -420,9 +418,23 @@ static void mpiSplit(void)
   //小領域のパラメータ
   subFieldInfo_s.SUB_N_X    = fieldInfo_s.N_PX / procs[0];
   subFieldInfo_s.SUB_N_Y    = fieldInfo_s.N_PY / procs[1];
+
   subFieldInfo_s.SUB_N_PX   = subFieldInfo_s.SUB_N_X + 2; //のりしろの分2大きい
   subFieldInfo_s.SUB_N_PY   = subFieldInfo_s.SUB_N_Y + 2; //のりしろの分2大きい
   subFieldInfo_s.SUB_N_CELL = subFieldInfo_s.SUB_N_PX*subFieldInfo_s.SUB_N_PY;  
   subFieldInfo_s.OFFSET_X  = coordinates[0] * subFieldInfo_s.SUB_N_X; //ランクのインデックスではなく, セル単位のオフセットなのでSUB_N_Xずれる
   subFieldInfo_s.OFFSET_Y  = coordinates[1] * subFieldInfo_s.SUB_N_Y;
+
+  subFieldInfo_s.SUB_DX    = subFieldInfo_s.SUB_N_PY;
+  subFieldInfo_s.SUB_DY    = 1;
 }
+
+
+
+
+
+
+
+
+
+

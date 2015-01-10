@@ -2,6 +2,11 @@
 #define _DRAWER_H
 #include "myComplex.h"
 
+
+typedef struct {
+ float r,g,b;
+}colorf;
+
 enum COLOR_MODE
 {
   CREAL,
@@ -21,5 +26,6 @@ extern void drawer_clear(void);
 
 extern void drawer_outputImage(char *fileName, dcomplex* data, double *model, int width, int height);
 extern void drawer_screenshot(const char* filename);
-
+extern void drawer_outputLineImage(char *fileName, double red[360], double green[360], double blue[360]);
+extern void drawer_saveImage(char *fileName, colorf **cells, int width, int height);
 #endif //_DRAWER_H

@@ -585,8 +585,11 @@ static void output()
       for(i=1, x=offsets[0]; i<SUB_N_PX-1; i++, x++)
         for(j=1, y=offsets[1]; j<SUB_N_PY-1; j++, y++)
           entire[ind(x,y)] = Ey[subInd(i, j)];      
-    }    
-    field_outputElliptic("mpi_mieTE.txt", entire);
+    }
+
+    FieldInfo fInfo = field_getFieldInfo();
+    double radius_s = field_toCellUnit(1.2*fInfo.lambda_nm);
+    field_outputElliptic("mpi_mieTE.txt", entire, radius_s);
     free(entire);
   }
   else{

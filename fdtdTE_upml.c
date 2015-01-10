@@ -134,37 +134,6 @@ static void reset()
   memset(Uz, 0, size);
 }
 
-/*
-//Standard Scattered Wave
-static void scatteredWave(double complex *p, double *eps){
-  double time = field_getTime();
-  double w_s  = field_getOmega();
-  double ray_coef = field_getRayCoef();
-  double k_s = field_getK();  
-  double rad = 1.0*field_getWaveAngle()*M_PI/180.0;	//ラジアン変換
-  double ks_cos = cos(rad)*k_s, ks_sin = sin(rad)*k_s;	//毎回計算すると時間かかりそうだから,代入しておく
-
-  //ガウシアンパルス
-    double _cos = cos(rad), _sin = sin(rad);
-  const double beam_width = 50;
-  const double t0 = 100;
-  
-  int i,j;
-  for(i=N_PML; i<N_X+N_PML; i++){
-    for(j=N_PML; j<N_Y+N_PML; j++){
-      double ikx = i*ks_cos + j*ks_sin; //k_s*(i*cos + j*sin)
-      
-      //p[ind(i,j)] += ray_coef*(EPSILON_0_S/eps[ind(i,j)] - 1)*( cos(ikx-w_s*time) + I*sin(ikx-w_s*time) );
-      int k = field_index(i,j);
-      //ガウシアンパルス
-      const double r = (i*_cos+j*_sin)/C_0_S-(time-t0);
-      const double gaussian_coef = exp( -pow(r/beam_width, 2 ) );
-      p[k] += gaussian_coef*(EPSILON_0_S/eps[k] - 1)*cexp(I*r*w_s);    
-      
-    }
-  }
-  }*/
-
 static inline void update(void)
 {  
 //  fastCalcMB();
@@ -187,6 +156,7 @@ static inline void update(void)
     field_scatteredPulse(Ex, EPS_EX, 0.5, 0.0, co); //Exは格子点より右に0.5ずれた位置に配置
   if(si != 0.0)
     field_scatteredPulse(Ey, EPS_EY, 0.0, 0.5, si); //Eyは格子点より上に0.5ずれた位置に配置
+
 
   ntffTE_TimeCalc(Ex,Ey,Hz,Wx,Wy,Uz);
 }
@@ -417,37 +387,20 @@ static void freeMemories()
   if(Ey != NULL){    free(Ey); Ey = NULL;}  
   if(Hz != NULL){    free(Hz); Hz = NULL;}
 
-  delete(Dx);
-  delete(Dy);
-  delete(Bz);
-  
-  delete(Jx);
-  delete(Jy);
-  delete(Mz);
+  delete(Ex); delete(Ey); delete(Hz);
+  delete(Dx); delete(Dy); delete(Bz);
+  delete(Jx); delete(Jy); delete(Mz);
 
-  delete(Wx);
-  delete(Wy);
-  delete(Uz);
+  delete(Wx); delete(Wy); delete(Uz);
+
+  delete(EPS_EX); delete(EPS_EY); delete(EPS_HZ);
   
-  if(C_JX!= NULL){    free(C_JX);  C_JX = NULL;}
-  if(C_JXHZ!= NULL){   free(C_JXHZ); C_JXHZ = NULL;}
-  if(C_DX!= NULL){   free(C_DX); C_DX = NULL;}
-  if(C_DXJX0 != NULL){   free(C_DXJX0); C_DXJX0 = NULL;}
-  if(C_DXJX1 != NULL){   free(C_DXJX1); C_DXJX1 = NULL;}
+  delete(C_JX); delete(C_JXHZ);
+  delete(C_DX); delete(C_DXJX1); delete(C_DXJX0);
+
+  delete(C_JY); delete(C_JYHZ);
+  delete(C_DY); delete(C_DYJY1); delete(C_DYJY0);
   
-  if(C_JY!= NULL){    free(C_JY);  C_JY = NULL;}
-  if(C_JYHZ!= NULL){   free(C_JYHZ); C_JYHZ = NULL;}
-  if(C_DY!= NULL){   free(C_DY); C_DY = NULL;}
-  if(C_DYJY0 != NULL){   free(C_DYJY0); C_DYJY0 = NULL;}
-  if(C_DYJY1 != NULL){   free(C_DYJY1); C_DYJY1 = NULL;}
-  
-  if(C_MZ!= NULL){    free(C_MZ);  C_MZ = NULL;}
-  if(C_MZEXEY!= NULL){   free(C_MZEXEY); C_MZEXEY = NULL;}
-  if(C_BZ != NULL){   free(C_BZ); C_BZ = NULL;}
-  if(C_BZMZ0 != NULL){   free(C_BZMZ0); C_BZMZ0 = NULL;}
-  if(C_BZMZ1 != NULL){   free(C_BZMZ1); C_BZMZ1 = NULL;}
-  
-  if(EPS_EX != NULL)   free(EPS_EX);
-  if(EPS_EY != NULL)   free(EPS_EY);
-  if(EPS_HZ != NULL)   free(EPS_HZ);
+  delete(C_MZ); delete(C_MZEXEY);
+  delete(C_BZ); delete(C_BZMZ1); delete(C_BZMZ0);  
 }

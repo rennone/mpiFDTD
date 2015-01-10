@@ -278,8 +278,10 @@ static void reset()
 {
   FieldInfo fInfo = field_getFieldInfo();
   char buf[128];
+
+  double radius_s = field_toCellUnit(1.2*fInfo.lambda_nm);
   sprintf(buf, "ns_te_%dnm.txt",fInfo.h_u_nm);
-  field_outputElliptic(buf, Ey);
+  field_outputElliptic(buf, Ey, radius_s);
 
   FieldInfo_S fInfo_s = field_getFieldInfo_S();
   memset(Ex, 0, sizeof(dcomplex)*fInfo_s.N_CELL);

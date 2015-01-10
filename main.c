@@ -9,6 +9,7 @@
 #include "parser.h"
 #include "function.h"
 #include "drawer.h"
+#include "colorTransform.h"
 
 typedef struct Config
 {
@@ -41,10 +42,10 @@ typedef struct Config
 #endif
 
 //プロトタイプ宣言
-static void drawField();
-static void drawSubField();
-static void display();
-static void idle();
+static void drawField(void);
+static void drawSubField(void);
+static void display(void);
+static void idle(void);
 
 #endif
 
@@ -72,10 +73,11 @@ static void calcFieldSize(FieldInfo *fInfo)
 {
   int x_nm, y_nm;
   models_needSize(&x_nm, &y_nm);
-  
-  //モデルのサイズ + (pml + ntff)*2 + 余白
-  fInfo->width_nm  = x_nm + fInfo->h_u_nm*(fInfo->pml + 5)*2 + 200;
-  fInfo->height_nm = y_nm + fInfo->h_u_nm*(fInfo->pml + 5)*2 + 200;
+
+  int padding = 20;
+  //モデルのサイズ + (pml + ntff + 余白)*2  
+  fInfo->width_nm  = x_nm + fInfo->h_u_nm*(fInfo->pml + 5 + padding)*2; //
+  fInfo->height_nm = y_nm + fInfo->h_u_nm*(fInfo->pml + 5 + padding)*2;
 
   bool square = false;
   if(square)
@@ -89,11 +91,11 @@ static void calcFieldSize(FieldInfo *fInfo)
 
 static void initParameter()
 {
-  config.field_info.h_u_nm    = 50;
-  config.field_info.pml       = 15; //pml領域のセル数
-  config.field_info.lambda_nm = 500;
+  config.field_info.h_u_nm    = 1;
+  config.field_info.pml       = 16; //pml領域のセル数
+  config.field_info.lambda_nm = 32;
   //領域の全体サイズが変化し,収束にかかる時間が変わるためh_uによりステップ数を変える必要がある.
-  config.field_info.stepNum   = 20000 / config.field_info.h_u_nm;
+  config.field_info.stepNum   = 200000;//20000 / config.field_info.h_u_nm;
   config.field_info.angle_deg = ST_PHI;
   config.startAngle = ST_PHI;
   config.endAngle   = EN_PHI;
@@ -150,24 +152,28 @@ static void screenshot()
 int main( int argc, char *argv[] )
 {
   getcwd(root, 512); //カレントディレクトリを保存
- 
-  models_setModel(MIE_CYLINDER);       // MORPHO_SCALE,TRACE_IMAGE, ZIGZAG,NO_MODEL,
-  simulator_setSolver(TM_2D);
-  
+
   MPI_Init( 0, 0 );
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &numProc);
 
+  colorTransform_init();
+
+  models_setModel(MIE_CYLINDER);       // MORPHO_SCALE,TRACE_IMAGE, ZIGZAG,NO_MODEL,
+  simulator_setSolver(NS_TM_2D); 
+
 //  initConfigFromText();
   initParameter();  //パラメータを設定
   moveDir();
-  
+
+  /*
  //プロセスごとに別のシミュレーションをする.
   bool changeModel;
   if( nextSimulation(rank, &changeModel) == true){
     MPI_Finalize();
     exit(0);
   }
+  */
   
   //シミュレーションの初期化.
   simulator_init(config.field_info);
@@ -186,6 +192,7 @@ int main( int argc, char *argv[] )
       simulator_calc();    
     }
 
+    bool changeModel;
     //numProc次のシミュレーションにする. 角度が変わるか構造(nm変数のみ)が変わるか
     if( nextSimulation(numProc, &changeModel) == true)
     {
@@ -277,13 +284,15 @@ static void idle(void)
 {
   simulator_calc();
 
+  //Note:
+  //GAでルートプロセスが,他のプロセスの終了を確認するために入れている.
+  models_update(); //モデルのアップデート処理
+  
   //シミュレーションが続くなら再描画して終わり
   if( !simulator_isFinish() ){
     glutPostRedisplay();  //再描画
     return;
   }
-
-  printf("finish rank %d\n",rank);
   
   bool changeModel;
 

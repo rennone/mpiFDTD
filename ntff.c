@@ -31,3 +31,16 @@ void ntff_outputEnormBin(double **e_norm, const char *file_name)
   }
   fclose(fp_b);
 }
+
+void ntff_normalize(double array[360])
+{
+  double sum = 0;
+  for(int i=0; i<360; i++)
+    sum += array[i];
+
+  if(sum == 0)
+    return;
+  
+  for(int i=0; i<360; i++)
+    array[i] /= sum;  
+}

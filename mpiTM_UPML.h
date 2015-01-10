@@ -11,10 +11,4 @@ extern double complex* mpi_fdtdTM_upml_getHy(void);
 extern double complex* mpi_fdtdTM_upml_getEz(void);
 extern double * mpi_fdtdTM_upml_getEps(void);
 
-extern int mpi_fdtdTM_upml_getSubNx(void);
-extern int mpi_fdtdTM_upml_getSubNy(void);
-extern int mpi_fdtdTM_upml_getSubNpx(void);
-extern int mpi_fdtdTM_upml_getSubNpy(void);
-extern int mpi_fdtdTM_upml_getSubNcell(void);
-
 #endif

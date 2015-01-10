@@ -78,16 +78,17 @@ static void update()
     Ez[k] = Ezx[k] + Ezy[k];
   }
 }
-
+/*
 static bool InPML(double i, double j)
 {
+  return false;
   int p = 0;
   FieldInfo_S fInfo_s = field_getFieldInfo_S();
   return (i < fInfo_s.N_PML+p || j < fInfo_s.N_PML+p
     || (i >= fInfo_s.N_X + fInfo_s.N_PML -p )
                || (j >= fInfo_s.N_Y + fInfo_s.N_PML -p) );
 }
-
+*/
 static void calcE()
 {
   FieldInfo_S fInfo_s = field_getFieldInfo_S();
@@ -116,55 +117,30 @@ static void calcH()
   double k_s = field_getK();
   double r =  1.0/6.0 + k_s*k_s/180.0 - pow(k_s,4) / 23040;
   double r_2 = r/2.0;
-
-  double kx_s = k_s * pow(2.0, -0.25);
-  double ky_s = k_s * sqrt(1 - pow(2.0, -0.5));
-  double sin2_kx = pow(sin(kx_s*0.5), 2);
-  double sin2_ky = pow(sin(ky_s*0.5), 2);
-  double sin2_k  = pow(sin(k_s*0.5), 2);
-
-  double Rm = (sin2_kx + sin2_ky - sin2_k) / (4*sin2_kx*sin2_ky);
-  double Rp = 1 - Rm;
   
   FOR_FOR(fInfo_s, i, j)
   {
     int k = field_index(i,j);
 
-    if( InPML(i,j+0.5) )
-    {
-      Hx[k] = C_HX[k]*Hx[k] - C_HXLY[k]* (
-          Ez[k+dy] - Ez[k] );  // dy
-    }
-    else
-    {      
-      // γ/2 * dx^2dy
-      dcomplex ns_operator = r_2*( (Ez[k+dy+dx] + Ez[k+dy-dx] - 2*Ez[k+dy])   
-                                  -(Ez[k+dx]    + Ez[k-dx]    - 2*Ez[k]   ));      
-      Hx[k] = C_HX[k]*Hx[k] - C_HXLY[k]* (
-          Ez[k+dy] - Ez[k] // dy
-        + ns_operator );
-    }
+    // γ/2 * dx^2dy
+    dcomplex ns_operator = r_2*( (Ez[k+dy+dx] + Ez[k+dy-dx] - 2*Ez[k+dy])   
+                                 -(Ez[k+dx]    + Ez[k-dx]    - 2*Ez[k]   ));      
+    Hx[k] = C_HX[k]*Hx[k] - C_HXLY[k]* (
+      Ez[k+dy] - Ez[k] // dy
+      + ns_operator );
   }
   
   FOR_FOR(fInfo_s, i, j)
   {
     int k = field_index(i,j);
-
-    if( InPML(i+0.5,j) )
-    {
-      Hy[k] = C_HY[k]*Hy[k] + C_HYLX[k]*(
-        Ez[k+dx] - Ez[k] );
-    }
-    else
-    {
       
-      // γ/2 * dxdy^2
-      dcomplex ns_operator =  r_2*(  (Ez[k+dx+dy] + Ez[k+dx-dy] - 2*Ez[k+dx] )
-                                    -(Ez[k+dy]    + Ez[k-dy]    - 2*Ez[k]    ));
-      Hy[k] = C_HY[k]*Hy[k] + C_HYLX[k]*(
-        Ez[k+dx] - Ez[k]//dx
-        + ns_operator );     
-    }
+    // γ/2 * dxdy^2
+    dcomplex ns_operator =  r_2*(  (Ez[k+dx+dy] + Ez[k+dx-dy] - 2*Ez[k+dx] )
+                                   -(Ez[k+dy]    + Ez[k-dy]    - 2*Ez[k]    ));
+    Hy[k] = C_HY[k]*Hy[k] + C_HYLX[k]*(
+      Ez[k+dx] - Ez[k]//dx
+      + ns_operator );     
+
   }
 }
 
@@ -178,8 +154,16 @@ static void reset()
 {
   FieldInfo fInfo = field_getFieldInfo();
   char buf[128];
-  sprintf(buf, "ns_tm_%dnm.txt",fInfo.h_u_nm);
-  field_outputElliptic(buf, Ez);
+  double radius_s = field_toCellUnit(16);
+  sprintf(buf, "1.1_ns_tm_%dnm.txt",fInfo.h_u_nm);
+  field_outputElliptic(buf, Ez, 1.1*radius_s);
+
+  sprintf(buf, "1.2_ns_tm_%dnm.txt",fInfo.h_u_nm);
+  field_outputElliptic(buf, Ez, 1.2*radius_s);
+
+  sprintf(buf, "1.21_ns_tm_%dnm.txt",fInfo.h_u_nm);
+  field_outputElliptic(buf, Ez, 1.21*radius_s);
+  
   memset(Hx , 0, sizeof(double complex)*N_CELL);
   memset(Hy , 0, sizeof(double complex)*N_CELL);
   memset(Ezx, 0, sizeof(double complex)*N_CELL);
@@ -235,23 +219,6 @@ static void allocateMemories()
   EPS_EZ = newDouble(fInfo_s.N_CELL);  
 }
 
-//簡略化したUns2
-static double Uns(double alpha, double beta)
-{
-  double w_s = field_getOmega();
-  double k_s = field_getK();
-  double sinh_2_a = pow( sinh(alpha) , 2);
-  double sin_2_w  = pow( sin(w_s*0.5), 2);
-  double cosh_a   = cosh(2*alpha);
-  return sqrt(( (sinh_2_a + sin_2_w)/cosh(alpha) - beta*beta ))  / sin(k_s * 0.5);
-}
-
-//PML用のα
-static double alpha(double sigma, double ep_mu)
-{
-  return sigma / (2 *ep_mu);
-}
-
 //PML用に簡略化したβ
 static double beta(double alpha)
 {  
@@ -263,18 +230,8 @@ static double coef1(double alpha, double beta)
   return (1 - beta) / (1 + beta);
 }
 
-static double coef2(double alpha, double beta)
-{
-  double u_ns = Uns(alpha, beta);
-  return u_ns / (1+beta);
-}
-
 static void setCoefficient()
 {
- //Ez,, Hx, Hyそれぞれでσx, σx*, σy, σy*が違う(場所が違うから)
-  double sig_ez_x, sig_ez_y, sig_ez_xx, sig_ez_yy;
-  double sig_hx_x, sig_hx_y, sig_hx_xx, sig_hx_yy;
-  double sig_hy_x, sig_hy_y, sig_hy_xx, sig_hy_yy;
 
   double R = 1.0e-8;
   double M = 2.0;
@@ -282,9 +239,6 @@ static void setCoefficient()
   //NS用係数
   double w_s = field_getOmega();
   double k_s = field_getK();
-  double u_ns = sin(w_s * 0.5) / sin(k_s * 0.5);
-  printf("w_s = %lf,  k_s = %lf  u_ns = %lf\n", w_s, k_s, u_ns);
-  FieldInfo_S fInfo_s = field_getFieldInfo_S();
 
   const double sig_max = -(M+1.0)*EPSILON_0_S*C_0_S/N_PML*log(R);
   for(int i=0; i<N_PX; i++){
@@ -297,20 +251,21 @@ static void setCoefficient()
 
       // PML領域には散乱体がないので eps = EPSILON_0_S としている.
       // (領域内はσ = 0なので関係ない)
-      sig_ez_x  = sig_max*field_sigmaX(i,j);      //σ_x  for ez
-      sig_ez_xx = MU_0_S/EPSILON_0_S * sig_ez_x;  //σ_x* for ez      
-      sig_ez_y  = sig_max*field_sigmaY(i,j);      //σ_y  for ez
-      sig_ez_yy = MU_0_S/EPSILON_0_S * sig_ez_y;  //σ_y* for ez
+       //Ez,, Hx, Hyそれぞれでσx, σx*, σy, σy*が違う(場所が違うから)
+      double sig_ez_x  = sig_max*field_sigmaX(i,j);      //σ_x  for ez
+      //double sig_ez_xx = MU_0_S/EPSILON_0_S * sig_ez_x;  //σ_x* for ez      
+      double sig_ez_y  = sig_max*field_sigmaY(i,j);      //σ_y  for ez
+      //double sig_ez_yy = MU_0_S/EPSILON_0_S * sig_ez_y;  //σ_y* for ez
 
-      sig_hx_x  = sig_max*field_sigmaX(i,j+0.5);  //σ_x  for hx
-      sig_hx_xx = MU_0_S/EPSILON_0_S * sig_hx_x;  //σ_x* for hx
-      sig_hx_y  = sig_max*field_sigmaY(i,j+0.5);  //σ_y  for hx
-      sig_hx_yy = MU_0_S/EPSILON_0_S * sig_hx_y;  //σ_y* for hx
+      //double sig_hx_x  = sig_max*field_sigmaX(i,j+0.5);  //σ_x  for hx
+      //double sig_hx_xx = MU_0_S/EPSILON_0_S * sig_hx_x;  //σ_x* for hx
+      double sig_hx_y  = sig_max*field_sigmaY(i,j+0.5);  //σ_y  for hx
+      //double sig_hx_yy = MU_0_S/EPSILON_0_S * sig_hx_y;  //σ_y* for hx
 
-      sig_hy_x  = sig_max*field_sigmaX(i+0.5,j);  //σ_x  for hy
-      sig_hy_xx = MU_0_S/EPSILON_0_S * sig_hy_x;  //σ_x* for hy
-      sig_hy_y  = sig_max*field_sigmaY(i+0.5,j);  //σ_y  for hy
-      sig_hy_yy = MU_0_S/EPSILON_0_S * sig_hy_y;  //σ_y* for hy
+      double sig_hy_x  = sig_max*field_sigmaX(i+0.5,j);  //σ_x  for hy
+      //double sig_hy_xx = MU_0_S/EPSILON_0_S * sig_hy_x;  //σ_x* for hy
+      //double sig_hy_y  = sig_max*field_sigmaY(i+0.5,j);  //σ_y  for hy
+      //double sig_hy_yy = MU_0_S/EPSILON_0_S * sig_hy_y;  //σ_y* for hy
 
       // PML領域以外では α = α*, β = β* となるので,簡略化
       double a_hx_y = sig_hx_y / (2*EPSILON_0_S);
@@ -322,73 +277,33 @@ static void setCoefficient()
       double b_hy_x = beta(a_hy_x);
       double b_ez_x = beta(a_ez_x);
       double b_ez_y = beta(a_ez_y);
-      
+
       // EZ
-      if( InPML(i,j) )
-      {
-        // Standard FDTD
-        C_EZX[k]   =     field_pmlCoef(EPS_EZ[k], sig_ez_x);
-        C_EZXLX[k] = field_pmlCoef_LXY(EPS_EZ[k], sig_ez_x);
-        C_EZY[k]   =     field_pmlCoef(EPS_EZ[k], sig_ez_y);
-        C_EZYLY[k] = field_pmlCoef_LXY(EPS_EZ[k], sig_ez_y);
-      }
-      else
-      {
-        //printf("%.2lf,  %.2lf,  %.2lf,   %.2lf  \n", a_ez_x, b_ez_x, a_ez_y, b_ez_y);
-        double z_ez = sqrt(MU_0_S / EPS_EZ[k]);
-        //波数kは媒質に依存する(角周波数は一定)
-        double n_ez   = sqrt(EPS_EZ[k] / EPSILON_0_S); //屈折率
-        double k_ez_s = k_s * n_ez;              
-        double u = sin(w_s*0.5) / sin(k_ez_s*0.5);
-        C_EZX[k]   = coef1(a_ez_x, b_ez_x);
-        C_EZXLX[k] = u * z_ez;//coef2(a_ez_x, b_ez_x) * z_ez;
-        C_EZY[k]   = coef1(a_ez_y, b_ez_y);
-        C_EZYLY[k] = u * z_ez;//coef2(a_ez_y, b_ez_y) * z_ez;
-      }
+      //Δt = 1, μ(i,j) = μ0 で固定
+      double z_ez = sqrt(MU_0_S / EPS_EZ[k]);
+      double n_ez   = sqrt(EPS_EZ[k] / EPSILON_0_S); //屈折率
+      double k_ez_s = k_s * n_ez;      //波数kは媒質に依存する(角周波数は一定)
+      double u_ez = sin(w_s*0.5) / sin(k_ez_s*0.5);
+      C_EZX[k]   = coef1(a_ez_x, b_ez_x);
+      C_EZXLX[k] = u_ez * z_ez / (1+b_ez_x);
+      C_EZY[k]   = coef1(a_ez_y, b_ez_y);
+      C_EZYLY[k] = u_ez * z_ez / (1+b_ez_y);
 
       // HX
-      if( InPML(i, j+0.5) )
-      {
-        C_HX[k]    =     field_pmlCoef(MU_0_S, sig_hx_yy);
-        C_HXLY[k]  = field_pmlCoef_LXY(MU_0_S, sig_hx_yy);             
-      }
-      else
-      {
-        // NonStandard FDTD
-        //Δt = 1, μ(i,j) = μ0
-        double z_hx = sqrt(MU_0_S / EPS_HX[k]);
-        double n_hx   = sqrt(EPS_HX[k] / EPSILON_0_S);
-        double k_hx_s = k_s * n_hx;      
-        double u = sin(w_s*0.5) / sin(k_hx_s*0.5);
-        C_HX[k]    = coef1(a_hx_y, b_hx_y);
-        C_HXLY[k]  = u / z_hx;//coef2(a_hx_y, b_hx_y) /  z_hx;
-      }
+      double z_hx = sqrt(MU_0_S / EPS_HX[k]);
+      double n_hx   = sqrt(EPS_HX[k] / EPSILON_0_S);
+      double k_hx_s = k_s * n_hx;      //波数kは媒質に依存する(角周波数は一定)
+      double u_hx = sin(w_s*0.5) / sin(k_hx_s*0.5);
+      C_HX[k]    = coef1(a_hx_y, b_hx_y);
+      C_HXLY[k]  = u_hx / z_hx / (1+b_hx_y);
 
       // HY
-      if( InPML(i+0.5, j) )
-      {
-        C_HY[k]    =     field_pmlCoef(MU_0_S, sig_hy_xx);
-        C_HYLX[k]  = field_pmlCoef_LXY(MU_0_S, sig_hy_xx);
-      }
-      else
-      {
-        double z_hy   = sqrt(MU_0_S / EPS_HY[k]);
-        double n_hy   = sqrt(EPS_HY[k] / EPSILON_0_S);
-        double k_hy_s = k_s * n_hy;
-        double u      = sin(w_s*0.5) / sin(k_hy_s*0.5);
-        C_HY[k]       = coef1(a_hy_x, b_hy_x);
-        C_HYLX[k]     = u / z_hy;//coef2(a_hy_x, b_hy_x) / z_hy;
-      }
-
-      if ( InPML(i,j) && i >= fInfo_s.N_PML && i < fInfo_s.N_PML + fInfo_s.N_X)
-      {
-        // printf("%.3lf   ", C_EZYLY[k]/*, i, j*/);
-      }
-    }
-
-    if( i>=fInfo_s.N_PML || i<fInfo_s.N_PML + fInfo_s.N_X)
-    {
-      //printf("\n");
+      double z_hy   = sqrt(MU_0_S / EPS_HY[k]);
+      double n_hy   = sqrt(EPS_HY[k] / EPSILON_0_S);
+      double k_hy_s = k_s * n_hy;      //波数kは媒質に依存する(角周波数は一定)
+      double u_hy   = sin(w_s*0.5) / sin(k_hy_s*0.5);
+      C_HY[k]       = coef1(a_hy_x, b_hy_x);
+      C_HYLX[k]     = u_hy / z_hy / (1+b_hy_x);
     }
   } 
 }

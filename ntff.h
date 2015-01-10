@@ -8,4 +8,6 @@
 extern void ntff_outputEnormTxt(double **e_norm, const char *file_name);
 extern void ntff_outputEnormBin(double **e_norm, const char *file_name);
 
+//360°方向に値をもつ配列を正規化
+extern void ntff_normalize(double array[360]);
 #endif

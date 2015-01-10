@@ -9,14 +9,9 @@ static int putBmpHeader(FILE *s, int x, int y, int c);
 static int fputc4LowHigh(unsigned long d, FILE *s);
 static int fputc2LowHigh(unsigned short d, FILE *s);
 
-typedef struct {
- float r,g,b;
-}colorf;
-
 #ifdef USE_OPENGL
 
 #include <GL/glew.h>
-
 
 #include <time.h>
 
@@ -153,11 +148,11 @@ void drawer_paintModel(int left, int bottom, int right, int top, int width, int 
   {
     for(j=0,y=bottom; j<TEX_NY && y<top-1; j++, y+=u)
     {
-      dphi = dbilinear(phis,x,y,width,height);
-      double n = 1-1.0/dphi;
-      texColor[i][j].r -= n;
-      texColor[i][j].g -= n;
-      texColor[i][j].b -= n;
+      dphi = max(1.0, dbilinear(phis,x,y,width,height) * 0.8);
+      double n = 1.0/dphi;
+      texColor[i][j].r *= n;
+      texColor[i][j].g *= n;
+      texColor[i][j].b *= n;
     }
   }
 }
@@ -233,12 +228,14 @@ void drawer_screenshot(const char *fileName)
 //--------------------Color Trancform---------------------//
 static void colorTransform(double phi, colorf *col)
 {
-  double range = 1.0; //波の振幅  
-  double ab_phi = phi < 0 ? -phi : phi;
-  double a = ab_phi < range ? (ab_phi <  range/3.0 ? 3.0/range*ab_phi : (-3.0/4.0/range*ab_phi+1.25) ) : 0.5;
+  double Maximum = 10.0; //最大振幅
+  double p = 2*phi / Maximum - 1.0;
+
+  double ab_phi = p < 0 ? -p : p;
+  double a = ab_phi < 1.0 ? (ab_phi <  1.0/3.0 ? 3.0*ab_phi : (-3.0/4.0*ab_phi+1.25) ) : 0.5;
   
-  col->r = phi > 0 ? a:0;
-  col->b = phi < 0 ? a:0;
+  col->r = p > 0 ? a:0;
+  col->b = p < 0 ? a:0;
   col->g = min(1.0, max(0.0, -3*ab_phi+2));
 }
 
@@ -249,6 +246,106 @@ static void modelColorTransform(double n, colorf *col)
   col->g -= (1-1.0/n/n);
   col->b -= (1-1.0/n/n);  
 }
+
+void drawer_saveImage(char *fileName, colorf **cells, int width, int height)
+{
+  const int bpp        = 24; //1ピクセルセル24ビット
+  const int data_width = (width>>2)<<2; //4の倍数に切り下げ
+  const int datasize   = height*data_width*(bpp>>3);
+
+  unsigned char *buf = (unsigned char*)malloc(sizeof(unsigned char)*datasize);
+
+  memset(buf, 0, sizeof(unsigned char)*datasize);
+
+  int k=0;
+  for(int j=0; j<height; j++)
+    for(int i=0; i<data_width; i++)
+    {
+      buf[k]   = max(0, min(255, cells[i][j].b*255));
+      buf[k+1] = max(0, min(255, cells[i][j].g*255));
+      buf[k+2] = max(0, min(255, cells[i][j].r*255));
+      k+= (bpp>>3);      
+    }
+  FILE *fp = fopen(fileName, "wb");
+  if(fp==NULL)
+  {
+    printf("can not open file %s",fileName);
+    free(buf);
+    return;
+  }
+
+  if( !putBmpHeader(fp, data_width, height, bpp) ) {
+    printf("can not write headers");
+    fclose(fp);
+    free(buf);
+    return;
+  }
+
+  if( fwrite((unsigned char*)buf, sizeof(unsigned char), datasize, fp) != datasize)
+  {
+    printf("can not write data");
+    fclose(fp);
+    free(buf);
+    return;
+  }
+
+  free(buf);
+  fclose(fp);
+  return;
+}
+
+void drawer_outputLineImage(char *fileName, double red[360], double green[360], double blue[360])
+{
+  int height = 64;
+  int width  = 180;
+  const int bpp = 24; //1ピクセルセル24ビット
+  const int data_width = (width>>2)<<2;
+  const int datasize = height*data_width*(bpp>>3);
+//  const int datasize = height*((((width*bpp/8) + 3) >> 2) << 2); //横のバイト列は4の倍数でなければならないので切り上げ
+
+
+  unsigned char *buf = (unsigned char*)malloc(sizeof(unsigned char)*datasize);
+  memset(buf, 0, sizeof(unsigned char)*datasize);
+
+  colorf c;
+  int k=0;
+  for(int j=0; j<height; j++)
+    for(int i=0; i<data_width; i++)
+    {
+      buf[k]   = max(0, min(255, blue[i]*255));
+      buf[k+1] = max(0, min(255, green[i]*255));
+      buf[k+2] = max(0, min(255, red[i]*255));
+      k+= (bpp>>3);
+    }
+
+  FILE *fp = fopen(fileName, "wb");
+  if(fp==NULL)
+  {
+    printf("can not open file %s",fileName);
+    free(buf);
+    return;
+  }
+
+  if( !putBmpHeader(fp, data_width, height, bpp) ) {
+    printf("can not write headers");
+    fclose(fp);
+    free(buf);
+    return;
+  }
+
+  if( fwrite((unsigned char*)buf, sizeof(unsigned char), datasize, fp) != datasize)
+  {
+    printf("can not write data");
+    fclose(fp);
+    free(buf);
+    return;
+  }
+
+  free(buf);
+  fclose(fp);
+  return;
+}
+ 
 
 void drawer_outputImage(char *fileName, dcomplex *data, double *model, int width, int height)
 {
