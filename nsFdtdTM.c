@@ -124,7 +124,7 @@ static void calcH()
 
     // γ/2 * dx^2dy
     dcomplex ns_operator = r_2*( (Ez[k+dy+dx] + Ez[k+dy-dx] - 2*Ez[k+dy])   
-                                 -(Ez[k+dx]    + Ez[k-dx]    - 2*Ez[k]   ));      
+                                -(Ez[k+dx]    + Ez[k-dx]    - 2*Ez[k]   ));      
     Hx[k] = C_HX[k]*Hx[k] - C_HXLY[k]* (
       Ez[k+dy] - Ez[k] // dy
       + ns_operator );
@@ -280,22 +280,22 @@ static void setCoefficient()
 
       // EZ
       //Δt = 1, μ(i,j) = μ0 で固定
-      double z_ez = sqrt(MU_0_S / EPS_EZ[k]);
+      double z_ez   = sqrt(MU_0_S / EPS_EZ[k]);
       double n_ez   = sqrt(EPS_EZ[k] / EPSILON_0_S); //屈折率
       double k_ez_s = k_s * n_ez;      //波数kは媒質に依存する(角周波数は一定)
-      double u_ez = sin(w_s*0.5) / sin(k_ez_s*0.5);
+      double u_ez   = sin(w_s*0.5) / sin(k_ez_s*0.5);
       C_EZX[k]   = coef1(a_ez_x, b_ez_x);
       C_EZXLX[k] = u_ez * z_ez / (1+b_ez_x);
       C_EZY[k]   = coef1(a_ez_y, b_ez_y);
       C_EZYLY[k] = u_ez * z_ez / (1+b_ez_y);
 
       // HX
-      double z_hx = sqrt(MU_0_S / EPS_HX[k]);
+      double z_hx   = sqrt(MU_0_S / EPS_HX[k]);
       double n_hx   = sqrt(EPS_HX[k] / EPSILON_0_S);
       double k_hx_s = k_s * n_hx;      //波数kは媒質に依存する(角周波数は一定)
-      double u_hx = sin(w_s*0.5) / sin(k_hx_s*0.5);
-      C_HX[k]    = coef1(a_hx_y, b_hx_y);
-      C_HXLY[k]  = u_hx / z_hx / (1+b_hx_y);
+      double u_hx   = sin(w_s*0.5) / sin(k_hx_s*0.5);
+      C_HX[k]       = coef1(a_hx_y, b_hx_y);
+      C_HXLY[k]     = u_hx / z_hx / (1+b_hx_y);
 
       // HY
       double z_hy   = sqrt(MU_0_S / EPS_HY[k]);

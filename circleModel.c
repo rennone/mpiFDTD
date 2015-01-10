@@ -46,14 +46,14 @@ static double eps(double x, double y, int col, int row)
   double split = 200;
   double half_split = split/2;
   double sum=0;
-  for(double i=-half_split+0.5; i<half_split; i+=1){
-    for(double j=-half_split+0.5; j<half_split; j+=1){
-      if(pow(dx+col*i/split, 2.0) + pow(dy+row*j/split, 2.0) <= radius_s*radius_s)
+  for(double i=-half_split; i<=half_split; i+=1){
+    for(double j=-half_split; j<=half_split; j+=1){
+      if(pow(dx+col*i/(split+1.0), 2.0) + pow(dy+row*j/(split+1.0), 2.0) <= radius_s*radius_s)
 	sum+=1;
     }
   }
   
-  sum /= split*split;
+  sum /= (split+1.0)*(split+1.0);
   return epsilon_s*sum + EPSILON_0_S*(1-sum);
 }
 
