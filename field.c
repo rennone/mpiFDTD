@@ -157,9 +157,9 @@ void field_nsScatteredWaveNotUPML(dcomplex *p, double *eps, double gapX, double 
   double ray_coef = field_getRayCoef() * dot;
   double k_s = field_getK();
   double rad = field_getWaveAngle()*M_PI/180.0;
-  double ks_cos = cos(rad)*k_s, ks_sin = sin(rad)*k_s;//毎回計算すると時間かかりそうだから代入しておく  
-  for(int i=1; i<fInfo_s.N_PX-1; i++) {
-    for(int j=1; j<fInfo_s.N_PY-1; j++) {
+  double ks_cos = cos(rad)*k_s, ks_sin = sin(rad)*k_s;//毎回計算すると時間かかりそうだから代入しておく
+  for(int i=1; i<fInfo_s.N_PX; i++) {
+    for(int j=1; j<fInfo_s.N_PY; j++) {
       int k = field_index(i,j);
       double kr = (i+gapX)*ks_cos+(j+gapY)*ks_sin;
       double n  = sqrt( eps[k] / EPSILON_0_S );

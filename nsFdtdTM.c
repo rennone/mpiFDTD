@@ -68,7 +68,7 @@ Solver* nsFdtdTM_getSolver()
 static void update()
 {
   calcH();
-  calcE();  
+  calcE();
 
   field_nsScatteredWaveNotUPML(Ezy, EPS_EZ, 0, 0, 1.0);
   
@@ -78,17 +78,7 @@ static void update()
     Ez[k] = Ezx[k] + Ezy[k];
   }
 }
-/*
-static bool InPML(double i, double j)
-{
-  return false;
-  int p = 0;
-  FieldInfo_S fInfo_s = field_getFieldInfo_S();
-  return (i < fInfo_s.N_PML+p || j < fInfo_s.N_PML+p
-    || (i >= fInfo_s.N_X + fInfo_s.N_PML -p )
-               || (j >= fInfo_s.N_Y + fInfo_s.N_PML -p) );
-}
-*/
+
 static void calcE()
 {
   FieldInfo_S fInfo_s = field_getFieldInfo_S();
@@ -192,6 +182,7 @@ static void freeMemories()
   delete(EPS_HX);
   delete(EPS_HY);
   delete(EPS_EZ);
+
 }
 
 static void allocateMemories()
@@ -216,7 +207,8 @@ static void allocateMemories()
 
   EPS_HY = newDouble(fInfo_s.N_CELL);
   EPS_HX = newDouble(fInfo_s.N_CELL);
-  EPS_EZ = newDouble(fInfo_s.N_CELL);  
+  EPS_EZ = newDouble(fInfo_s.N_CELL);
+
 }
 
 //PML用に簡略化したβ
@@ -228,6 +220,18 @@ static double beta(double alpha)
 static double coef1(double alpha, double beta)
 {
   return (1 - beta) / (1 + beta);
+}
+
+//PML用に簡略化したuns
+static double uns(double alpha, double beta, double k, double w)
+{
+  alpha = 0;
+  beta = 0;
+  double _w = w;
+  double denom = pow(sinh(alpha),2) + pow(sin(_w*0.5),2);
+  double nemer = cosh(2*alpha);
+    
+  return sqrt( denom / nemer  - beta*beta ) / sin(k*0.5) ; 
 }
 
 static void setCoefficient()
@@ -267,7 +271,7 @@ static void setCoefficient()
       //double sig_hy_y  = sig_max*field_sigmaY(i+0.5,j);  //σ_y  for hy
       //double sig_hy_yy = MU_0_S/EPSILON_0_S * sig_hy_y;  //σ_y* for hy
 
-      // PML領域以外では α = α*, β = β* となるので,簡略化
+      // PML領域以外では吸収媒質がないので α = α*, β = β* となる為簡略化
       double a_hx_y = sig_hx_y / (2*EPSILON_0_S);
       double a_hy_x = sig_hy_x / (2*EPSILON_0_S);
       double a_ez_x = sig_ez_x / (2*EPSILON_0_S);
@@ -285,9 +289,9 @@ static void setCoefficient()
       double k_ez_s = k_s * n_ez;      //波数kは媒質に依存する(角周波数は一定)
       double u_ez   = sin(w_s*0.5) / sin(k_ez_s*0.5);
       C_EZX[k]   = coef1(a_ez_x, b_ez_x);
-      C_EZXLX[k] = u_ez * z_ez / (1+b_ez_x);
+      C_EZXLX[k] = uns(a_ez_x, b_ez_x, k_ez_s, w_s) * z_ez / (1+b_ez_x);//u_ez * z_ez / (1+b_ez_x);
       C_EZY[k]   = coef1(a_ez_y, b_ez_y);
-      C_EZYLY[k] = u_ez * z_ez / (1+b_ez_y);
+      C_EZYLY[k] = uns(a_ez_y, b_ez_y, k_ez_s, w_s) * z_ez / (1+b_ez_y);;//u_ez * z_ez / (1+b_ez_y);
 
       // HX
       double z_hx   = sqrt(MU_0_S / EPS_HX[k]);
@@ -295,7 +299,7 @@ static void setCoefficient()
       double k_hx_s = k_s * n_hx;      //波数kは媒質に依存する(角周波数は一定)
       double u_hx   = sin(w_s*0.5) / sin(k_hx_s*0.5);
       C_HX[k]       = coef1(a_hx_y, b_hx_y);
-      C_HXLY[k]     = u_hx / z_hx / (1+b_hx_y);
+      C_HXLY[k]     = uns(a_hx_y,b_hx_y, k_hx_s, w_s) / z_hx / (1+b_hx_y);//u_hx / z_hx / (1+b_hx_y);
 
       // HY
       double z_hy   = sqrt(MU_0_S / EPS_HY[k]);
@@ -303,7 +307,11 @@ static void setCoefficient()
       double k_hy_s = k_s * n_hy;      //波数kは媒質に依存する(角周波数は一定)
       double u_hy   = sin(w_s*0.5) / sin(k_hy_s*0.5);
       C_HY[k]       = coef1(a_hy_x, b_hy_x);
-      C_HYLX[k]     = u_hy / z_hy / (1+b_hy_x);
+      C_HYLX[k]     = uns(a_hy_x, b_hy_x, k_hy_s, w_s) / z_hy / (1+b_hy_x);//u_hy / z_hy / (1+b_hy_x);
+
+
+//      double u0 = sin(w_s*0.5) / sin(w_s*k_s);
+//      double u1 = sqrt( (pow(sin(w_s*w_s - a_ez));
     }
   } 
 }
