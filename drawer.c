@@ -363,10 +363,11 @@ void drawer_outputImage(char *fileName, dcomplex *data, double *model, int width
   for(int j=0; j<height; j++)
     for(int i=0; i<data_width; i++)
     {
-      modelColorTransform( model[i*height+j] , &c);
-      buf[k]   = max(0, min(255, c.b*255));
-      buf[k+1] = max(0, min(255, c.g*255));
-      buf[k+2] = max(0, min(255, c.r*255));
+      colorTransform( cnorm(data[i*height+j]) , &c );
+      double eps = model[i*height+j];
+      buf[k]   = max(0, min(255, c.b*255)) / eps;
+      buf[k+1] = max(0, min(255, c.g*255)) / eps;
+      buf[k+2] = max(0, min(255, c.r*255)) / eps;
       k+= (bpp>>3);
     }
 

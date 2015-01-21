@@ -95,7 +95,7 @@ static void initParameter()
   config.field_info.pml       = 16; //pml領域のセル数
   config.field_info.lambda_nm = 283.497;
   //領域の全体サイズが変化し,収束にかかる時間が変わるためh_uによりステップ数を変える必要がある.
-  config.field_info.stepNum   = 500000;//20000 / config.field_info.h_u_nm;
+  config.field_info.stepNum   = 2000000;//20000 / config.field_info.h_u_nm;
   config.field_info.angle_deg = ST_PHI;
   config.startAngle = ST_PHI;
   config.endAngle   = EN_PHI;
@@ -194,7 +194,7 @@ int main( int argc, char *argv[] )
     while(!simulator_isFinish()) {
       simulator_calc();
       int time = (int)field_getTime();
-      if(time%100000 == 0)
+      if(time%100 == 0)
         screenshot();
     }
 
@@ -289,7 +289,9 @@ static void display()
 static void idle(void)
 {
   simulator_calc();
-  screenshot();
+
+  if ( ((int)field_getTime())%100 == 0)
+    screenshot();
   //Note:
   //GAでルートプロセスが,他のプロセスの終了を確認するために入れている.
   models_update(); //モデルのアップデート処理
