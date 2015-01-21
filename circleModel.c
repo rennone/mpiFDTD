@@ -3,8 +3,8 @@
 #include "field.h"
 #include "function.h"
 
-#define ST_RADIUS_NM 16
-#define EN_RADIUS_NM 16
+#define ST_RADIUS_NM 320
+#define EN_RADIUS_NM 320
 #define DELTA_RADIUS_NM 100
 
 #define N 2.745

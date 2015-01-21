@@ -91,11 +91,11 @@ static void calcFieldSize(FieldInfo *fInfo)
 
 static void initParameter()
 {
-  config.field_info.h_u_nm    = 1;
+  config.field_info.h_u_nm    = 2;
   config.field_info.pml       = 16; //pml領域のセル数
-  config.field_info.lambda_nm = 32;
+  config.field_info.lambda_nm = 283.497;
   //領域の全体サイズが変化し,収束にかかる時間が変わるためh_uによりステップ数を変える必要がある.
-  config.field_info.stepNum   = 200000;//20000 / config.field_info.h_u_nm;
+  config.field_info.stepNum   = 500000;//20000 / config.field_info.h_u_nm;
   config.field_info.angle_deg = ST_PHI;
   config.startAngle = ST_PHI;
   config.endAngle   = EN_PHI;
@@ -145,7 +145,10 @@ static void screenshot()
   if(config.field_info.angle_deg == ST_PHI)
   {
     FieldInfo_S fInfo_s = field_getFieldInfo_S();
-    drawer_outputImage("image.bmp", simulator_getDrawingData(), simulator_getEps(), fInfo_s.N_PX, fInfo_s.N_PY);
+    int time = (int)field_getTime();
+    char buf[256];
+    sprintf(buf, "image%d.bmp",time);
+    drawer_outputImage(buf, simulator_getDrawingData(), simulator_getEps(), fInfo_s.N_PX, fInfo_s.N_PY);
   }
 }
 
@@ -189,7 +192,10 @@ int main( int argc, char *argv[] )
   {
     //シミュレーションをまわす
     while(!simulator_isFinish()) {
-      simulator_calc();    
+      simulator_calc();
+      int time = (int)field_getTime();
+      if(time%100000 == 0)
+        screenshot();
     }
 
     bool changeModel;
@@ -283,7 +289,7 @@ static void display()
 static void idle(void)
 {
   simulator_calc();
-
+  screenshot();
   //Note:
   //GAでルートプロセスが,他のプロセスの終了を確認するために入れている.
   models_update(); //モデルのアップデート処理

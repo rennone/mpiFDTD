@@ -22,7 +22,7 @@ typedef struct FieldInfo
   int width_nm, height_nm; // 領域のサイズ
   int h_u_nm;              //1セルの大きさ
   int pml;                 //pmlレイヤの大きさ(セル数)
-  int lambda_nm;        //波長
+  double lambda_nm;        //波長
   int angle_deg;       //入射角度
   int stepNum;             //計算ステップ
 }FieldInfo;
