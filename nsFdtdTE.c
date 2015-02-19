@@ -170,7 +170,8 @@ static void setCoefficient()
     sig_hz_y = sig_max*field_sigmaY(i+0.5,j+0.5); //σ_y for hz
     sig_hz_yy = MU_0_S/EPSILON_0_S * sig_hz_y;    //σ_y* for hz
 
-    // PML領域以外では α = α*, β = β* となるので,簡略化
+    // PML領域では α = α*, β = β* となるので,簡略化
+    // PML領域では a=0, b=1となる
     double a_ex_y = sig_ex_y / (2*EPS_EX[k]);
     double a_ey_x = sig_ey_x / (2*EPS_EY[k]);
     double a_hz_x = sig_hz_x / (2*EPS_HZ[k]);
@@ -182,26 +183,15 @@ static void setCoefficient()
     double b_hz_y = beta(a_hz_y);
       
     // HZ
-    if( InPML(i+0.5,j+0.5) )
-    {
-      // Standard FDTD
-      C_HZX[k]   =     field_pmlCoef(MU_0_S, sig_hz_xx);
-      C_HZXLX[k] = field_pmlCoef_LXY(MU_0_S, sig_hz_xx);
-      C_HZY[k]   =     field_pmlCoef(MU_0_S, sig_hz_yy);
-      C_HZYLY[k] = field_pmlCoef_LXY(MU_0_S, sig_hz_yy);
-    }
-    else
-    {
-      double z_hz = sqrt(MU_0_S / EPS_HZ[k]);
-      //波数kは媒質に依存する(角周波数は一定)
-      double n_hz   = sqrt(EPS_HZ[k] / EPSILON_0_S); //屈折率
-      double k_hz_s = k_s * n_hz;              
-      double u = sin(w_s*0.5) / sin(k_hz_s*0.5);
-      C_HZX[k]   = coef1(a_hz_x, b_hz_x);
-      C_HZXLX[k] = u / z_hz;//coef2(a_ez_x, b_ez_x) * z_ez;
-      C_HZY[k]   = coef1(a_hz_y, b_hz_y);
-      C_HZYLY[k] = u / z_hz;//coef2(a_ez_y, b_ez_y) * z_ez;
-    }
+    double z_hz = sqrt(MU_0_S / EPS_HZ[k]);
+    //波数kは媒質に依存する(角周波数は一定)
+    double n_hz   = sqrt(EPS_HZ[k] / EPSILON_0_S); //屈折率
+    double k_hz_s = k_s * n_hz;              
+    double u_hz = sin(w_s*0.5) / sin(k_hz_s*0.5);
+    C_HZX[k]   = coef1(a_hz_x, b_hz_x);
+    C_HZXLX[k] = u_hz / z_hz / (1.0 + b_hz_x);//coef2(a_ez_x, b_ez_x) * z_ez;
+    C_HZY[k]   = coef1(a_hz_y, b_hz_y);
+    C_HZYLY[k] = u_hz / z_hz / (1.0 + b_hz_y);//coef2(a_ez_y, b_ez_y) * z_ez;
 
     // EX
     if( InPML(i+0.5, j) )
