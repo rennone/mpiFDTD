@@ -6,6 +6,7 @@
 #include "nsFdtdTM.h"
 #include "models.h"
 #include "function.h"
+#include "ntffTM.h"
 
 //   メンバ変数    //
 static dcomplex *Ezx = NULL;
@@ -105,7 +106,7 @@ static void calcH()
   int dx = fInfo_s.DX, dy = fInfo_s.DY;
 
   double k_s = field_getK();
-  double r =  1.0/6.0 + k_s*k_s/180.0 - pow(k_s,4) / 23040;
+  double r =  1.0/6.0 + k_s*k_s/180.0 - pow(k_s,4) / 23040.0;
   double r_2 = r/2.0;
   
   FOR_FOR(fInfo_s, i, j)
@@ -140,19 +141,25 @@ static void finish()
   freeMemories();
 }
 
+static void ntffFreq()
+{  
+  dcomplex res[360];
+  ntffTM_Frequency(Hx, Hy, Ez, res);
+  FILE *fp = FileOpen("ntffStr.txt", "w");
+  for(int i=0; i<360; i++)
+    fprintf(fp, "%.18lf \n", cnorm(res[i]));
+
+  fclose(fp);
+}
+
 static void reset()
 {
   FieldInfo fInfo = field_getFieldInfo();
   char buf[128];
-  double radius_s = field_toCellUnit(16);
-  sprintf(buf, "1.1_ns_tm_%dnm.txt",fInfo.h_u_nm);
-  field_outputElliptic(buf, Ez, 1.1*radius_s);
-
+  double radius_s = field_getLambda();
   sprintf(buf, "1.2_ns_tm_%dnm.txt",fInfo.h_u_nm);
   field_outputElliptic(buf, Ez, 1.2*radius_s);
-
-  sprintf(buf, "1.21_ns_tm_%dnm.txt",fInfo.h_u_nm);
-  field_outputElliptic(buf, Ez, 1.21*radius_s);
+  ntffFreq();
   
   memset(Hx , 0, sizeof(double complex)*N_CELL);
   memset(Hy , 0, sizeof(double complex)*N_CELL);
@@ -250,7 +257,7 @@ static void setCoefficient()
       int k = field_index(i,j);
       
       EPS_EZ[k] = models_eps(i,j, D_XY);
-      EPS_HX[k] = models_eps(i,j+0.5, D_Y);
+      EPS_HX[k] = models_eps(i,j+0.5, D_Y); //D_XYよりも精度が良かった.
       EPS_HY[k] = models_eps(i+0.5,j, D_X);
 
       // PML領域には散乱体がないので eps = EPSILON_0_S としている.
@@ -320,6 +327,7 @@ static void init()
 {
   allocateMemories();
   setCoefficient();
+  ntffTM_init();
 /*
   //計算用定数の設定
   double kx_s = k_s *          pow(2.0, -0.25);	//(2の4乗根)分の1

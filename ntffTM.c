@@ -79,7 +79,7 @@ void ntffTM_Frequency( dcomplex *Hx, dcomplex *Hy, dcomplex *Ez, dcomplex result
 
   double k_s = field_getK();
 
-  double complex coef = csqrt( I*k_s/(8*M_PI*R0) ) * cexp(I*k_s*R0);
+  double complex coef = csqrt( I*k_s/(8*M_PI*R0*fInfo.h_u_nm) ) * cexp(I*k_s*R0);
   int tp = nInfo.top;     //上面
   int bm = nInfo.bottom; //下面
   int rt = nInfo.right;  //右
@@ -153,7 +153,7 @@ void ntffTM_Frequency( dcomplex *Hx, dcomplex *Hy, dcomplex *Ez, dcomplex result
     }
 
     double complex Lphi = -Lx*sin(rad) + Ly*cos(rad); //極座標変換
-    resultEz[ang] = coef * ( Z_0_S*Nz + Lphi )*sqrt(fInfo.h_u_nm);
+    resultEz[ang] = coef * ( Z_0_S*Nz + Lphi );
   }
 }
 

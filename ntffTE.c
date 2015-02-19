@@ -253,7 +253,7 @@ void ntffTE_Frequency(dcomplex *Ex, dcomplex *Ey, dcomplex *Hz, dcomplex resultE
   int rt = nInfo.right;
   int lt = nInfo.left;
   
-  dcomplex coef = csqrt( I*waveInfo_s.K_s/(8*M_PI*R0) ) * cexp(I*waveInfo_s.K_s*R0);  
+  dcomplex coef = csqrt( I*waveInfo_s.K_s/(8*M_PI*R0*fInfo.h_u_nm) ) * cexp(I*waveInfo_s.K_s*R0);
 
   //Js -> W   Ms -> U
   for ( int ang=0; ang<360; ang++ )
@@ -326,7 +326,7 @@ void ntffTE_Frequency(dcomplex *Ex, dcomplex *Ey, dcomplex *Hz, dcomplex resultE
     
     // Get Ephi
     double complex Nphi  = -Nx*sin(rad) + Ny*cos(rad);
-    resultEphi[ang] = coef * ( Z_0_S*Nphi - Lz )*fInfo.h_u_nm; //物理単位に変換しておく
+    resultEphi[ang] = coef * ( Z_0_S*Nphi - Lz ); //物理単位に変換しておく
   }
 
   FILE *fp = fopen("ntffStrTE.txt", "w");  
