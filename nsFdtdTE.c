@@ -86,34 +86,6 @@ static void allocateMemories()
   EPS_HZ = newDouble(fInfo_s.N_CELL);  
 }
 
-static bool InPML(double i, double j)
-{
-  int p = 0;
-  FieldInfo_S fInfo_s = field_getFieldInfo_S();
-  return (i < fInfo_s.N_PML+p || j < fInfo_s.N_PML+p
-          || (i >= fInfo_s.N_X + fInfo_s.N_PML -p )
-          || (j >= fInfo_s.N_Y + fInfo_s.N_PML -p) );
-}
-
-//簡略化したUns2
-static double Uns(double alpha, double beta)
-{
-  double w_s = field_getOmega();
-  double k_s = field_getK();
-  double sinh_2_a = pow( sinh(alpha) , 2);
-  double sin_2_w  = pow( sin(w_s*0.5), 2);
-  double cosh_a   = cosh(2*alpha);
-
-
-  return sqrt(( (sinh_2_a + sin_2_w)/cosh(alpha) - beta*beta ))  / sin(k_s * 0.5);
-}
-
-//PML用のα
-static double alpha(double sigma, double ep_mu)
-{
-  return sigma / (2 *ep_mu);
-}
-
 //PML用に簡略化したβ
 static double beta(double alpha)
 {  
@@ -123,12 +95,6 @@ static double beta(double alpha)
 static double coef1(double alpha, double beta)
 {
   return (1 - beta) / (1 + beta);
-}
-
-static double coef2(double alpha, double beta)
-{
-  double u_ns = Uns(alpha, beta);
-  return u_ns / (1+beta);
 }
 
 static void setCoefficient()
@@ -170,7 +136,8 @@ static void setCoefficient()
     sig_hz_y = sig_max*field_sigmaY(i+0.5,j+0.5); //σ_y for hz
     sig_hz_yy = MU_0_S/EPSILON_0_S * sig_hz_y;    //σ_y* for hz
 
-    // PML領域以外では α = α*, β = β* となるので,簡略化
+    // PML領域では α = α*, β = β* となるので,簡略化
+    // PML領域では a=b=0となる
     double a_ex_y = sig_ex_y / (2*EPS_EX[k]);
     double a_ey_x = sig_ey_x / (2*EPS_EY[k]);
     double a_hz_x = sig_hz_x / (2*EPS_HZ[k]);
@@ -182,60 +149,34 @@ static void setCoefficient()
     double b_hz_y = beta(a_hz_y);
       
     // HZ
-    if( InPML(i+0.5,j+0.5) )
-    {
-      // Standard FDTD
-      C_HZX[k]   =     field_pmlCoef(MU_0_S, sig_hz_xx);
-      C_HZXLX[k] = field_pmlCoef_LXY(MU_0_S, sig_hz_xx);
-      C_HZY[k]   =     field_pmlCoef(MU_0_S, sig_hz_yy);
-      C_HZYLY[k] = field_pmlCoef_LXY(MU_0_S, sig_hz_yy);
-    }
-    else
-    {
-      double z_hz = sqrt(MU_0_S / EPS_HZ[k]);
-      //波数kは媒質に依存する(角周波数は一定)
-      double n_hz   = sqrt(EPS_HZ[k] / EPSILON_0_S); //屈折率
-      double k_hz_s = k_s * n_hz;              
-      double u = sin(w_s*0.5) / sin(k_hz_s*0.5);
-      C_HZX[k]   = coef1(a_hz_x, b_hz_x);
-      C_HZXLX[k] = u / z_hz;//coef2(a_ez_x, b_ez_x) * z_ez;
-      C_HZY[k]   = coef1(a_hz_y, b_hz_y);
-      C_HZYLY[k] = u / z_hz;//coef2(a_ez_y, b_ez_y) * z_ez;
-    }
+    double z_hz = sqrt(MU_0_S / EPS_HZ[k]);
+    //波数kは媒質に依存する(角周波数は一定)
+    double n_hz   = sqrt(EPS_HZ[k] / EPSILON_0_S); //屈折率
+    double k_hz_s = k_s * n_hz;              
+    double u_hz = sin(w_s*0.5) / sin(k_hz_s*0.5);
+    C_HZX[k]   = coef1(a_hz_x, b_hz_x);
+    C_HZXLX[k] = u_hz / z_hz / (1.0 + b_hz_x);//coef2(a_ez_x, b_ez_x) * z_ez;
+    C_HZY[k]   = coef1(a_hz_y, b_hz_y);
+    C_HZYLY[k] = u_hz / z_hz / (1.0 + b_hz_y);//coef2(a_ez_y, b_ez_y) * z_ez;
 
-    // EX
-    if( InPML(i+0.5, j) )
-    {
-      C_EX[k]    =     field_pmlCoef(EPS_EX[k], sig_ex_y);
-      C_EXLY[k]  = field_pmlCoef_LXY(EPS_EX[k], sig_ex_y);             
-    }
-    else
-    {
-      // NonStandard FDTD
-      //Δt = 1, μ(i,j) = μ0
-      double z_ex   = sqrt(MU_0_S / EPS_EX[k]);
-      double n_ex   = sqrt(EPS_EX[k] / EPSILON_0_S);
-      double k_ex_s = k_s * n_ex;      
-      double u = sin(w_s*0.5) / sin(k_ex_s*0.5);
-      C_EX[k]    = coef1(a_ex_y, b_ex_y);
-      C_EXLY[k]  = u * z_ex;//coef2(a_hx_y, b_hx_y) /  z_hx;
-    }
+    // EX    
+    // NonStandard FDTD
+    //Δt = 1, μ(i,j) = μ0
+    double z_ex   = sqrt(MU_0_S / EPS_EX[k]);
+    double n_ex   = sqrt(EPS_EX[k] / EPSILON_0_S);
+    double k_ex_s = k_s * n_ex;      
+    double u_ex = sin(w_s*0.5) / sin(k_ex_s*0.5);
+    C_EX[k]    = coef1(a_ex_y, b_ex_y);
+    C_EXLY[k]  = u_ex * z_ex / (1.0 + b_ex_y);//coef2(a_hx_y, b_hx_y) /  z_hx;
 
     // EY
-    if( InPML(i, j+0.5) )
-    {
-      C_EY[k]    =     field_pmlCoef(EPS_EY[k], sig_ey_x);
-      C_EYLX[k]  = field_pmlCoef_LXY(EPS_EY[k], sig_ey_x);
-    }
-    else
-    {
-      double z_ey   = sqrt(MU_0_S / EPS_EY[k]);
-      double n_ey   = sqrt(EPS_EY[k] / EPSILON_0_S);
-      double k_ey_s = k_s * n_ey;
-      double u      = sin(w_s*0.5) / sin(k_ey_s*0.5);
-      C_EY[k]       = coef1(a_ey_x, b_ey_x);
-      C_EYLX[k]     = u * z_ey;//coef2(a_hy_x, b_hy_x) / z_hy;
-    }    
+    double z_ey   = sqrt(MU_0_S / EPS_EY[k]);
+    double n_ey   = sqrt(EPS_EY[k] / EPSILON_0_S);
+    double k_ey_s = k_s * n_ey;
+    double u_ey   = sin(w_s*0.5) / sin(k_ey_s*0.5);
+    C_EY[k]       = coef1(a_ey_x, b_ey_x);
+    C_EYLX[k]     = u_ey * z_ey / (1.0 + b_ey_x);//coef2(a_hy_x, b_hy_x) / z_hy;
+
   } 
 }
 
@@ -332,33 +273,19 @@ static inline void calcE(void)
   FOR_FOR(fInfo_s, i, j)
   {
     int k = field_index(i,j);
-    if( InPML(i+0.5, j) )
-    {
-      Ex[k] = C_EX[k]*Ex[k] + C_EXLY[k]*( Hz[k] - Hz[k-dy]);
-    }
-    else
-    {
-      dcomplex ns_operator = r_2*(  (Hz[k+dx] + Hz[k-dx] - 2*Hz[k])
-                                   -(Hz[k-dy+dx] + Hz[k-dy-dx] - 2*Hz[k-dy]));
-      Ex[k] = C_EX[k]*Ex[k] + C_EXLY[k] * ( Hz[k] - Hz[k-dy]
-                                            + ns_operator  );
-    }
+    dcomplex ns_operator = r_2*(  (Hz[k+dx] + Hz[k-dx] - 2*Hz[k])
+                                  -(Hz[k-dy+dx] + Hz[k-dy-dx] - 2*Hz[k-dy]));
+    Ex[k] = C_EX[k]*Ex[k] + C_EXLY[k] * ( Hz[k] - Hz[k-dy]
+                                          + ns_operator  );
   }
 
   FOR_FOR(fInfo_s, i, j)
   {
     int k = field_index(i,j);
-    if( InPML(i, j+0.5) )
-    {
-      Ey[k] = C_EY[k]*Ey[k] - C_EYLX[k]*( Hz[k] - Hz[k-dx]);
-    }
-    else
-    {
-      dcomplex ns_operator = r_2*(  (Hz[k+dy] + Hz[k-dy] - 2*Hz[k])
-                                   -(Hz[k-dx+dy] + Hz[k-dx-dy] - 2*Hz[k-dx]) );
-      Ey[k] = C_EY[k]*Ey[k] - C_EYLX[k]*( Hz[k] - Hz[k-dx]
-                                          + ns_operator);
-    }
+    dcomplex ns_operator = r_2*(  (Hz[k+dy] + Hz[k-dy] - 2*Hz[k])
+                                  -(Hz[k-dx+dy] + Hz[k-dx-dy] - 2*Hz[k-dx]) );
+    Ey[k] = C_EY[k]*Ey[k] - C_EYLX[k]*( Hz[k] - Hz[k-dx]
+                                        + ns_operator);
   }
 }
 

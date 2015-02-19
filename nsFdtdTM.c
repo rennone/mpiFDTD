@@ -263,7 +263,8 @@ static void setCoefficient()
 //      double sig_hy_y  = sig_max*field_sigmaY(i+0.5,j);  //σ_y  for hy
 //      double sig_hy_yy = MU_0_S/EPSILON_0_S * sig_hy_y;  //σ_y* for hy
 
-      // PML領域以外では α = α*, β = β* となるので,簡略化
+      // PML領域では α = α*, β = β* となるので,簡略化
+      // 領域外では a = b = 0
       double a_hx_y = sig_hx_y / (2*EPSILON_0_S);
       double a_hy_x = sig_hy_x / (2*EPSILON_0_S);
       double a_ez_x = sig_ez_x / (2*EPSILON_0_S);
